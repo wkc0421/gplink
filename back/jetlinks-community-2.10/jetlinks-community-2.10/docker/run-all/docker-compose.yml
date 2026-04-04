@@ -1,0 +1,84 @@
+version: '3'
+services:
+    redis:
+        image: redis:6
+        container_name: jetlinks-ce-redis
+        #    ports:
+        #      - "6379:6379" # 仅供jetlinks-ce访问
+        volumes:
+            - "./data/redis:/data"
+        command: redis-server --appendonly yes --requirepass "JetLinks@redis"
+        environment:
+            - TZ=Asia/Shanghai
+        healthcheck:
+            test: ["CMD", "redis-cli", "-h", "localhost", "-p", "6379", "-a", "JetLinks@redis", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+    postgres:
+        image: timescale/timescaledb:latest-pg16
+        container_name: jetlinks-ce-postgres
+#        ports:
+#            - "5432:5432"  # 仅供jetlinks-ce访问
+        volumes:
+            - "./data/postgres:/var/lib/postgresql/data"
+        environment:
+            POSTGRES_PASSWORD: JetLinks@postgres
+            POSTGRES_DB: jetlinks
+            POSTGRES_HOST_AUTH_METHOD: trust
+            TZ: Asia/Shanghai
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+    jetlinks:
+        image: registry.cn-shenzhen.aliyuncs.com/jetlinks/jetlinks-community:2.10.0-SNAPSHOT
+        container_name: jetlinks-ce
+        ports:
+            - "8848:8848" # 平台访问端口
+            - "1883-1890:1883-1890" # 预留
+            - "8800-8810:8800-8810" # 预留
+            - "5060-5061:5060-5061" # 预留
+        volumes:
+            - "./data/jetlinks:/application/data"
+        environment:
+            - "JAVA_OPTS=-Duser.language=zh"
+            - "TZ=Asia/Shanghai"
+            - "EXTERNAL_HOST=local-host.cn" # 对外提供访问的域名或者ip地址
+            - "EXTERNAL_PORT=8848" # 对外提供访问的端口,修改了端口映射同时也需要修改这里.
+            - "ADMIN_USER_PASSWORD=JetLinks.C0mmVn1ty" # admin用户的初始密码
+            - "spring.r2dbc.url=r2dbc:postgresql://postgres:5432/jetlinks" #数据库连接地址
+            - "spring.r2dbc.username=postgres"
+            - "spring.r2dbc.password=JetLinks@postgres"
+            - "spring.data.redis.host=redis"
+            - "spring.data.redis.port=6379"
+            - "file.manager.storage-base-path=/application/data/files"
+            - "spring.data.redis.password=JetLinks@redis"
+            - "logging.level.io.r2dbc=warn"
+            - "logging.level.org.springframework.data=warn"
+            - "logging.level.org.springframework=warn"
+            - "logging.level.org.jetlinks=warn"
+            - "logging.level.org.hswebframework=warn"
+            - "logging.level.org.springframework.data.r2dbc.connectionfactory=warn"
+            - "network.resources[0]=0.0.0.0:8800-8810/tcp"
+            - "network.resources[1]=0.0.0.0:1883-1890"
+            - "hsweb.cors.enable=true"
+            - "hsweb.cors.configs[0].path=/**"
+            - "hsweb.cors.configs[0].allowed-credentials=true"
+            - "hsweb.cors.configs[0].allowed-headers=*"
+            - "hsweb.cors.configs[0].allowed-origins=*"
+            - "hsweb.cors.configs[0].allowed-methods[0]=GET"
+            - "hsweb.cors.configs[0].allowed-methods[1]=POST"
+            - "hsweb.cors.configs[0].allowed-methods[2]=PUT"
+            - "hsweb.cors.configs[0].allowed-methods[3]=PATCH"
+            - "hsweb.cors.configs[0].allowed-methods[4]=DELETE"
+            - "hsweb.cors.configs[0].allowed-methods[5]=OPTIONS"
+        links:
+            - redis:redis
+            - postgres:postgres
+        depends_on:
+             postgres:
+                 condition: service_healthy
+             redis:
+                 condition: service_healthy

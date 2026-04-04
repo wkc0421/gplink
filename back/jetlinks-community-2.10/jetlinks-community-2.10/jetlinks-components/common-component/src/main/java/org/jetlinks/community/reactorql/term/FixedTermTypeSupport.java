@@ -1,0 +1,493 @@
+/*
+ * Copyright 2025 JetLinks https://www.jetlinks.cn
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jetlinks.community.reactorql.term;
+
+import com.google.common.collect.Sets;
+import lombok.Getter;
+import org.hswebframework.ezorm.core.param.Term;
+import org.hswebframework.ezorm.rdb.operator.builder.fragments.NativeSql;
+import org.hswebframework.ezorm.rdb.operator.builder.fragments.PrepareSqlFragments;
+import org.hswebframework.ezorm.rdb.operator.builder.fragments.SqlFragments;
+import org.hswebframework.web.i18n.LocaleUtils;
+import org.jetlinks.community.utils.ConverterUtils;
+import org.jetlinks.community.utils.ReactorUtils;
+import org.jetlinks.core.metadata.DataType;
+import org.jetlinks.core.metadata.types.*;
+import org.jetlinks.core.utils.Reactors;
+import org.jetlinks.reactor.ql.supports.filter.BetweenFilter;
+import org.jetlinks.reactor.ql.supports.filter.LikeFilter;
+import org.jetlinks.reactor.ql.utils.CastUtils;
+import org.jetlinks.reactor.ql.utils.CompareUtils;
+import reactor.core.publisher.Mono;
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Getter
+public enum FixedTermTypeSupport implements TermTypeSupport {
+
+    eq("等于", "eq") {
+        @Override
+        public boolean isSupported(DataType type) {
+            return !type.getType().equals(ArrayType.ID) && super.isSupported(type);
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return CompareUtils.compare(expect, actual) == 0;
+        }
+    },
+    neq("不等于", "neq") {
+        @Override
+        public boolean isSupported(DataType type) {
+            return !type.getType().equals(ArrayType.ID) && super.isSupported(type);
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return CompareUtils.compare(expect, actual) != 0;
+        }
+    },
+    notnull("不为空", "notnull", false) {
+        @Override
+        protected String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s%s", property, getName());
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return actual != null;
+        }
+    },
+    isnull("为空", "isnull", false) {
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s%s", property, getName());
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return actual == null;
+        }
+
+    },
+
+    gt("大于", "gt", DateTimeType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID) {
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return CompareUtils.compare(expect, actual) > 0;
+        }
+    },
+    gte("大于等于", "gte", DateTimeType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID) {
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return CompareUtils.compare(expect, actual) >= 0;
+        }
+    },
+    lt("小于", "lt", DateTimeType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID) {
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return CompareUtils.compare(expect, actual) < 0;
+        }
+    },
+    lte("小于等于", "lte", DateTimeType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID) {
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return CompareUtils.compare(expect, actual) <= 0;
+        }
+    },
+
+    btw("在...之间", "btw", DateTimeType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID) {
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            List<Object> castArray = ConverterUtils.convertToList(expect);
+            if (castArray.size() > 1) {
+                return BetweenFilter.predicate(actual, castArray.get(0), castArray.get(1));
+            }
+            return false;
+        }
+
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return val;
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s在%s之间", property, arrayToSpec(expect));
+        }
+    },
+    nbtw("不在...之间", "nbtw", DateTimeType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return val;
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s不在%s之间", property, createValueDesc(expect));
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            List<Object> castArray = ConverterUtils.convertToList(expect);
+            if (castArray.size() > 1) {
+                return !BetweenFilter.predicate(actual, castArray.get(0), castArray.get(1));
+            }
+            return true;
+        }
+
+    },
+    in("在...之中", "in", StringType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID, EnumType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return val;
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s在%s之中", property, createValueDesc(expect));
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return ConverterUtils
+                .convertToList(expect)
+                .stream()
+                .anyMatch(o -> CompareUtils.compare(o, actual) == 0);
+        }
+    },
+    nin("不在...之中", "nin", StringType.ID, ShortType.ID, IntType.ID, LongType.ID, FloatType.ID, DoubleType.ID, EnumType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return val;
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s不在%s之中", property, createValueDesc(expect));
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return ConverterUtils
+                .convertToList(expect)
+                .stream()
+                .noneMatch(o -> CompareUtils.compare(o, actual) == 0);
+        }
+    },
+    contains_all("全部包含在...之中", "contains_all", ArrayType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return ConverterUtils.convertToList(val);
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s全部包含在%s之中", property, createValueDesc(expect));
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            if (actual == null) {
+                return false;
+            }
+            TreeSet<Object> left =
+                CastUtils.castCollection(expect, new TreeSet<>(CompareUtils::compare));
+
+            return left.containsAll(ConverterUtils.convertToList(actual));
+        }
+    },
+    contains_any("任意包含在...之中", "contains_any", ArrayType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return ConverterUtils.convertToList(val);
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s任意包含在%s之中", property, createValueDesc(expect));
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            TreeSet<Object> left =
+                CastUtils.castCollection(expect, new TreeSet<>(CompareUtils::compare));
+
+            return ConverterUtils
+                .convertToList(actual)
+                .stream()
+                .anyMatch(val -> CompareUtils.contains(left, val));
+        }
+    },
+    not_contains("不包含在...之中", "not_contains", ArrayType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return ConverterUtils.convertToList(val);
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s不包含在%s之中", property, createValueDesc(expect));
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            TreeSet<Object> left =
+                CastUtils.castCollection(expect, new TreeSet<>(CompareUtils::compare));
+
+            return ConverterUtils
+                .convertToList(actual)
+                .stream()
+                .noneMatch(val -> CompareUtils.contains(left, val));
+        }
+    },
+
+    like("包含字符", "str_like", StringType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            if (val instanceof NativeSql) {
+                NativeSql sql = ((NativeSql) val);
+                return NativeSql.of("concat('%'," + sql.getSql() + ",'%')");
+            }
+            val = super.convertValue(val, term);
+            if (val instanceof String && !((String) val).contains("%")) {
+                val = "%" + val + "%";
+            }
+            return val;
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            if (expect instanceof String && !((String) expect).contains("%")) {
+                expect = "%" + expect + "%";
+            }
+            return LikeFilter.doTest(false, actual, expect);
+        }
+    },
+    nlike("不包含字符", "str_nlike", StringType.ID) {
+        @Override
+        protected Object convertValue(Object val, Term term) {
+            return like.convertValue(val, term);
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            return LikeFilter.doTest(true, actual, expect);
+        }
+    },
+
+    // gt(math.sub(column,now()),?)
+    time_gt_now("距离当前时间大于...秒", "time_gt_now", DateTimeType.ID) {
+        @Override
+        protected void appendFunction(String column, PrepareSqlFragments fragments) {
+            fragments.addSql("gt(math.divi(math.sub(now(),", column, "),1000),");
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s距离当前时间大于%s秒", property, expect);
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            long cast = CastUtils.castNumber(expect).longValue();
+            long now = System.currentTimeMillis();
+            return cast > now / 1000;
+        }
+    },
+    time_lt_now("距离当前时间小于...秒", "time_lt_now", DateTimeType.ID) {
+        @Override
+        protected void appendFunction(String column, PrepareSqlFragments fragments) {
+            fragments.addSql("lt(math.divi(math.sub(now(),", column, "),1000),");
+        }
+
+        @Override
+        protected String createValueDesc(Object expect) {
+            return arrayToSpec(expect);
+        }
+
+        @Override
+        public String createDefaultDesc(String property, Object expect, Object actual) {
+            return String.format("%s距离当前时间小于%s秒", property, expect);
+        }
+
+        @Override
+        public boolean matchBlocking(Object expect, Object actual) {
+            long cast = CastUtils.castNumber(expect).longValue();
+            long now = System.currentTimeMillis();
+            return cast < now / 1000;
+        }
+    };
+
+    private final String text;
+    private final boolean needValue;
+
+    private final Set<String> supportTypes;
+
+    private final String function;
+
+    FixedTermTypeSupport(String text, String function, String... supportTypes) {
+        this.text = text;
+        this.function = function;
+        this.needValue = true;
+        this.supportTypes = Sets.newHashSet(supportTypes);
+    }
+
+    FixedTermTypeSupport(String text, String function, boolean needValue, String... supportTypes) {
+        this.text = text;
+        this.function = function;
+        this.needValue = needValue;
+        this.supportTypes = Sets.newHashSet(supportTypes);
+    }
+
+    @Override
+    public boolean isSupported(DataType type) {
+        return supportTypes.isEmpty() || supportTypes.contains(type.getType());
+    }
+
+    protected Object convertValue(Object val, Term term) {
+        if (val instanceof Collection) {
+            //值为数组,则尝试获取第一个值
+            if (((Collection<?>) val).size() == 1) {
+                return ((Collection<?>) val).iterator().next();
+            }
+        }
+        return val;
+    }
+
+    protected void appendFunction(String column, PrepareSqlFragments fragments) {
+        if (needValue) {
+            fragments.addSql(function + "(", column, ",");
+        } else {
+            fragments.addSql(function + "(", column, ")");
+        }
+    }
+
+    @Override
+    public SqlFragments createSql(String column, Object value, Term term) {
+        PrepareSqlFragments fragments = PrepareSqlFragments.of();
+        appendFunction(column, fragments);
+
+        if (value instanceof NativeSql) {
+            fragments
+                .addSql(((NativeSql) value).getSql())
+                .addParameter(((NativeSql) value).getParameters())
+                .addSql(")");
+        } else if (needValue) {
+            value = convertValue(value, term);
+            fragments
+                .addSql("?")
+                .addParameter(value)
+                .addSql(")");
+        }
+        return fragments;
+    }
+
+    static String arrayToSpec(Object value) {
+        if (value == null) {
+            return "[]";
+        }
+        List<String> list = ConverterUtils
+            .convertToList(value, String::valueOf);
+        if (list.size() > 8) {
+            return Stream
+                .concat(list.stream().limit(8), Stream.of("..."))
+                .collect(Collectors.joining(",", "[", "]"));
+        }
+        return list.toString();
+    }
+
+    @Override
+    public String getType() {
+        return name();
+    }
+
+    @Override
+    public String getName() {
+        return LocaleUtils.resolveMessage("message.term_type_" + name(), text);
+    }
+
+    protected String createValueDesc(Object expect) {
+        return String.valueOf(expect);
+    }
+
+    protected String createDefaultDesc(String property, Object expect, Object actual) {
+        return String.format("%s%s(%s)", property, getName(), expect);
+    }
+
+    @Override
+    public String createDesc(String property, Object expect, Object actual) {
+        //在国际化资源文件中查找对应的描述
+        // {0}=属性名称,{1}=期望值
+        //如: message.term_type_neq_desc={0}不等于{1}
+        return LocaleUtils.resolveMessage(
+            "message.term_type_" + name() + "_desc",
+            createDefaultDesc(property, expect, expect),
+            property,
+            createValueDesc(expect),
+            actual
+        );
+    }
+
+    @Override
+    public Mono<Boolean> match(Object expect, Object actual) {
+        return matchBlocking(expect, actual) ? Reactors.ALWAYS_TRUE : Reactors.ALWAYS_FALSE;
+    }
+
+}

@@ -1,0 +1,47 @@
+/*
+ * Copyright 2025 JetLinks https://www.jetlinks.cn
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jetlinks.community.notify.wechat.corp.request;
+
+import lombok.AllArgsConstructor;
+import org.jetlinks.community.notify.wechat.corp.response.ApiResponse;
+import org.jetlinks.community.notify.wechat.corp.response.GetUserInfoResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+/**
+ * 获取用户身份请求.
+ *
+ * @author zhangji 2023/6/8
+ * @see <a href="https://developer.work.weixin.qq.com/document/path/91023">获取访问用户身份</a>
+ * @since 2.1
+ */
+@AllArgsConstructor
+public class GetUserInfoRequest extends ApiRequest<GetUserInfoResponse> {
+
+    private final String code;
+
+    @Override
+    public Mono<GetUserInfoResponse> execute(WebClient client) {
+        return client
+            .get()
+            .uri("/cgi-bin/auth/getuserinfo", builder -> builder
+                .queryParam("code", code)
+                .build())
+            .retrieve()
+            .bodyToMono(GetUserInfoResponse.class)
+            .doOnNext(ApiResponse::assertSuccess);
+    }
+}

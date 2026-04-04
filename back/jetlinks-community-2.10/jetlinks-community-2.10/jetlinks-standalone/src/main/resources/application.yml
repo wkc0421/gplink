@@ -1,0 +1,317 @@
+server:
+    port: 8848
+
+spring:
+    profiles:
+        active: default,dev,local
+    application:
+        name: jetlinks-platform
+    jackson:
+        date-format: yyyy-MM-dd HH:mm:ss
+        time-zone: Asia/Shanghai
+        serialization:
+            WRITE_DATES_AS_TIMESTAMPS: true
+        default-property-inclusion: non_null
+    codec:
+        max-in-memory-size: 100MB
+    web:
+        resources:
+            static-locations: file:./static/,/,classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/, classpath:/public/
+    data:
+        redis:
+            host: ${REDIS_HOST:127.0.0.1}
+            port: ${REDIS_PORT}
+            timeout: 20s
+            database: ${REDIS_DATABASE}
+            password: ${REDIS_PASSWORD:""}
+    r2dbc:
+        # 需要手动创建数据库,启动会自动创建表,修改了配置easyorm相关配置也要修改
+        url: r2dbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_DATABASE:jetlinks}
+        # 如果需要切换为mysql,请同时禁用timescaledb.enabled=false或者单独配置timescaledb.r2dbc.url
+        # 如果需要使用elasticsearch,请勾选es7x profile或者手动引入es依赖,具体在pom.xml搜索es7x.并配置elasticsearch相关配置
+        # 数据库说明: https://hanta.yuque.com/px7kg1/dev/tw77qae6b08bcdfh
+        # 注意:切换了数据库easyorm相关配置也要修改
+        # url: r2dbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_DATABASE}?ssl=false&serverZoneId=Asia/Shanghai
+        username: ${DB_USERNAME:postgres}
+        password: ${DB_PASSWORD:jetlinks}
+        pool:
+            max-size: 128
+            max-idle-time: 2m # 值不能大于mysql server的wait_timeout配置
+            max-life-time: 10m
+            max-acquire-time: 30s
+    reactor:
+        debug-agent:
+            enabled: false
+    # 引入elasticsearch相关模块后使用elasticsearch来存储设备、时序、日志等数据
+    elasticsearch:
+        uris: ${ES_URIS:127.0.0.1:9200}
+        socket-timeout: 10s
+        connection-timeout: 15s
+        username: ${ES_USERNAME:""}
+        password: ${ES_PASSWORD:""}
+easyorm:
+    default-schema: ${DB_SCHEMA:public} # 数据库默认的schema,mysql时则为数据库名.(注意大小写,请勿使用-等特殊字符)
+    dialect: ${DB_DIALECT:postgres} #数据库方言
+timescaledb:
+    # 默认使用timescaledb来存储设备数据,如果使用mysql,需要设置为false或配置shared-spring为false以及r2dbc相关配置.
+    enabled: true
+    shared-spring: true # 默认共享spring的连接
+    #    r2dbc: # 这里仅支持timescaledb,请勿修改成其他数据库.
+    #        url: r2dbc:postgresql://localhost:15432/jetlinks
+    #        username: postgres
+    #        password: p@ssw0rd
+    schema: ${TIMESCALEDB_SCHEMA:${easyorm.default-schema}} # timescaledb的schema,默认public
+    time-series:
+        enabled: true
+        retention-policies:
+            # 设备会话统计，只保留30天
+            -   table: device_session_metric
+                interval: 30d
+                # 设备消息统计，只保留30天
+            -   table: device_metrics
+                interval: 30d
+    things-data:
+        enabled: true # 开启设备数据存储
+#        retention-policy: 30d # 保留策略,30天
+#        chunk-time-interval: 1d # 分区时间间隔,1天
+tdengine:
+    enabled: false # 使用tdengine来存储设备数据
+    database: jetlinks
+    restful:
+        endpoints:
+            - http://127.0.0.1:6041/
+        username: root
+        password: taosdata
+elasticsearch:
+    index:
+        default-strategy: time-by-month #默认es的索引按月进行分表, direct则为直接操作索引.
+        settings:
+            number-of-shards: 1 # es 分片数量
+            number-of-replicas: 0 # 副本数量
+device:
+    message:
+        writer:
+            time-series:
+                enabled: true #对设备数据进行持久化
+
+captcha:
+    enabled: false # 开启验证码
+    ttl: 2m #验证码过期时间,2分钟
+hsweb:
+    cors:
+        enable: true
+        configs:
+            -   path: /**
+                allowed-headers: "*"
+                allowed-methods: [ "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" ]
+                allowed-origins: [ "*" ] ## 生产环境请替换为具体的域名端口如: http://xxxxx
+                max-age: 1800
+    dict:
+        enum-packages: org.jetlinks
+    webflux:
+        response-wrapper:
+            enabled: true #开启响应包装器(将返回值包装为ResponseMessage)
+            excludes: # 这下包下的接口不包装
+                - org.springdoc
+    authorize:
+        auto-parse: true
+    #  user-token:
+    #    allopatric-login-mode: offlineOther  # 设置异地登录模式为 将其他地方登录的相同用户踢下线
+    #    allopatric-login-modes:
+    #      app: offlineOther
+    permission:
+        initialize:
+            enabled-dimensions: api-client
+        filter:
+            enabled: true # 设置为true开启权限过滤,赋权时,不能赋予比自己多的权限.
+            exclude-username: admin # admin用户不受上述限制
+            un-auth-strategy: ignore # error表示:发生越权时,抛出403错误. ignore表示会忽略越权的赋权.
+    cache:
+        type: redis
+        redis:
+            local-cache-type: guava
+file:
+    manager:
+        storage-base-path: ./data/files
+api:
+    # 访问api接口的根地址
+    base-path: http://${EXTERNAL_HOST:127.0.0.1}:${EXTERNAL_PORT:${server.port}}
+
+jetlinks:
+    server-id: ${spring.application.name}:${server.port} #设备服务网关服务ID,不同服务请设置不同的ID
+    logging:
+        system:
+            context:
+                server: ${spring.application.name}
+    device:
+        storage:
+            default-policy: timescaledb-row # 默认设备数据存储策略
+            enable-last-data-in-db: false # 是否将设备最新到数据存储到数据库
+    authentication:
+        defaults:
+            user:
+                admin:
+                    - "*:*"
+    user-init:
+        enabled: true
+        users: # 系统初始用户密码
+            -   username: admin
+                password: ${ADMIN_USER_PASSWORD:JetLinks.C0mmVn1ty}
+                name: Administrator
+                type: admin
+rule:
+    engine:
+        server-id: ${jetlinks.server-id}
+        server-name: ${spring.application.name}
+logging:
+    level:
+        org.jetlinks: debug
+        rule.engine: debug
+        org.hswebframework: debug
+        org.springframework.transaction: debug
+        org.springframework.data.r2dbc.connectionfactory: warn
+        io.micrometer: warn
+        org.hswebframework.expands: error
+        system: debug
+        org.jetlinks.rule.engine: warn
+        org.jetlinks.supports.event: warn
+        org.springframework: warn
+        org.jetlinks.community.device.message.writer: warn
+        org.jetlinks.community.timeseries.micrometer: warn
+        org.jetlinks.community.elastic.search.service.reactive: trace
+        org.jetlinks.community.network: warn
+        io.vertx.mqtt.impl: warn
+        org.jetlinks.supports.scalecube.rpc: warn
+        "org.jetlinks.community.buffer": warn
+        org.elasticsearch: error
+        org.elasticsearch.deprecation: off
+        "io.vertx.core.impl.ContextImpl": off
+        "org.hswebframework.web.starter.jackson": warn
+        "org.jetlinks.community.timescaledb.impl.DefaultTimescaleDBDataWriter": warn
+        "io.scalecube": warn
+        "org.jetlinks.community.things.data": warn
+        "org.hswebframework.web.starter.i18n": warn
+    logback:
+        rollingpolicy:
+            max-file-size: 100MB
+            max-history: 7
+            total-size-cap: 10GB
+    file:
+        name: ./data/logs/${spring.application.name}_${server.port}.log
+        path: ./data/logs
+    threshold:
+        file: INFO # 文件只记录INFO以上的日志
+        console: TRACE
+        event: WARN # 只记录WARN以上的日志到系统日志中
+vertx:
+    max-event-loop-execute-time-unit: seconds
+    max-event-loop-execute-time: 30
+    max-worker-execute-time-unit: seconds
+    max-worker-execute-time: 30
+    prefer-native-transport: true
+micrometer:
+    time-series:
+        tags:
+            server: ${spring.application.name}
+        metrics:
+            default:
+                step: 30s
+system:
+    config:
+        scopes:
+            -   id: front
+                name: 前端配置
+                public-access: true
+            -   id: paths
+                name: 访问路径配置
+                public-access: true
+                properties:
+                    -   key: base-path
+                        name: 接口根路径
+                        default-value: ${api.base-path}
+            -   id: amap
+                name: 高德地图配置
+                public-access: false
+                properties:
+                    -   key: apiKey # 配置id
+                        name: 高德地图ApiKey # 名称
+management:
+    health:
+        elasticsearch:
+            enabled: false
+    elastic:
+        metrics:
+            export:
+                enabled: false
+    simple:
+        metrics:
+            export:
+                enabled: false
+# knife4j的增强配置，不需要增强可以不配
+knife4j:
+    enable: true
+    setting:
+        language: zh_cn
+springdoc:
+    openapi:
+        info:
+            title: "jetlinks"
+            description: "jetlinks平台API"
+            version: "2.10"
+    api-docs:
+        enabled: true
+        path: /v3/api-docs
+    swagger-ui:
+        path: /swagger-ui.html
+        use-root-path: false
+        enabled: true
+        disable-swagger-default-url: true
+    #  packages-to-scan: org.jetlinks
+    group-configs:
+        -   group: 设备管理相关接口
+            packages-to-scan:
+                - org.jetlinks.community.device
+            paths-to-exclude:
+                - /device-instance/**
+                - /device-product/**
+                - /protocol/**
+        -   group: 规则引擎相关接口
+            packages-to-scan: org.jetlinks.community.rule.engine.web
+            paths-to-exclude: /api/**
+        -   group: 通知管理相关接口
+            packages-to-scan: org.jetlinks.community.notify.manager.web
+        -   group: 设备接入相关接口
+            packages-to-scan:
+                - org.jetlinks.community.network.manager.web
+                - org.jetlinks.community.device.web
+            paths-to-match:
+                - /gateway/**
+                - /network/**
+                - /protocol/**
+        -   group: 系统管理相关接口
+            packages-to-scan:
+                - org.jetlinks.community.auth
+                - org.hswebframework.web.system.authorization.defaults.webflux
+                - org.hswebframework.web.file
+                - org.jetlinks.community.io.file.web
+                - org.hswebframework.web.authorization.basic.web
+                - org.jetlinks.community.logging.controller
+    cache:
+        disabled: false
+network:
+    resources:
+        - 1883-1890
+        - 8800-8810
+        - 5060-5061
+trace:
+    # 开启链路追踪
+    enabled: true
+    jaeger: # https://hanta.yuque.com/px7kg1/dev/nn2r53n5w8ttap8a
+        enabled: false # 记录链路数据到jaeger
+        endpoint: "http://127.0.0.1:14250"
+    ignore-spans:
+        - "/device/*/upstream"
+        - "/device/*/decode"
+        - "/java/TimeSeriesMessageWriterConnector/writeDeviceMessageToTs"
+        - "/java/DeviceStatusMeasurementProvider/incrementOnline"
+        - "/java/DeviceMessageMeasurementProvider/incrementMessage"
