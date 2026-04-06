@@ -47,10 +47,25 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
 
         table.getFeature(CreateContinuousAggregate.ID)
              .ifPresent(cagg -> {
+                 // 小时级 cagg
                  sqlRequest.addBatch(createCaggViewSQL(table, cagg));
-                 sqlRequest.addBatch(createCaggMaterializedOnlySQL(table));
+                 sqlRequest.addBatch(createCaggMaterializedOnlySQL(hourlyCaggName(table)));
                  sqlRequest.addBatch(createCaggRefreshPolicySQL(table, cagg));
-                 sqlRequest.addBatch(createCaggRetentionPolicySQL(table, cagg));
+                 sqlRequest.addBatch(createCaggRetentionPolicySQL(hourlyCaggName(table), cagg.getRetention()));
+                 // 日级层级 cagg（在小时 cagg 之上）
+                 if (cagg.isDailyEnabled()) {
+                     sqlRequest.addBatch(createDailyCaggViewSQL(table));
+                     sqlRequest.addBatch(createCaggMaterializedOnlySQL(dailyCaggName(table)));
+                     sqlRequest.addBatch(createDailyCaggRefreshPolicySQL(table));
+                     sqlRequest.addBatch(createCaggRetentionPolicySQL(dailyCaggName(table), cagg.getRetention()));
+                 }
+                 // 月级层级 cagg（在日级 cagg 之上，需要 dailyEnabled）
+                 if (cagg.isDailyEnabled() && cagg.isMonthlyEnabled()) {
+                     sqlRequest.addBatch(createMonthlyCaggViewSQL(table));
+                     sqlRequest.addBatch(createCaggMaterializedOnlySQL(monthlyCaggName(table)));
+                     sqlRequest.addBatch(createMonthlyCaggRefreshPolicySQL(table));
+                     sqlRequest.addBatch(createCaggRetentionPolicySQL(monthlyCaggName(table), cagg.getRetention()));
+                 }
              });
 
         return sqlRequest;
@@ -100,16 +115,25 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
 
     // ── continuous aggregate helpers ─────────────────────────────────────────
 
-    private String caggViewName(RDBTableMetadata table) {
+    private String hourlyCaggName(RDBTableMetadata table) {
         return table.getFullName() + "_hourly_agg";
+    }
+
+    private String dailyCaggName(RDBTableMetadata table) {
+        return table.getFullName() + "_daily_agg";
+    }
+
+    private String monthlyCaggName(RDBTableMetadata table) {
+        return table.getFullName() + "_monthly_agg";
     }
 
     private String intervalStr(org.jetlinks.community.Interval i) {
         return i.getNumber().intValue() + " " + i.getUnit().name().toLowerCase();
     }
 
+    /** 小时级 cagg：直接在原始表上聚合，物化 first/last/avg/sum/min/max/count */
     private SqlRequest createCaggViewSQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
-        String view = caggViewName(table);
+        String view = hourlyCaggName(table);
         String raw  = table.getFullName();
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
@@ -127,27 +151,93 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         );
     }
 
-    private SqlRequest createCaggMaterializedOnlySQL(RDBTableMetadata table) {
+    /**
+     * 日级层级 cagg：在 _hourly_agg 之上聚合。
+     * avg_value 不单独存储，查询时由 sum_value/sample_count 派生。
+     */
+    private SqlRequest createDailyCaggViewSQL(RDBTableMetadata table) {
+        String view   = dailyCaggName(table);
+        String hourly = hourlyCaggName(table);
         return SqlRequests.of(
-            "ALTER MATERIALIZED VIEW " + caggViewName(table) +
+            "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
+            "SELECT time_bucket('1 day',bucket_start) AS bucket_start," +
+            "thing_id,property," +
+            "first(first_value,bucket_start) AS first_value," +
+            "last(last_value,bucket_start)   AS last_value," +
+            "sum(sum_value)                  AS sum_value," +
+            "min(min_value)                  AS min_value," +
+            "max(max_value)                  AS max_value," +
+            "sum(sample_count)               AS sample_count " +
+            "FROM " + hourly + " " +
+            "GROUP BY 1,thing_id,property WITH NO DATA"
+        );
+    }
+
+    /**
+     * 月级层级 cagg：在 _daily_agg 之上聚合。
+     */
+    private SqlRequest createMonthlyCaggViewSQL(RDBTableMetadata table) {
+        String view  = monthlyCaggName(table);
+        String daily = dailyCaggName(table);
+        return SqlRequests.of(
+            "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
+            "SELECT time_bucket('1 month',bucket_start) AS bucket_start," +
+            "thing_id,property," +
+            "first(first_value,bucket_start) AS first_value," +
+            "last(last_value,bucket_start)   AS last_value," +
+            "sum(sum_value)                  AS sum_value," +
+            "min(min_value)                  AS min_value," +
+            "max(max_value)                  AS max_value," +
+            "sum(sample_count)               AS sample_count " +
+            "FROM " + daily + " " +
+            "GROUP BY 1,thing_id,property WITH NO DATA"
+        );
+    }
+
+    private SqlRequest createCaggMaterializedOnlySQL(String viewName) {
+        return SqlRequests.of(
+            "ALTER MATERIALIZED VIEW " + viewName +
             " SET (timescaledb.materialized_only = false)"
         );
     }
 
+    /** 小时 cagg 刷新策略（使用 cagg 中配置的 offset 和 schedule） */
     private SqlRequest createCaggRefreshPolicySQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         return SqlRequests.of(
             "SELECT " + schema + ".add_continuous_aggregate_policy(?," +
             "start_offset => INTERVAL '" + intervalStr(cagg.getStartOffset()) + "'," +
             "end_offset   => INTERVAL '" + intervalStr(cagg.getEndOffset()) + "'," +
             "schedule_interval => INTERVAL '" + intervalStr(cagg.getRefreshInterval()) + "')",
-            caggViewName(table)
+            hourlyCaggName(table)
         );
     }
 
-    private SqlRequest createCaggRetentionPolicySQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
+    /** 日级 cagg 刷新策略：start_offset=3d, end_offset=1d, schedule=1d */
+    private SqlRequest createDailyCaggRefreshPolicySQL(RDBTableMetadata table) {
         return SqlRequests.of(
-            "SELECT " + schema + ".add_retention_policy(?,INTERVAL '" + intervalStr(cagg.getRetention()) + "')",
-            caggViewName(table)
+            "SELECT " + schema + ".add_continuous_aggregate_policy(?," +
+            "start_offset => INTERVAL '3 days'," +
+            "end_offset   => INTERVAL '1 days'," +
+            "schedule_interval => INTERVAL '1 days')",
+            dailyCaggName(table)
+        );
+    }
+
+    /** 月级 cagg 刷新策略：start_offset=3 months, end_offset=1 month, schedule=1 day */
+    private SqlRequest createMonthlyCaggRefreshPolicySQL(RDBTableMetadata table) {
+        return SqlRequests.of(
+            "SELECT " + schema + ".add_continuous_aggregate_policy(?," +
+            "start_offset => INTERVAL '3 months'," +
+            "end_offset   => INTERVAL '1 months'," +
+            "schedule_interval => INTERVAL '1 days')",
+            monthlyCaggName(table)
+        );
+    }
+
+    private SqlRequest createCaggRetentionPolicySQL(String viewName, org.jetlinks.community.Interval retention) {
+        return SqlRequests.of(
+            "SELECT " + schema + ".add_retention_policy(?,INTERVAL '" + intervalStr(retention) + "')",
+            viewName
         );
     }
 }

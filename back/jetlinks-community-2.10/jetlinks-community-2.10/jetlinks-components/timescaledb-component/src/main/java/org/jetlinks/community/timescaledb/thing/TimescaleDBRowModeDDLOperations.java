@@ -146,14 +146,16 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
             ));
         }
 
-        // 仅对属性表建立小时级 cagg，当 cagg.enabled=true
+        // 仅对属性表建立 cagg（小时/日/月层级），当 cagg.enabled=true
         if (this.properties.getCagg().isEnabled() && metricType == MetricType.properties) {
             TimescaleDBThingsDataProperties.Cagg c = this.properties.getCagg();
             table.addFeature(new CreateContinuousAggregate(
                 c.getRefreshInterval(),
                 c.getStartOffset(),
                 c.getEndOffset(),
-                c.getRetention()
+                c.getRetention(),
+                c.isDailyEnabled(),
+                c.isMonthlyEnabled()
             ));
         }
 

@@ -84,6 +84,8 @@ timescaledb:
           start-offset: 3h      # 刷新策略 start_offset
           end-offset: 1h        # 刷新策略 end_offset
           retention: 3y         # cagg 视图数据保留时长
+          daily-enabled: true   # 在小时 cagg 之上建立日级层级 cagg（_daily_agg）
+          monthly-enabled: true # 在日级 cagg 之上建立月级层级 cagg（_monthly_agg）
 tdengine:
     enabled: false # 使用tdengine来存储设备数据
     database: jetlinks

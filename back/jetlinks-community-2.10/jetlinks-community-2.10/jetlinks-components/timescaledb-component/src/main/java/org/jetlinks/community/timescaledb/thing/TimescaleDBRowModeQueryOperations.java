@@ -119,13 +119,13 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
                                                   AggregationContext context) {
         metric = TimescaleDBUtils.getTableName(metric);
 
-        // 满足条件时路由到 cagg 视图，避免全扫原始表
+        // 满足条件时路由到最优 cagg 视图层（月 > 日 > 小时），避免全扫原始表
         if (properties.getCagg().isEnabled()
                 && request.getInterval() != null
                 && isCaggInterval(request.getInterval())
                 && allSupportedByCagg(context.getProperties())
                 && isSafeForCagg(request.getFilter())) {
-            return doAggregationFromCagg(metric + "_hourly_agg", request, context);
+            return doAggregationFromCagg(selectCaggView(metric, request.getInterval()), request, context);
         }
 
         QueryParamEntity filter = request.getFilter();
@@ -245,6 +245,40 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
     /** 请求间隔 >= 1 小时才走 cagg */
     private boolean isCaggInterval(org.jetlinks.community.Interval interval) {
         return interval.toMillis() >= 3_600_000L;
+    }
+
+    private static final long DAY_MS   = 24L * 3_600_000L;
+    private static final long MONTH_MS = 30L * DAY_MS; // 用于粗筛，月对齐由 isMonthAligned() 精确判断
+
+    /**
+     * 根据请求间隔选择最优 cagg 视图层：
+     * <ul>
+     *   <li>interval 为整月（MONTHS/YEARS 单位）且 daily+monthly 均已启用 → _monthly_agg</li>
+     *   <li>interval 为整天（DAY_MS 的整数倍）且 dailyEnabled → _daily_agg</li>
+     *   <li>其他（>= 1 小时）→ _hourly_agg</li>
+     * </ul>
+     * P1-1：月级路由必须同时要求 dailyEnabled，与 DDL 建视图条件保持一致。
+     * P1-2：非整天对齐的间隔（如 25h、36h）不能路由到日级视图，否则 bucket 精度丢失。
+     */
+    private String selectCaggView(String metric, org.jetlinks.community.Interval interval) {
+        long ms = interval.toMillis();
+        TimescaleDBThingsDataProperties.Cagg cagg = properties.getCagg();
+        // 月级：要求 daily+monthly 均已启用，且间隔为整月（避免变长月份导致精度问题）
+        if (cagg.isDailyEnabled() && cagg.isMonthlyEnabled()
+                && ms >= MONTH_MS && isMonthAligned(interval)) {
+            return metric + "_monthly_agg";
+        }
+        // 日级：要求 dailyEnabled 且间隔为 DAY_MS 的整数倍
+        if (cagg.isDailyEnabled() && ms >= DAY_MS && ms % DAY_MS == 0) {
+            return metric + "_daily_agg";
+        }
+        return metric + "_hourly_agg";
+    }
+
+    /** 月对齐：仅当 Interval 单位本身为 MONTHS 或 YEARS 时才路由到月级 cagg */
+    private boolean isMonthAligned(org.jetlinks.community.Interval interval) {
+        String unit = interval.getUnit().name().toUpperCase();
+        return "MONTHS".equals(unit) || "YEARS".equals(unit);
     }
 
     /** cagg 支持的聚合类型：avg/max/min/first/last/top */

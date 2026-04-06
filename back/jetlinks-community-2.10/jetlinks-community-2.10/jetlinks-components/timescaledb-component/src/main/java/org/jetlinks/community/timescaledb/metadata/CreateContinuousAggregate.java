@@ -23,8 +23,10 @@ import org.hswebframework.ezorm.core.meta.Feature;
 import org.jetlinks.community.Interval;
 
 /**
- * TimescaleDB 小时级 continuous aggregate 视图特性。
+ * TimescaleDB continuous aggregate 视图特性。
  * 建表时自动创建 _hourly_agg 物化视图及刷新策略。
+ * 如果 dailyEnabled=true，还会在 _hourly_agg 之上创建 _daily_agg（层级 cagg）。
+ * 如果 monthlyEnabled=true，会在 _daily_agg 之上继续创建 _monthly_agg。
  *
  * @see TimescaleDBCreateTableSqlBuilder
  */
@@ -46,6 +48,12 @@ public class CreateContinuousAggregate implements Feature, FeatureType {
 
     /** cagg 视图数据保留时长，例如 3y */
     private final Interval retention;
+
+    /** 是否在小时 cagg 之上建立日级层级 cagg */
+    private final boolean dailyEnabled;
+
+    /** 是否在日级 cagg 之上建立月级层级 cagg（需要 dailyEnabled=true） */
+    private final boolean monthlyEnabled;
 
     @Override
     public String getId() {

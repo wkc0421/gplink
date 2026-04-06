@@ -88,5 +88,15 @@ public class TimescaleDBThingsDataProperties {
          * cagg 视图数据保留时长，默认 3 年
          */
         private Interval retention = Interval.of(3, Interval.year);
+
+        /**
+         * 是否在小时 cagg 之上建立日级层级 cagg（_daily_agg），默认 false
+         */
+        private boolean dailyEnabled = false;
+
+        /**
+         * 是否在日级 cagg 之上建立月级层级 cagg（_monthly_agg），需要 dailyEnabled=true，默认 false
+         */
+        private boolean monthlyEnabled = false;
     }
 }
