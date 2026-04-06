@@ -104,8 +104,24 @@ public class VertxWebSocketExchange implements WebSocketExchange {
     private void doReceived() {
         serverWebSocket
             .textMessageHandler(text -> handle(textMessage(text)))
-            .binaryMessageHandler(msg -> handle(binaryMessage(msg.getByteBuf())))
-            .pongHandler(buf -> handle(pongMessage(buf.getByteBuf())))
+            .binaryMessageHandler(msg -> {
+                ByteBuf buf = msg.getByteBuf();
+                try {
+                    handle(binaryMessage(buf));
+                } catch (Throwable e) {
+                    ReferenceCountUtil.safeRelease(buf);
+                    throw e;
+                }
+            })
+            .pongHandler(buf -> {
+                ByteBuf byteBuf = buf.getByteBuf();
+                try {
+                    handle(pongMessage(byteBuf));
+                } catch (Throwable e) {
+                    ReferenceCountUtil.safeRelease(byteBuf);
+                    throw e;
+                }
+            })
             .closeHandler((nil) -> doClose())
             .exceptionHandler(err -> {
                 if (err instanceof HttpClosedException) {
@@ -118,10 +134,17 @@ public class VertxWebSocketExchange implements WebSocketExchange {
 
     private void doClose() {
         sink.emitComplete(Reactors.emitFailureHandler());
-        for (Runnable runnable : closeHandler) {
-            runnable.run();
+        try {
+            for (Runnable runnable : closeHandler) {
+                try {
+                    runnable.run();
+                } catch (Throwable e) {
+                    log.warn("Error executing close handler", e);
+                }
+            }
+        } finally {
+            closeHandler.clear();
         }
-        closeHandler.clear();
 
     }
 

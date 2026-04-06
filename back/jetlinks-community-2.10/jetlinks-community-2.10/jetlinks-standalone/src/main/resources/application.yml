@@ -35,7 +35,7 @@ spring:
         username: ${DB_USERNAME:postgres}
         password: ${DB_PASSWORD:jetlinks}
         pool:
-            max-size: 128
+            max-size: 32              # 收紧连接池，避免 DB 连接数过高（原 128）
             max-idle-time: 2m # 值不能大于mysql server的wait_timeout配置
             max-life-time: 10m
             max-acquire-time: 30s
@@ -72,8 +72,12 @@ timescaledb:
                 interval: 30d
     things-data:
         enabled: true # 开启设备数据存储
-#        retention-policy: 30d # 保留策略,30天
-#        chunk-time-interval: 1d # 分区时间间隔,1天
+        retention-policy: 3y  # 原始数据保留 3 年后自动删除
+#        chunk-time-interval: 7d # 分区时间间隔，默认 7 天
+        compress: true          # 启用列压缩（30 天以上自动压缩）
+        compress-after: 30d
+        compress-segment-by: "thing_id,property"
+        compress-order-by: "timestamp DESC"
 tdengine:
     enabled: false # 使用tdengine来存储设备数据
     database: jetlinks
@@ -139,6 +143,16 @@ api:
 
 jetlinks:
     server-id: ${spring.application.name}:${server.port} #设备服务网关服务ID,不同服务请设置不同的ID
+    device:
+        storage:
+            enable-last-data-in-db: false   # 使用 Redis latest 层代替 DB 表（见 RedisDeviceLatestDataService）
+            redis-latest:
+                enabled: true               # 启用 Redis latest 缓存层
+                ttl-hours: 24               # Redis key TTL（小时）
+            latest:
+                buffer:
+                    size: 500               # 写入缓冲大小（原默认 1000，收紧）
+                    parallelism: 2          # 并行写入线程数
     logging:
         system:
             context:

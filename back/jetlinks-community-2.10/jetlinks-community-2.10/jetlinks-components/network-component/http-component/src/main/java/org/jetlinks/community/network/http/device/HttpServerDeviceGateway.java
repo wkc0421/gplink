@@ -379,6 +379,10 @@ public class HttpServerDeviceGateway extends AbstractDeviceGateway {
             value.dispose();
         }
         handlers.clear();
+        for (Disposable value : websocketHandlers.values()) {
+            value.dispose();
+        }
+        websocketHandlers.clear();
         return Mono.empty();
     }
 }

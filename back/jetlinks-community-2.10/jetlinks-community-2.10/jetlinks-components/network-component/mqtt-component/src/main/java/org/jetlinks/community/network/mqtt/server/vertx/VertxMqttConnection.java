@@ -281,24 +281,32 @@ class VertxMqttConnection implements MqttConnection {
         return Mono
             .<Void>create(sink -> {
                 ByteBuf buf = message.getPayload();
-                Buffer buffer = Buffer.buffer(buf);
-                endpoint.publish(
-                    message.getTopic(),
-                    buffer,
-                    MqttQoS.valueOf(message.getQosLevel()),
-                    message.isDup(),
-                    message.isRetain(),
-                    messageId,
-                    message.getProperties(),
-                    result -> {
-                        if (result.succeeded()) {
-                            sink.success();
-                        } else {
-                            sink.error(result.cause());
+                try {
+                    Buffer buffer = Buffer.buffer(buf);
+                    endpoint.publish(
+                        message.getTopic(),
+                        buffer,
+                        MqttQoS.valueOf(message.getQosLevel()),
+                        message.isDup(),
+                        message.isRetain(),
+                        messageId,
+                        message.getProperties(),
+                        result -> {
+                            try {
+                                if (result.succeeded()) {
+                                    sink.success();
+                                } else {
+                                    sink.error(result.cause());
+                                }
+                            } finally {
+                                ReferenceCountUtil.safeRelease(buf);
+                            }
                         }
-                        ReferenceCountUtil.safeRelease(buf);
-                    }
-                );
+                    );
+                } catch (Throwable e) {
+                    ReferenceCountUtil.safeRelease(buf);
+                    sink.error(e);
+                }
             });
     }
 
@@ -414,6 +422,11 @@ class VertxMqttConnection implements MqttConnection {
             return message.isRetain();
         }
 
+        /**
+         * Returns the message payload as a ByteBuf.
+         * Note: The caller is responsible for releasing this ByteBuf to prevent memory leaks.
+         * @return the payload ByteBuf
+         */
         @Nonnull
         @Override
         public ByteBuf getPayload() {

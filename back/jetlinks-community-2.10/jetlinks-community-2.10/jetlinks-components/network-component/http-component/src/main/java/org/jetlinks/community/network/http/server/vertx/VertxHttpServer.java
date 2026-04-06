@@ -314,6 +314,9 @@ public class VertxHttpServer implements HttpServer {
             }
             httpServers.clear();
             httpServers = null;
+            // Clean up topic trees to prevent memory leaks
+            route.clean();
+            websocketRoute.clean();
         }
     }
 

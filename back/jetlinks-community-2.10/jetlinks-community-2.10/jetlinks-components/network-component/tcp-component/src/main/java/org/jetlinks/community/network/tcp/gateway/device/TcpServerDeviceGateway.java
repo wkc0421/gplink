@@ -44,6 +44,7 @@ import org.jetlinks.community.gateway.DeviceGatewayHelper;
 import org.jetlinks.community.utils.TimeUtils;
 import org.jetlinks.supports.server.DecodedClientMessageHandler;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -71,6 +72,8 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
     private final AtomicBoolean started = new AtomicBoolean();
 
     private Disposable disposable;
+
+    private final Disposable.Composite subscriptions = Disposables.composite();
 
     private final DeviceGatewayHelper helper;
 
@@ -112,9 +115,14 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
                 counter.decrement();
                 monitor.disconnected();
                 monitor.totalConnection(counter.sum());
+                // Dispose legalityChecker on disconnect to prevent scheduler leak
+                Disposable checker = legalityChecker;
+                if (checker != null && !checker.isDisposed()) {
+                    checker.dispose();
+                }
                 //check session
                 DeviceSession session = sessionRef.get();
-                if (session.getDeviceId() != null) {
+                if (session != null && session.getDeviceId() != null) {
                     sessionManager
                         .getSession(session.getDeviceId())
                         .subscribe();
@@ -261,6 +269,7 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
     @Override
     protected Mono<Void> doShutdown() {
         return Mono.fromRunnable(() -> {
+            subscriptions.dispose();
             if (null != disposable) {
                 disposable.dispose();
                 disposable = null;

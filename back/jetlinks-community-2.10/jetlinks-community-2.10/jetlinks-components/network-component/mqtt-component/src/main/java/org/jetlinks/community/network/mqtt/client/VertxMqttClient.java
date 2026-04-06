@@ -69,8 +69,11 @@ public class VertxMqttClient implements MqttClient {
     public void setLoading(boolean loading) {
         this.loading = loading;
         if (!loading) {
-            loadSuccessListener.forEach(Runnable::run);
-            loadSuccessListener.clear();
+            try {
+                loadSuccessListener.forEach(Runnable::run);
+            } finally {
+                loadSuccessListener.clear();
+            }
         }
     }
 
@@ -218,25 +221,30 @@ public class VertxMqttClient implements MqttClient {
     private Mono<Void> doPublish(MqttMessage message) {
         return Mono.create((sink) -> {
             ByteBuf payload = message.getPayload();
-            Buffer buffer = Buffer.buffer(payload);
-            client.publish(message.getTopic(),
-                           buffer,
-                           MqttQoS.valueOf(message.getQosLevel()),
-                           message.isDup(),
-                           message.isRetain(),
-                           result -> {
-                               try {
-                                   if (result.succeeded()) {
-                                       log.info("publish mqtt [{}] message success: {}", client.clientId(), message);
-                                       sink.success();
-                                   } else {
-                                       log.info("publish mqtt [{}] message error : {}", client.clientId(), message, result.cause());
-                                       sink.error(result.cause());
+            try {
+                Buffer buffer = Buffer.buffer(payload);
+                client.publish(message.getTopic(),
+                               buffer,
+                               MqttQoS.valueOf(message.getQosLevel()),
+                               message.isDup(),
+                               message.isRetain(),
+                               result -> {
+                                   try {
+                                       if (result.succeeded()) {
+                                           log.info("publish mqtt [{}] message success: {}", client.clientId(), message);
+                                           sink.success();
+                                       } else {
+                                           log.info("publish mqtt [{}] message error : {}", client.clientId(), message, result.cause());
+                                           sink.error(result.cause());
+                                       }
+                                   } finally {
+                                       ReferenceCountUtil.safeRelease(payload);
                                    }
-                               } finally {
-                                   ReferenceCountUtil.safeRelease(payload);
-                               }
-                           });
+                               });
+            } catch (Throwable e) {
+                ReferenceCountUtil.safeRelease(payload);
+                sink.error(e);
+            }
         });
     }
 
@@ -268,6 +276,8 @@ public class VertxMqttClient implements MqttClient {
     @Override
     public void shutdown() {
         loading = false;
+        // Clean up topic tree to prevent memory leaks
+        subscriber.clean();
         if (isAlive()) {
             try {
                 client.disconnect();

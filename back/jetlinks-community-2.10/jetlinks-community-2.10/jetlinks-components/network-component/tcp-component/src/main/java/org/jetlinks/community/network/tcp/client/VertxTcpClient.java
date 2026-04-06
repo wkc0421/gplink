@@ -188,13 +188,14 @@ public class VertxTcpClient implements TcpClient {
                 payloadParser = null;
             }
         }
-        for (Runnable runnable : disconnectListener) {
-            execute(runnable);
+        try {
+            for (Runnable runnable : disconnectListener) {
+                execute(runnable);
+            }
+        } finally {
+            disconnectListener.clear();
         }
-        disconnectListener.clear();
-        if (serverClient) {
-            sink.tryEmitComplete();
-        }
+        sink.tryEmitComplete();
     }
 
     public void setClient(NetClient client) {

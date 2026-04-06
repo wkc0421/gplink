@@ -102,7 +102,7 @@ class MqttServerDeviceGateway extends AbstractDeviceGateway {
     private final Mono<ProtocolSupport> supportMono;
 
     //注销监听器
-    private Disposable disposable;
+    private volatile Disposable disposable;
 
     //设备网关消息处理工具类
     private final DeviceGatewayHelper helper;

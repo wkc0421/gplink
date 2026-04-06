@@ -53,7 +53,7 @@ public class VertxTcpServer implements TcpServer {
     private final String id;
 
 
-    private final Sinks.Many<TcpClient> sink = Reactors.createMany(Integer.MAX_VALUE,false);
+    private final Sinks.Many<TcpClient> sink = Reactors.createMany(8192, false);
 
     @Getter
     @Setter
@@ -131,6 +131,7 @@ public class VertxTcpServer implements TcpServer {
     public void shutdown() {
         if (null != tcpServers) {
             log.debug("close tcp server :[{}]", id);
+            sink.tryEmitComplete();
             for (NetServer tcpServer : tcpServers) {
                 execute(tcpServer::close);
             }

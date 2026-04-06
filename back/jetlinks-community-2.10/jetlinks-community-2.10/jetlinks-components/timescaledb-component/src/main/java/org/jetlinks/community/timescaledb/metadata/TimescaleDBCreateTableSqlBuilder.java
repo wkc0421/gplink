@@ -39,6 +39,12 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         table.getFeature(CreateRetentionPolicy.ID)
              .ifPresent(feature -> sqlRequest.addBatch(createCreateRetentionPolicySQL(table, feature)));
 
+        table.getFeature(CreateCompressionPolicy.ID)
+             .ifPresent(policy -> {
+                 sqlRequest.addBatch(createAlterCompressionSQL(table, policy));
+                 sqlRequest.addBatch(createAddCompressionPolicySQL(table, policy));
+             });
+
         return sqlRequest;
     }
 
@@ -50,6 +56,24 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
 
         return SqlRequests.of(
             "SELECT "+ schema +".add_retention_policy( ? , INTERVAL '" + interval + "')",
+            table.getFullName()
+        );
+    }
+
+    private SqlRequest createAlterCompressionSQL(RDBTableMetadata table, CreateCompressionPolicy policy) {
+        return SqlRequests.of(
+            "ALTER TABLE " + table.getFullName()
+                + " SET (timescaledb.compress"
+                + ", timescaledb.compress_segmentby = '" + policy.getSegmentBy() + "'"
+                + ", timescaledb.compress_orderby = '" + policy.getOrderBy() + "')"
+        );
+    }
+
+    private SqlRequest createAddCompressionPolicySQL(RDBTableMetadata table, CreateCompressionPolicy policy) {
+        String interval = policy.getCompressAfter().getNumber().intValue() + " "
+            + policy.getCompressAfter().getUnit().name().toLowerCase();
+        return SqlRequests.of(
+            "SELECT " + schema + ".add_compression_policy( ? , INTERVAL '" + interval + "')",
             table.getFullName()
         );
     }

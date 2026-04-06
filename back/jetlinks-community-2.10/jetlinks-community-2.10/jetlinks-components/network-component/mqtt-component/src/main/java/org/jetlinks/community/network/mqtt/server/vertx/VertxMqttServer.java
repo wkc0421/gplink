@@ -119,7 +119,7 @@ public class VertxMqttServer implements MqttServer {
             Sinks.unsafe()
                  .many()
                  .unicast()
-                 .onBackpressureBuffer(Queues.<MqttConnection>unboundedMultiproducer().get());
+                 .onBackpressureBuffer(Queues.<MqttConnection>get(8192).get());
 
         sinks.add(sink);
 
@@ -151,6 +151,13 @@ public class VertxMqttServer implements MqttServer {
     @Override
     public void shutdown() {
         if (mqttServer != null) {
+            // Complete main sink
+            sink.tryEmitComplete();
+            // Complete all per-holder sinks
+            sinks.values().forEach(list ->
+                list.forEach(s -> s.tryEmitComplete()));
+            sinks.clear();
+
             for (io.vertx.mqtt.MqttServer server : mqttServer) {
                 server.close(res -> {
                     if (res.failed()) {

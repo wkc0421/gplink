@@ -15,32 +15,46 @@
  */
 package org.jetlinks.community.device.message.writer;
 
-import lombok.AllArgsConstructor;
 import lombok.Generated;
 import lombok.extern.slf4j.Slf4j;
+import org.jetlinks.community.device.service.data.DeviceDataService;
+import org.jetlinks.community.device.service.data.RedisDeviceLatestService;
+import org.jetlinks.community.gateway.annotation.Subscribe;
 import org.jetlinks.community.things.data.ThingsDataWriter;
 import org.jetlinks.core.message.DeviceMessage;
-import org.jetlinks.community.device.service.data.DeviceDataService;
-import org.jetlinks.community.gateway.annotation.Subscribe;
-import org.jetlinks.core.message.property.Property;
 import org.jetlinks.core.message.property.PropertyMessage;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+
+import javax.annotation.Nullable;
 
 /**
- * 用于将设备消息写入到时序数据库
+ * 用于将设备消息写入到时序数据库，并异步同步到 Redis latest 缓存。
  *
  * @author zhouhao
  * @since 1.0
  */
 @Slf4j
-@AllArgsConstructor
 public class TimeSeriesMessageWriterConnector {
-
 
     private final DeviceDataService dataService;
 
     private final ThingsDataWriter thingsDataWriter;
+
+    /** 可选：Redis latest 缓存服务，不存在时跳过 Redis 写入 */
+    @Nullable
+    private RedisDeviceLatestService redisLatestService;
+
+    public TimeSeriesMessageWriterConnector(DeviceDataService dataService,
+                                            ThingsDataWriter thingsDataWriter) {
+        this.dataService = dataService;
+        this.thingsDataWriter = thingsDataWriter;
+    }
+
+    public void setRedisLatestService(@Nullable RedisDeviceLatestService redisLatestService) {
+        this.redisLatestService = redisLatestService;
+    }
 
     @Subscribe(topics = "/device/**", id = "device-message-ts-writer", priority = 100)
     @Generated
@@ -58,10 +72,28 @@ public class TimeSeriesMessageWriterConnector {
         if (message instanceof PropertyMessage) {
             return Flux
                 .fromIterable(((PropertyMessage) message).getCompleteProperties())
-                .concatMap(prop -> thingsDataWriter
-                    .updateProperty(message.getThingType(),
-                                    message.getThingId(),
-                                    prop))
+                .concatMap(prop -> {
+                    Mono<Void> dbWrite = thingsDataWriter
+                        .updateProperty(message.getThingType(), message.getThingId(), prop);
+                    if (redisLatestService != null) {
+                        // TimescaleDB 写完后，异步火并忘写 Redis，失败不影响主流程
+                        return dbWrite.doOnSuccess(ignored ->
+                            redisLatestService
+                                .writeProperty(message.getThingId(),
+                                               prop.getProperty(),
+                                               prop.getValue() != null ? prop.getValue() : "",
+                                               prop.getTimestamp())
+                                .onErrorResume(e -> {
+                                    log.warn("Redis latest async write failed: device={}, property={}",
+                                             message.getThingId(), prop.getProperty(), e);
+                                    return Mono.just(false);
+                                })
+                                .subscribeOn(Schedulers.parallel())
+                                .subscribe()
+                        );
+                    }
+                    return dbWrite;
+                })
                 .then();
         }
         return Mono.empty();

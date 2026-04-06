@@ -30,6 +30,7 @@ import org.jetlinks.community.things.data.operations.MetricBuilder;
 import org.jetlinks.community.things.data.operations.RowModeDDLOperationsBase;
 import org.jetlinks.community.things.utils.ThingsDatabaseUtils;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
+import org.jetlinks.community.timescaledb.metadata.CreateCompressionPolicy;
 import org.jetlinks.community.timescaledb.metadata.CreateHypertable;
 import org.jetlinks.community.timescaledb.metadata.CreateRetentionPolicy;
 import org.slf4j.Logger;
@@ -133,6 +134,15 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
 
         if (this.properties.getRetentionPolicy() != null) {
             table.addFeature(new CreateRetentionPolicy(this.properties.getRetentionPolicy()));
+        }
+
+        // 仅对属性表启用列压缩，事件/日志表不压缩
+        if (this.properties.isCompress() && metricType == MetricType.properties) {
+            table.addFeature(new CreateCompressionPolicy(
+                this.properties.getCompressSegmentBy(),
+                this.properties.getCompressOrderBy(),
+                this.properties.getCompressAfter()
+            ));
         }
 
         if (ddl) {

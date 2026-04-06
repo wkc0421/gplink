@@ -15,6 +15,7 @@
  */
 package org.jetlinks.community.device.configuration;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.hswebframework.ezorm.rdb.mapping.ReactiveRepository;
 import org.hswebframework.ezorm.rdb.operator.DatabaseOperator;
 import org.jetlinks.community.buffer.BufferProperties;
@@ -26,22 +27,23 @@ import org.jetlinks.community.device.message.writer.TimeSeriesMessageWriterConne
 import org.jetlinks.community.device.service.data.*;
 import org.jetlinks.community.rule.engine.executor.DeviceSelectorBuilder;
 import org.jetlinks.community.rule.engine.executor.device.DeviceSelectorProvider;
+import org.jetlinks.community.things.ThingsDataRepository;
 import org.jetlinks.community.things.data.ThingsDataWriter;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.event.EventBus;
 import org.jetlinks.core.server.MessageHandler;
 import org.jetlinks.core.things.ThingsRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 
 import java.time.Duration;
 
@@ -71,9 +73,35 @@ public class DeviceManagerConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "device.message.writer.time-series", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public TimeSeriesMessageWriterConnector timeSeriesMessageWriterConnector(DeviceDataService dataService,
-                                                                             ThingsDataWriter writer) {
-        return new TimeSeriesMessageWriterConnector(dataService,writer);
+    public TimeSeriesMessageWriterConnector timeSeriesMessageWriterConnector(
+        DeviceDataService dataService,
+        ThingsDataWriter writer,
+        ObjectProvider<RedisDeviceLatestService> redisProvider) {
+        TimeSeriesMessageWriterConnector connector = new TimeSeriesMessageWriterConnector(dataService, writer);
+        redisProvider.ifAvailable(connector::setRedisLatestService);
+        return connector;
+    }
+
+    @Bean
+    @ConditionalOnBean(ReactiveStringRedisTemplate.class)
+    @ConditionalOnProperty(prefix = "jetlinks.device.storage.redis-latest", name = "enabled",
+                           havingValue = "true", matchIfMissing = true)
+    public RedisDeviceLatestService redisDeviceLatestService(
+        ReactiveStringRedisTemplate redisTemplate,
+        MeterRegistry meterRegistry) {
+        long ttlHours = 24; // TODO: 可从配置读取 jetlinks.device.storage.redis-latest.ttl-hours
+        return new RedisDeviceLatestService(redisTemplate, ttlHours * 3600, meterRegistry);
+    }
+
+    @Bean
+    @ConditionalOnBean(ReactiveStringRedisTemplate.class)
+    @ConditionalOnProperty(prefix = "jetlinks.device.storage.redis-latest", name = "enabled",
+                           havingValue = "true", matchIfMissing = true)
+    @ConditionalOnMissingBean(DeviceLatestDataService.class)
+    public DeviceLatestDataService redisDeviceLatestDataService(
+        RedisDeviceLatestService redisService,
+        ThingsDataRepository thingsDataRepository) {
+        return new RedisDeviceLatestDataService(redisService, thingsDataRepository);
     }
 
     @AutoConfiguration

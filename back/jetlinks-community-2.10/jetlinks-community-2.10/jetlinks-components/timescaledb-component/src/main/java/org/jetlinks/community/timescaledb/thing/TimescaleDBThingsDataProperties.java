@@ -35,4 +35,24 @@ public class TimescaleDBThingsDataProperties {
      * 数据保留时长
      */
     private Interval retentionPolicy;
+
+    /**
+     * 是否对属性表启用 TimescaleDB 列压缩（仅属性表）
+     */
+    private boolean compress = false;
+
+    /**
+     * 超过此时间间隔的数据自动压缩，默认 30 天
+     */
+    private Interval compressAfter = Interval.ofDays(30);
+
+    /**
+     * 压缩 segmentby 列（逗号分隔，直接写入 SQL），与实际 DB 列名对齐
+     */
+    private String compressSegmentBy = "thing_id,property";
+
+    /**
+     * 压缩 orderby 子句
+     */
+    private String compressOrderBy = "timestamp DESC";
 }
