@@ -15,6 +15,7 @@
  */
 package org.jetlinks.community.device.service.data;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
@@ -49,11 +50,6 @@ public class RedisDeviceLatestService {
     /** Hash Field 前缀 */
     static final String FIELD_PREFIX = "property:";
 
-    /** JSON 字段名：属性值 */
-    private static final String JSON_VALUE_KEY = "v";
-    /** JSON 字段名：时间戳 */
-    private static final String JSON_TS_KEY = "ts";
-
     private static final TypeReference<Map<String, Object>> MAP_TYPE_REF = new TypeReference<>() {};
 
     /**
@@ -85,6 +81,7 @@ public class RedisDeviceLatestService {
     }
 
     private final ReactiveStringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
     private final long ttlSeconds;
 
     // --- Micrometer 指标 ---
@@ -94,9 +91,11 @@ public class RedisDeviceLatestService {
     private final Counter staleBlockedCounter;
 
     public RedisDeviceLatestService(ReactiveStringRedisTemplate redisTemplate,
+                                    ObjectMapper objectMapper,
                                     long ttlSeconds,
                                     MeterRegistry meterRegistry) {
         this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
         this.ttlSeconds = ttlSeconds;
         this.hitCounter = Counter.builder("redis.latest.hit")
                                  .description("Redis latest 命中次数")
@@ -129,14 +128,25 @@ public class RedisDeviceLatestService {
     public Mono<Boolean> writeProperty(String deviceId, String propertyId, Object value, long timestamp) {
         String key = buildKey(deviceId);
         String field = buildField(propertyId);
-        String valueStr = String.valueOf(value);
         String tsStr = String.valueOf(timestamp);
         String ttlStr = String.valueOf(ttlSeconds);
+
+        String json;
+        try {
+            Map<String, Object> entry = new LinkedHashMap<>(2);
+            entry.put("v", value);
+            entry.put("ts", timestamp);
+            json = objectMapper.writeValueAsString(entry);
+        } catch (JsonProcessingException e) {
+            writeFailCounter.increment();
+            log.warn("Redis latest serialize failed: device={}, property={}", deviceId, propertyId, e);
+            return Mono.just(false);
+        }
 
         return redisTemplate
             .execute(WRITE_SCRIPT,
                      Collections.singletonList(key),
-                     field, valueStr, tsStr, ttlStr)
+                     field, json, tsStr, ttlStr)
             .next()
             .map(result -> {
                 if (result == 0L) {
@@ -154,12 +164,11 @@ public class RedisDeviceLatestService {
     }
 
     /**
-     * 读取设备全部属性最新值。
+     * 读取设备全部属性最新值，返回类型与写入时一致（数值/布尔/对象均保留原始类型）。
      * key 不存在（miss）时返回空 Map，不抛出异常。
      *
      * @return Mono&lt;Map&lt;propertyId, value&gt;&gt;，miss 时返回空 Map
      */
-    @SuppressWarnings("unchecked")
     public Mono<Map<String, Object>> readAllProperties(String deviceId) {
         String key = buildKey(deviceId);
 
@@ -169,15 +178,9 @@ public class RedisDeviceLatestService {
             .collectMap(
                 e -> {
                     String f = String.valueOf(e.getKey());
-                    // 去除 "property:" 前缀
                     return f.startsWith(FIELD_PREFIX) ? f.substring(FIELD_PREFIX.length()) : f;
                 },
-                e -> {
-                    String combined = String.valueOf(e.getValue());
-                    int sep = combined.lastIndexOf(SEP);
-                    // 返回纯 value 部分
-                    return (Object) (sep >= 0 ? combined.substring(0, sep) : combined);
-                }
+                e -> extractValue(String.valueOf(e.getValue()))
             )
             .flatMap(map -> {
                 if (map.isEmpty()) {
@@ -195,12 +198,11 @@ public class RedisDeviceLatestService {
     }
 
     /**
-     * 读取单个属性最新值（原始字符串）。
+     * 读取单个属性最新值，类型与写入时一致。
      *
-     * @return Mono&lt;String&gt;，miss 时返回 empty
+     * @return Mono&lt;Object&gt;，miss 时返回 empty
      */
-    @SuppressWarnings("unchecked")
-    public Mono<String> readPropertyValue(String deviceId, String propertyId) {
+    public Mono<Object> readPropertyValue(String deviceId, String propertyId) {
         String key = buildKey(deviceId);
         String field = buildField(propertyId);
 
@@ -208,10 +210,9 @@ public class RedisDeviceLatestService {
             .opsForHash()
             .get(key, field)
             .cast(String.class)
-            .map(combined -> {
+            .map(json -> {
                 hitCounter.increment();
-                int sep = combined.lastIndexOf(SEP);
-                return sep >= 0 ? combined.substring(0, sep) : combined;
+                return extractValue(json);
             })
             .switchIfEmpty(Mono.fromRunnable(missCounter::increment).then(Mono.empty()))
             .onErrorResume(e -> {
@@ -219,5 +220,19 @@ public class RedisDeviceLatestService {
                 missCounter.increment();
                 return Mono.empty();
             });
+    }
+
+    /**
+     * 从 JSON {@code {"v":<value>,"ts":<ts>}} 中提取 value，保留原始类型。
+     * 若反序列化失败，原样返回字符串。
+     */
+    private Object extractValue(String json) {
+        try {
+            Map<String, Object> obj = objectMapper.readValue(json, MAP_TYPE_REF);
+            Object v = obj.get("v");
+            return v != null ? v : json;
+        } catch (Exception ex) {
+            return json;
+        }
     }
 }

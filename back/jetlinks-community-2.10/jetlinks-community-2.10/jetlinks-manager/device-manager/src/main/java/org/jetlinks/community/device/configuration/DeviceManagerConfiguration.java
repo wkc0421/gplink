@@ -15,6 +15,7 @@
  */
 package org.jetlinks.community.device.configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.hswebframework.ezorm.rdb.mapping.ReactiveRepository;
 import org.hswebframework.ezorm.rdb.operator.DatabaseOperator;
@@ -88,9 +89,11 @@ public class DeviceManagerConfiguration {
                            havingValue = "true", matchIfMissing = true)
     public RedisDeviceLatestService redisDeviceLatestService(
         ReactiveStringRedisTemplate redisTemplate,
-        MeterRegistry meterRegistry) {
-        long ttlHours = 24; // TODO: 可从配置读取 jetlinks.device.storage.redis-latest.ttl-hours
-        return new RedisDeviceLatestService(redisTemplate, ttlHours * 3600, meterRegistry);
+        ObjectMapper objectMapper,
+        MeterRegistry meterRegistry,
+        DeviceDataStorageProperties storageProperties) {
+        long ttlSeconds = storageProperties.getRedisLatest().getTtlHours() * 3600;
+        return new RedisDeviceLatestService(redisTemplate, objectMapper, ttlSeconds, meterRegistry);
     }
 
     @Bean

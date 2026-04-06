@@ -79,4 +79,23 @@ public class DeviceDataStorageProperties extends DataSettings {
         return getLogFilter();
     }
 
+    private RedisLatest redisLatest = new RedisLatest();
+
+    public RedisLatest getRedisLatest() {
+        return redisLatest;
+    }
+
+    public void setRedisLatest(RedisLatest redisLatest) {
+        this.redisLatest = redisLatest;
+    }
+
+    @Getter
+    @Setter
+    public static class RedisLatest {
+        /** 是否启用 Redis latest 缓存 */
+        private boolean enabled = true;
+        /** 缓存 TTL（小时），默认 24 小时 */
+        private long ttlHours = 24;
+    }
+
 }
