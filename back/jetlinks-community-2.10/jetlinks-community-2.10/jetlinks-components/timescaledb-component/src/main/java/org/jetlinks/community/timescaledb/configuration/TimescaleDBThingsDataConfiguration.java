@@ -15,9 +15,12 @@
  */
 package org.jetlinks.community.timescaledb.configuration;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import org.hswebframework.ezorm.rdb.executor.reactive.ReactiveSqlExecutor;
 import org.jetlinks.core.things.ThingsRegistry;
 import org.jetlinks.community.things.data.ThingsDataRepositoryStrategy;
 import org.jetlinks.community.timescaledb.TimescaleDBOperations;
+import org.jetlinks.community.timescaledb.thing.CaggMonitorService;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBColumnModeStrategy;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBRowModeStrategy;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBThingsDataProperties;
@@ -50,5 +53,14 @@ public class TimescaleDBThingsDataConfiguration {
         return new TimescaleDBColumnModeStrategy(registry, timescaleDBOperations, properties);
     }
 
+    @Bean
+    @ConditionalOnBean(MeterRegistry.class)
+    @ConditionalOnProperty(
+        prefix = "timescaledb.things-data.cagg",
+        name = "enabled", havingValue = "true")
+    public CaggMonitorService caggMonitorService(ReactiveSqlExecutor sqlExecutor,
+                                                 MeterRegistry meterRegistry) {
+        return new CaggMonitorService(sqlExecutor, meterRegistry);
+    }
 
 }

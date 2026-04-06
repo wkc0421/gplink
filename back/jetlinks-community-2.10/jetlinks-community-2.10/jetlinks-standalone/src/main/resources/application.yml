@@ -78,6 +78,12 @@ timescaledb:
         compress-after: 30d
         compress-segment-by: "thing_id,property"
         compress-order-by: "timestamp DESC"
+        cagg:
+          enabled: true         # 建立小时级 continuous aggregate（仅属性表）
+          refresh-interval: 1h  # cagg 自动刷新间隔
+          start-offset: 3h      # 刷新策略 start_offset
+          end-offset: 1h        # 刷新策略 end_offset
+          retention: 3y         # cagg 视图数据保留时长
 tdengine:
     enabled: false # 使用tdengine来存储设备数据
     database: jetlinks

@@ -30,6 +30,7 @@ import org.jetlinks.community.things.data.operations.MetricBuilder;
 import org.jetlinks.community.things.data.operations.RowModeDDLOperationsBase;
 import org.jetlinks.community.things.utils.ThingsDatabaseUtils;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
+import org.jetlinks.community.timescaledb.metadata.CreateContinuousAggregate;
 import org.jetlinks.community.timescaledb.metadata.CreateCompressionPolicy;
 import org.jetlinks.community.timescaledb.metadata.CreateHypertable;
 import org.jetlinks.community.timescaledb.metadata.CreateRetentionPolicy;
@@ -142,6 +143,17 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
                 this.properties.getCompressSegmentBy(),
                 this.properties.getCompressOrderBy(),
                 this.properties.getCompressAfter()
+            ));
+        }
+
+        // 仅对属性表建立小时级 cagg，当 cagg.enabled=true
+        if (this.properties.getCagg().isEnabled() && metricType == MetricType.properties) {
+            TimescaleDBThingsDataProperties.Cagg c = this.properties.getCagg();
+            table.addFeature(new CreateContinuousAggregate(
+                c.getRefreshInterval(),
+                c.getStartOffset(),
+                c.getEndOffset(),
+                c.getRetention()
             ));
         }
 

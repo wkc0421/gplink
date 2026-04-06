@@ -45,6 +45,14 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
                  sqlRequest.addBatch(createAddCompressionPolicySQL(table, policy));
              });
 
+        table.getFeature(CreateContinuousAggregate.ID)
+             .ifPresent(cagg -> {
+                 sqlRequest.addBatch(createCaggViewSQL(table, cagg));
+                 sqlRequest.addBatch(createCaggMaterializedOnlySQL(table));
+                 sqlRequest.addBatch(createCaggRefreshPolicySQL(table, cagg));
+                 sqlRequest.addBatch(createCaggRetentionPolicySQL(table, cagg));
+             });
+
         return sqlRequest;
     }
 
@@ -87,6 +95,59 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "SELECT "+ schema +".create_hypertable( ? , ? , chunk_time_interval => INTERVAL '" + interval + "')",
             table.getFullName(),
             table.getColumnNow(createHypertable.getColumn()).getName()
+        );
+    }
+
+    // ── continuous aggregate helpers ─────────────────────────────────────────
+
+    private String caggViewName(RDBTableMetadata table) {
+        return table.getFullName() + "_hourly_agg";
+    }
+
+    private String intervalStr(org.jetlinks.community.Interval i) {
+        return i.getNumber().intValue() + " " + i.getUnit().name().toLowerCase();
+    }
+
+    private SqlRequest createCaggViewSQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
+        String view = caggViewName(table);
+        String raw  = table.getFullName();
+        return SqlRequests.of(
+            "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
+            "SELECT time_bucket('1 hour',\"timestamp\") AS bucket_start," +
+            "\"thing_id\",\"property\"," +
+            "first(\"numberValue\",\"timestamp\") AS first_value," +
+            "last(\"numberValue\",\"timestamp\")  AS last_value," +
+            "avg(\"numberValue\")                 AS avg_value," +
+            "sum(\"numberValue\")                 AS sum_value," +
+            "min(\"numberValue\")                 AS min_value," +
+            "max(\"numberValue\")                 AS max_value," +
+            "count(*)                             AS sample_count " +
+            "FROM " + raw + " " +
+            "GROUP BY 1,\"thing_id\",\"property\" WITH NO DATA"
+        );
+    }
+
+    private SqlRequest createCaggMaterializedOnlySQL(RDBTableMetadata table) {
+        return SqlRequests.of(
+            "ALTER MATERIALIZED VIEW " + caggViewName(table) +
+            " SET (timescaledb.materialized_only = false)"
+        );
+    }
+
+    private SqlRequest createCaggRefreshPolicySQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
+        return SqlRequests.of(
+            "SELECT " + schema + ".add_continuous_aggregate_policy(?," +
+            "start_offset => INTERVAL '" + intervalStr(cagg.getStartOffset()) + "'," +
+            "end_offset   => INTERVAL '" + intervalStr(cagg.getEndOffset()) + "'," +
+            "schedule_interval => INTERVAL '" + intervalStr(cagg.getRefreshInterval()) + "')",
+            caggViewName(table)
+        );
+    }
+
+    private SqlRequest createCaggRetentionPolicySQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
+        return SqlRequests.of(
+            "SELECT " + schema + ".add_retention_policy(?,INTERVAL '" + intervalStr(cagg.getRetention()) + "')",
+            caggViewName(table)
         );
     }
 }

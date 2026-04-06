@@ -65,7 +65,8 @@ public class TimescaleDBRowModeStrategy extends AbstractThingDataRepositoryStrat
             TableSafeMetricBuilder.of(context.getMetricBuilder()),
             context.getSettings(),
             registry,
-            operations.database());
+            operations.database(),
+            properties);
     }
 
     @Override

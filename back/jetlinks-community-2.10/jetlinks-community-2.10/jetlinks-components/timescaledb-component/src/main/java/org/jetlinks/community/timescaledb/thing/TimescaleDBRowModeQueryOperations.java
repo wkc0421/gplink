@@ -19,6 +19,8 @@ import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.hswebframework.ezorm.core.Conditional;
 import org.hswebframework.ezorm.core.dsl.Query;
+import org.hswebframework.ezorm.core.param.Term;
+import org.hswebframework.ezorm.core.param.TermType;
 import org.hswebframework.ezorm.rdb.executor.wrapper.ResultWrappers;
 import org.hswebframework.ezorm.rdb.mapping.defaults.record.Record;
 import org.hswebframework.ezorm.rdb.operator.DatabaseOperator;
@@ -38,6 +40,7 @@ import org.jetlinks.community.things.data.operations.DataSettings;
 import org.jetlinks.community.things.data.operations.MetricBuilder;
 import org.jetlinks.community.things.data.operations.RowModeQueryOperationsBase;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
+import org.jetlinks.community.timescaledb.thing.TimescaleDBThingsDataProperties;
 import org.jetlinks.community.timeseries.TimeSeriesData;
 import org.jetlinks.community.timeseries.query.Aggregation;
 import org.jetlinks.community.timeseries.query.AggregationData;
@@ -49,11 +52,15 @@ import reactor.core.publisher.Mono;
 import java.util.*;
 import java.util.function.Function;
 
+import static org.hswebframework.ezorm.core.param.TermType.eq;
+import static org.hswebframework.ezorm.core.param.TermType.in;
+
 import static org.jetlinks.community.timescaledb.thing.TimescaleDBColumnModeQueryOperations.doAggregation0;
 
 @Slf4j
 public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBase {
     private final DatabaseOperator database;
+    private final TimescaleDBThingsDataProperties properties;
 
     public TimescaleDBRowModeQueryOperations(String thingType,
                                              String thingTemplateId,
@@ -61,9 +68,11 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
                                              MetricBuilder metricBuilder,
                                              DataSettings settings,
                                              ThingsRegistry registry,
-                                             DatabaseOperator database) {
+                                             DatabaseOperator database,
+                                             TimescaleDBThingsDataProperties properties) {
         super(thingType, thingTemplateId, thingId, metricBuilder, settings, registry);
         this.database = database;
+        this.properties = properties;
     }
 
     @Override
@@ -99,11 +108,26 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
 
     static final String timestampAlias = "_ts";
 
+    /** cagg thing_id 过滤的允许列名（Java camelCase 和 DB snake_case 均接受） */
+    private static final Set<String> THING_ID_COLUMNS = new HashSet<>(Arrays.asList(
+        ThingsDataConstants.COLUMN_THING_ID, "thing_id"
+    ));
+
     @Override
     protected Flux<AggregationData> doAggregation(String metric,
                                                   AggregationRequest request,
                                                   AggregationContext context) {
         metric = TimescaleDBUtils.getTableName(metric);
+
+        // 满足条件时路由到 cagg 视图，避免全扫原始表
+        if (properties.getCagg().isEnabled()
+                && request.getInterval() != null
+                && isCaggInterval(request.getInterval())
+                && allSupportedByCagg(context.getProperties())
+                && isSafeForCagg(request.getFilter())) {
+            return doAggregationFromCagg(metric + "_hourly_agg", request, context);
+        }
+
         QueryParamEntity filter = request.getFilter();
         filter.setSorts(new ArrayList<>());
         filter.setPaging(false);
@@ -214,5 +238,202 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
 //                return "stddev(\"numberValue\")";
         }
         throw new UnsupportedOperationException("不支持的聚合函数:" + aggregation);
+    }
+
+    // ── cagg 路由辅助 ─────────────────────────────────────────────────────────
+
+    /** 请求间隔 >= 1 小时才走 cagg */
+    private boolean isCaggInterval(org.jetlinks.community.Interval interval) {
+        return interval.toMillis() >= 3_600_000L;
+    }
+
+    /** cagg 支持的聚合类型：avg/max/min/first/last/top */
+    private boolean allSupportedByCagg(PropertyAggregation[] props) {
+        for (PropertyAggregation p : props) {
+            switch (p.getAgg()) {
+                case AVG:
+                case MAX:
+                case MIN:
+                case FIRST:
+                case LAST:
+                case TOP:
+                    break;
+                default:
+                    return false; // SUM/COUNT/DISTINCT_COUNT 回退原始表
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 将聚合类型映射到 cagg 视图中的重聚合表达式。
+     * <ul>
+     *   <li>AVG  → sum(sum_value)/nullif(sum(sample_count),0)（跨多个小时桶精确加权平均）</li>
+     *   <li>MAX  → max(max_value)</li>
+     *   <li>MIN  → min(min_value)</li>
+     *   <li>FIRST/TOP → first(first_value,bucket_start)（TimescaleDB 原生函数）</li>
+     *   <li>LAST → last(last_value,bucket_start)</li>
+     * </ul>
+     */
+    private String caggAggExpr(Aggregation agg) {
+        switch (agg) {
+            case AVG:
+                return "sum(sum_value)/nullif(sum(sample_count),0)";
+            case MAX:
+                return "max(max_value)";
+            case MIN:
+                return "min(min_value)";
+            case FIRST:
+            case TOP:
+                return "first(first_value,bucket_start)";
+            case LAST:
+                return "last(last_value,bucket_start)";
+            default:
+                throw new UnsupportedOperationException("cagg 不支持:" + agg);
+        }
+    }
+
+    private String caggIntervalStr(org.jetlinks.community.Interval i) {
+        return i.getNumber().intValue() + " " + i.getUnit().name().toLowerCase();
+    }
+
+    /**
+     * 检查 filter 是否仅包含 cagg 能安全映射的条件：
+     * <ul>
+     *   <li>只允许 thing_id / thingId 列</li>
+     *   <li>只允许 eq 或 in 操作符</li>
+     *   <li>不允许嵌套子条件（对 cagg 视图无法安全翻译）</li>
+     * </ul>
+     * 其他任何列或复杂条件（如 numberValue 过滤）均回退原始表。
+     */
+    private boolean isSafeForCagg(QueryParamEntity filter) {
+        List<Term> terms = filter.getTerms();
+        if (terms == null || terms.isEmpty()) {
+            return true;
+        }
+        for (Term term : terms) {
+            // 有嵌套子条件，直接回退
+            if (term.getTerms() != null && !term.getTerms().isEmpty()) {
+                return false;
+            }
+            if (!THING_ID_COLUMNS.contains(term.getColumn())) {
+                return false;
+            }
+            String type = term.getTermType();
+            if (!eq.equals(type) && !in.equals(type)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 将 filter 中的 thing_id / thingId 条件应用到 cagg 视图查询。
+     * 将列名统一映射为 cagg 视图列名 {@code thing_id}，
+     * 并正确处理 eq（单值）和 in（多值）两种操作符。
+     */
+    @SuppressWarnings("unchecked")
+    private void applyThingIdTermsToCagg(Conditional<?> cdt, List<Term> terms) {
+        if (terms == null) {
+            return;
+        }
+        for (Term term : terms) {
+            if (!THING_ID_COLUMNS.contains(term.getColumn())) {
+                continue;
+            }
+            Object value = term.getValue();
+            if (value == null) {
+                continue;
+            }
+            if (in.equals(term.getTermType())) {
+                // in 条件：value 可能是 Collection 或 Array，直接传递给 cdt.in
+                if (value instanceof Collection) {
+                    cdt.in("thing_id", (Collection<?>) value);
+                } else {
+                    // 其他类型（如逗号字符串），让 ezorm 按原始方式处理
+                    cdt.in("thing_id", value);
+                }
+            } else {
+                cdt.is("thing_id", value.toString());
+            }
+        }
+    }
+
+    /**
+     * 基于 cagg 视图执行聚合查询。
+     * 时间列为 bucket_start，通过 time_bucket 对多小时桶进行二次聚合。
+     */
+    private Flux<AggregationData> doAggregationFromCagg(String caggView,
+                                                         AggregationRequest request,
+                                                         AggregationContext context) {
+        QueryOperator query = database.dml().query(caggView);
+
+        SelectColumn propertyCol = SelectColumn.of("property");
+        query.groupBy(propertyCol);
+
+        // 时间分桶（基于 bucket_start 二次聚合）
+        String unit = caggIntervalStr(request.getInterval());
+        NativeSelectColumn timeCol = NativeSelectColumn.of(
+            "time_bucket('" + unit + "',bucket_start)");
+        timeCol.setAlias(timestampAlias);
+        query.groupBy(timeCol);
+        query.select(timeCol);
+        query.select(propertyCol);
+
+        Set<String> propertyIds = new HashSet<>();
+        PropertyAggregation[] aggs = context.getProperties();
+        if (aggs.length > 1) {
+            for (PropertyAggregation p : aggs) {
+                NativeSelectColumn col = new NativeSelectColumn(
+                    "case when property = ? then " + caggAggExpr(p.getAgg()) +
+                    " end as \"" + p.getAlias() + "\"");
+                col.setParameters(new Object[]{p.getProperty()});
+                query.select(col);
+                propertyIds.add(p.getProperty());
+            }
+        } else {
+            PropertyAggregation p = aggs[0];
+            query.select(NativeSelectColumn.of(
+                caggAggExpr(p.getAgg()) + " as \"" + p.getAlias() + "\""));
+            propertyIds.add(p.getProperty());
+        }
+
+        // WHERE：time_bucket 范围 + property 过滤 + thing_id（正确映射 eq/in 两种形式）
+        List<Term> filterTerms = request.getFilter().getTerms();
+        query.where(cdt -> {
+            applyThingIdTermsToCagg(cdt, filterTerms);
+            cdt.between("bucket_start", request.getFrom(), request.getTo());
+            if (!propertyIds.isEmpty()) {
+                cdt.in("property", propertyIds);
+            }
+        });
+
+        NavigableMap<Long, Map<String, Object>> prepares =
+            ThingsDataUtils.prepareAggregationData(request, context.getProperties());
+
+        return query
+            .fetch(ResultWrappers.map())
+            .reactive()
+            .map(val -> Maps.filterValues(val, Objects::nonNull))
+            .map(AggregationData::of)
+            .groupBy(data -> data.getLong(timestampAlias).orElse(0L), Integer.MAX_VALUE)
+            .flatMap(group -> {
+                long time = group.key();
+                Map<String, Object> prepare = ThingsDataUtils.findAggregationData(time, prepares);
+                if (prepare == null) {
+                    return Mono.empty();
+                }
+                return group
+                    .doOnNext(data -> {
+                        for (PropertyAggregation p : context.getProperties()) {
+                            String alias = p.getAlias();
+                            data.get(alias).ifPresent(val -> prepare.put(alias, val));
+                        }
+                    });
+            })
+            .thenMany(Flux.fromIterable(prepares.values()))
+            .map(AggregationData::of)
+            .take((long) request.getLimit() * propertyIds.size())
+            .contextWrite(ctx -> ctx.put(Logger.class, log));
     }
 }

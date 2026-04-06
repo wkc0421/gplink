@@ -55,4 +55,38 @@ public class TimescaleDBThingsDataProperties {
      * 压缩 orderby 子句
      */
     private String compressOrderBy = "timestamp DESC";
+
+    /**
+     * 小时级 continuous aggregate 配置（仅属性表）
+     */
+    private Cagg cagg = new Cagg();
+
+    @Getter
+    @Setter
+    public static class Cagg {
+        /**
+         * 是否建立小时级 cagg 物化视图，默认 false
+         */
+        private boolean enabled = false;
+
+        /**
+         * cagg 自动刷新间隔，默认 1 小时
+         */
+        private Interval refreshInterval = Interval.ofHours(1);
+
+        /**
+         * 刷新策略 start_offset，默认 3 小时
+         */
+        private Interval startOffset = Interval.ofHours(3);
+
+        /**
+         * 刷新策略 end_offset，默认 1 小时
+         */
+        private Interval endOffset = Interval.ofHours(1);
+
+        /**
+         * cagg 视图数据保留时长，默认 3 年
+         */
+        private Interval retention = Interval.of(3, Interval.year);
+    }
 }
