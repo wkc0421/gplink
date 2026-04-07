@@ -127,7 +127,7 @@ if [ -z "$APP_PID" ]; then
     echo "To run memory tests, start the application first:"
     echo "  java -Dio.netty.leakDetectionLevel=PARANOID -jar $BACKEND_ROOT/jetlinks-standalone/target/*.jar"
 else
-    echo "Found JetLinks process: PID $APP_PID"
+    echo "Found GPLink process: PID $APP_PID"
 
     # Take initial heap dump
     TOTAL_TESTS=$((TOTAL_TESTS + 1))

@@ -4,4 +4,4 @@
 ██   ██║██╔══╝     ██║       ██║     ██║██║╚██╗██║██╔═██╗ ╚════██║
 ╚█████╔╝███████╗   ██║       ███████╗██║██║ ╚████║██║  ██╗███████║
  ╚════╝ ╚══════╝   ╚═╝       ╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
-:: JetLinks IoT Platform ::  ${spring.application.name}:@project.version@
+:: GPLink IoT Platform ::  ${spring.application.name}:@project.version@
