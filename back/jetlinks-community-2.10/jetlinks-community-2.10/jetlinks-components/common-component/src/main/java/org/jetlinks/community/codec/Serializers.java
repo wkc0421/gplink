@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.FastThreadLocal;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.core.utils.SerializeUtils;
 import org.nustaq.serialization.FSTConfiguration;
 
@@ -27,6 +28,7 @@ import java.io.*;
 import java.util.Base64;
 import java.util.function.Supplier;
 
+@Slf4j
 public class Serializers {
 
     private static final ObjectSerializer JDK = new ObjectSerializer() {
@@ -72,7 +74,12 @@ public class Serializers {
     private static final ObjectSerializer DEFAULT;
 
     static {
-        DEFAULT = System.getProperty("jetlinks.object.serializer.type", "fst").equals("fst") ? FST : JDK;
+        String serializerType = System.getProperty("jetlinks.object.serializer.type");
+        if (serializerType == null || serializerType.isBlank()) {
+            serializerType = isAtLeastJava17() ? "jdk" : "fst";
+        }
+        DEFAULT = "fst".equalsIgnoreCase(serializerType) ? FST : JDK;
+        log.info("Using {} object serializer", "fst".equalsIgnoreCase(serializerType) ? "FST" : "JDK");
     }
 
     public static ObjectSerializer jdk() {
@@ -86,6 +93,15 @@ public class Serializers {
 
     public static ObjectSerializer getDefault() {
         return DEFAULT;
+    }
+
+    private static boolean isAtLeastJava17() {
+        String version = System.getProperty("java.specification.version", "8");
+        try {
+            return Double.parseDouble(version) >= 17;
+        } catch (NumberFormatException ignore) {
+            return true;
+        }
     }
 
     public static String serializeToBase64(Object source) {

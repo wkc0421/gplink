@@ -21,6 +21,7 @@ import io.scalecube.services.transport.rsocket.RSocketClientTransportFactory;
 import io.scalecube.services.transport.rsocket.RSocketServerTransportFactory;
 import io.scalecube.services.transport.rsocket.RSocketServiceTransport;
 import io.scalecube.transport.netty.tcp.TcpTransportFactory;
+import org.jetlinks.community.codec.Serializers;
 import org.jetlinks.core.cluster.ClusterManager;
 import org.jetlinks.core.event.EventBus;
 import org.jetlinks.supports.cluster.redis.RedisClusterManager;
@@ -29,12 +30,10 @@ import org.jetlinks.supports.event.InternalEventBus;
 import org.jetlinks.supports.scalecube.ExtendedCluster;
 import org.jetlinks.supports.scalecube.ExtendedClusterImpl;
 import org.jetlinks.supports.scalecube.rpc.ScalecubeRpcManager;
-import org.nustaq.serialization.FSTConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 
 import java.util.stream.Collectors;
@@ -45,16 +44,9 @@ import java.util.stream.Collectors;
 public class ClusterConfiguration {
 
     @Bean
-    public ExtendedClusterImpl cluster(ClusterProperties properties, ResourceLoader resourceLoader) {
+    public ExtendedClusterImpl cluster(ClusterProperties properties) {
 
-        FSTMessageCodec codec = new FSTMessageCodec(() -> {
-            FSTConfiguration configuration = FSTConfiguration
-                .createDefaultConfiguration()
-                .setForceSerializable(true);
-
-            configuration.setClassLoader(resourceLoader.getClassLoader());
-            return configuration;
-        });
+        FSTMessageCodec codec = new FSTMessageCodec(Serializers::getDefault);
 
         ExtendedClusterImpl impl = new ExtendedClusterImpl(
             new ClusterConfig()
