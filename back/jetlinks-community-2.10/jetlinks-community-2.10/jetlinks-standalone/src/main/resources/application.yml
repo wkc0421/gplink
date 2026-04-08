@@ -153,6 +153,7 @@ jetlinks:
     server-id: ${spring.application.name}:${server.port} #设备服务网关服务ID,不同服务请设置不同的ID
     device:
         storage:
+            default-policy: timescaledb-row # 默认设备数据存储策略
             enable-last-data-in-db: false   # 使用 Redis latest 层代替 DB 表（见 RedisDeviceLatestDataService）
             redis-latest:
                 enabled: true               # 启用 Redis latest 缓存层
@@ -165,10 +166,6 @@ jetlinks:
         system:
             context:
                 server: ${spring.application.name}
-    device:
-        storage:
-            default-policy: timescaledb-row # 默认设备数据存储策略
-            enable-last-data-in-db: false # 是否将设备最新到数据存储到数据库
     authentication:
         defaults:
             user:
