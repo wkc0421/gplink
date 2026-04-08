@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "test:smoke": "node tests\\smoke.js",
+    "test:task-flow": "node tests\\task-flow.js",
+    "test:concurrency": "node tests\\concurrency-e2e.js"
+  },
   "devDependencies": {
     "aedes": "^1.0.2",
     "mqtt": "^5.15.1",
