@@ -76,6 +76,25 @@ button[disabled] {
   transform: none;
 }
 
+button.loading {
+  position: relative;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+button.loading::after {
+  content: "";
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-left: 0.55rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -0.1rem;
+}
+
 .shell {
   width: min(1600px, calc(100vw - 32px));
   margin: 0 auto;
@@ -134,6 +153,35 @@ h1 {
   margin: 10px 0 0;
   max-width: 70ch;
   color: var(--muted);
+}
+
+.notice {
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.notice.hidden {
+  display: none;
+}
+
+.notice.info {
+  background: rgba(54, 102, 163, 0.22);
+  color: #d9efff;
+}
+
+.notice.success {
+  background: rgba(61, 207, 138, 0.2);
+  color: #d9ffe9;
+}
+
+.notice.error {
+  background: rgba(255, 97, 120, 0.18);
+  color: #ffe2e7;
 }
 
 .topbar-actions {
@@ -226,6 +274,29 @@ input:focus, textarea:focus {
   color: var(--muted);
   background: rgba(255, 255, 255, 0.04);
   white-space: nowrap;
+}
+
+.chip.status-running {
+  color: #d9ffe9;
+  border-color: rgba(61, 207, 138, 0.45);
+  background: rgba(61, 207, 138, 0.18);
+}
+
+.chip.status-starting {
+  color: #fff0c7;
+  border-color: rgba(255, 175, 89, 0.45);
+  background: rgba(255, 175, 89, 0.18);
+}
+
+.chip.status-stopped,
+.chip.status-idle {
+  color: #d9e7ff;
+}
+
+.chip.status-error {
+  color: #ffe2e7;
+  border-color: rgba(255, 97, 120, 0.45);
+  background: rgba(255, 97, 120, 0.18);
 }
 
 .task-list {
@@ -363,6 +434,10 @@ input:focus, textarea:focus {
   font-size: 1.15rem;
 }
 
+.stat strong.is-live {
+  color: var(--success);
+}
+
 .log-wrap {
   margin-top: 16px;
 }
@@ -438,4 +513,9 @@ input:focus, textarea:focus {
   .form-grid, .stats-grid {
     grid-template-columns: 1fr;
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

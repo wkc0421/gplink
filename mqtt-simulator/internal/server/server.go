@@ -162,6 +162,8 @@ func (s *Server) updateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	oldRuntime := s.runtime.GetRuntime(id)
+	shouldRestart := oldRuntime.Status == "running" || oldRuntime.Status == "starting"
 	if err = s.runtime.Stop(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -170,7 +172,22 @@ func (s *Server) updateTask(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"item": model.TaskSnapshot{ID: config.ID, Config: config, Runtime: s.runtime.GetRuntime(id)}})
+	if shouldRestart {
+		if err = s.runtime.Start(config); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("task updated but failed to restart: %v", err),
+			})
+			return
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"item": model.TaskSnapshot{
+			ID:      config.ID,
+			Config:  config,
+			Runtime: s.runtime.GetRuntime(id),
+		},
+		"restarted": shouldRestart,
+	})
 }
 
 func (s *Server) deleteTask(c *gin.Context) {

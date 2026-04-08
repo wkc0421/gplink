@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(test_guid/TESTING_INDEX.md:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(./mvnw compile:*)",
+      "Bash(cd /tmp)",
+      "Bash(jar -xf \"/c/Users/wkc/.m2/repository/org/hswebframework/hsweb-easy-orm-core/4.2.1/hsweb-easy-orm-core-4.2.1.jar\" \"org/hswebframework/ezorm/core/param/Term.java\")",
+      "Bash(jar -tf \"/c/Users/wkc/.m2/repository/org/hswebframework/hsweb-easy-orm-core/4.2.1/hsweb-easy-orm-core-4.2.1.jar\")",
+      "Bash(xargs grep:*)",
+      "Read(//usr/local/bin/**)",
+      "Read(//c/Users/wkc/**)",
+      "Read(//usr/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(\"/c/Users/wkc/.m2/wrapper/dists/apache-maven-3.9.3-bin/6actqn1ngkbj8g7k704ro02jj7/apache-maven-3.9.3/bin/mvn.cmd\" compile:*)",
+      "Bash(npx vue-tsc:*)"
+    ]
+  }
+}

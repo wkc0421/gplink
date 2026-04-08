@@ -44,7 +44,7 @@ func (b *PayloadBuilder) Counters() map[string]float64 {
 }
 
 func (b *PayloadBuilder) DeviceID(index int) string {
-	return fmt.Sprintf("%s-%06d", b.config.ProductID, index+1)
+	return fmt.Sprintf("%06d", index+1)
 }
 
 func (b *PayloadBuilder) Topic() string {
