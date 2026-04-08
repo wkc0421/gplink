@@ -5,12 +5,15 @@
     selectedId: "",
     metadata: [],
     stream: null,
+    pendingAction: "",
+    noticeTimer: null,
   };
 
   const els = {
     apiBase: document.getElementById("api-base"),
     reloadBtn: document.getElementById("reload-btn"),
     newBtn: document.getElementById("new-btn"),
+    notice: document.getElementById("notice"),
     taskCount: document.getElementById("task-count"),
     taskList: document.getElementById("task-list"),
     editorTitle: document.getElementById("editor-title"),
@@ -43,6 +46,7 @@
     statStatus: document.getElementById("stat-status"),
     statConnected: document.getElementById("stat-connected"),
     statSent: document.getElementById("stat-sent"),
+    statTargetRate: document.getElementById("stat-target-rate"),
     statRate: document.getElementById("stat-rate"),
     statErrors: document.getElementById("stat-errors"),
     statUptime: document.getElementById("stat-uptime"),
@@ -61,6 +65,40 @@
     while (els.runtimeLog.children.length > 20) {
       els.runtimeLog.removeChild(els.runtimeLog.lastChild);
     }
+  }
+
+  function showNotice(message, tone = "info", sticky = false) {
+    clearTimeout(state.noticeTimer);
+    els.notice.className = `notice ${tone}`;
+    els.notice.textContent = message;
+    if (!sticky) {
+      state.noticeTimer = setTimeout(() => {
+        els.notice.className = "notice hidden";
+        els.notice.textContent = "";
+      }, 2600);
+    }
+  }
+
+  function setPendingAction(action) {
+    state.pendingAction = action || "";
+    const map = [
+      [els.reloadBtn, "reload"],
+      [els.applyMetadata, "import"],
+      [els.startBtn, "start"],
+      [els.stopBtn, "stop"],
+      [els.deleteBtn, "delete"],
+      [document.getElementById("save-btn"), "save"],
+    ];
+    map.forEach(([button, key]) => {
+      if (!button) return;
+      const active = state.pendingAction === key;
+      button.disabled = active;
+      button.classList.toggle("loading", active);
+    });
+  }
+
+  function statusClass(status) {
+    return `status-${(status || "idle").toLowerCase()}`;
   }
 
   function defaultTask() {
@@ -160,7 +198,7 @@
             <h3>${escapeHtml(task.config.name || task.config.productId)}</h3>
             <p>${escapeHtml(task.config.productId)}</p>
           </div>
-          <span class="chip">${escapeHtml(runtime.status || "idle")}</span>
+          <span class="chip ${statusClass(runtime.status)}">${escapeHtml(runtime.status || "idle")}</span>
         </div>
         <div class="task-meta">
           <span class="chip">${task.config.deviceCount} devices</span>
@@ -192,6 +230,7 @@
 
   async function loadTasks() {
     try {
+      setPendingAction("reload");
       const data = await request("/api/tasks");
       state.tasks = data.items || [];
       renderTasks();
@@ -204,13 +243,19 @@
         }
       }
       log("Tasks reloaded");
+      showNotice("Tasks reloaded.", "info");
     } catch (error) {
       log("Load failed", error.message);
+      showNotice(`Load failed: ${error.message}`, "error", true);
+    } finally {
+      setPendingAction("");
     }
   }
 
   async function importMetadata() {
     try {
+      setPendingAction("import");
+      showNotice("Importing metadata...", "info", true);
       const raw = els.metadataText.value.trim();
       const data = await request("/api/products/import-model", {
         method: "POST",
@@ -220,9 +265,13 @@
       renderMetadataPreview();
       updatePreview();
       log("Metadata imported", `${state.metadata.length} properties`);
+      showNotice(`Imported ${state.metadata.length} properties.`, "success");
     } catch (error) {
       log("Metadata import failed", error.message);
+      showNotice(`Metadata import failed: ${error.message}`, "error", true);
       alert(error.message);
+    } finally {
+      setPendingAction("");
     }
   }
 
@@ -255,15 +304,25 @@
     const method = config.id ? "PUT" : "POST";
 
     try {
-      await request(path, {
+      setPendingAction("save");
+      showNotice(config.id ? "Updating task..." : "Creating task...", "info", true);
+      const result = await request(path, {
         method,
         body: JSON.stringify(config),
       });
       log(config.id ? "Task updated" : "Task created", config.name);
       await loadTasks();
+      if (config.id && result && result.restarted) {
+        showNotice("Task updated and restarted with the new settings.", "success");
+      } else {
+        showNotice(config.id ? "Task updated." : "Task created.", "success");
+      }
     } catch (error) {
       log("Save failed", error.message);
+      showNotice(`Save failed: ${error.message}`, "error", true);
       alert(error.message);
+    } finally {
+      setPendingAction("");
     }
   }
 
@@ -274,30 +333,52 @@
       return;
     }
     try {
+      setPendingAction(action);
+      showNotice(`${action === "delete" ? "Deleting" : action === "start" ? "Starting" : "Stopping"} task...`, "info", true);
       if (action === "delete") {
         await request(`/api/tasks/${id}`, { method: "DELETE" });
         log("Task deleted", id);
         fillForm(defaultTask());
         await loadTasks();
+        showNotice("Task deleted.", "success");
         return;
       }
       await request(`/api/tasks/${id}/${action}`, { method: "POST" });
       log(`Task ${action}ed`, id);
       await loadTasks();
+      showNotice(`Task ${action}ed successfully.`, "success");
     } catch (error) {
       log(`Task ${action} failed`, error.message);
+      showNotice(`Task ${action} failed: ${error.message}`, "error", true);
       alert(error.message);
+    } finally {
+      setPendingAction("");
     }
   }
 
   function renderRuntime(runtime = {}) {
-    els.runtimeStatus.textContent = runtime.lastError || "Idle";
+    const config = state.tasks.find((item) => item.id === state.selectedId)?.config || readForm();
+    if (runtime.lastError) {
+      els.runtimeStatus.textContent = runtime.lastError;
+    } else if ((runtime.status || "idle") === "running") {
+      els.runtimeStatus.textContent = "Task is running and publishing.";
+    } else if ((runtime.status || "idle") === "starting") {
+      els.runtimeStatus.textContent = "Task is connecting to broker...";
+    } else if ((runtime.status || "idle") === "stopped") {
+      els.runtimeStatus.textContent = "Task stopped.";
+    } else {
+      els.runtimeStatus.textContent = "Idle";
+    }
     els.statStatus.textContent = runtime.status || "idle";
     els.statConnected.textContent = runtime.connected ? "yes" : "no";
     els.statSent.textContent = `${runtime.sentTotal || 0}`;
-    els.statRate.textContent = `${runtime.sentLastMinute || 0}`;
+    els.statTargetRate.textContent = `${config.messagesPerMinute || 0}/min`;
+    els.statRate.textContent = `${runtime.sentLastSecond || 0}/sec`;
     els.statErrors.textContent = `${runtime.failedTotal || 0}`;
     els.statUptime.textContent = formatUptime(runtime.startedAt);
+    els.statStatus.classList.toggle("is-live", (runtime.status || "idle") === "running");
+    els.statSent.classList.toggle("is-live", (runtime.sentTotal || 0) > 0);
+    els.statRate.classList.toggle("is-live", (runtime.sentLastSecond || 0) > 0);
   }
 
   function formatUptime(startedAt) {
@@ -325,11 +406,19 @@
           renderTasks();
           if (task.id === state.selectedId) {
             renderRuntime(data.runtime);
+            if (data.runtime.status === "running") {
+              showNotice("Task is now running.", "success");
+            } else if (data.runtime.status === "stopped") {
+              showNotice("Task has stopped.", "info");
+            } else if (data.runtime.status === "error") {
+              showNotice(`Task error: ${data.runtime.lastError || "unknown error"}`, "error", true);
+            }
           }
         }
       });
       state.stream.onerror = () => {
         els.streamChip.textContent = "Stream offline";
+        showNotice("Realtime stream disconnected.", "error", true);
       };
     } catch (error) {
       els.streamChip.textContent = "No stream";

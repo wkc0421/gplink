@@ -224,8 +224,7 @@ const loadProducts = async (keyword?: string) => {
   }
 }
 
-// Load device/property/function options for a product WITHOUT touching form selections.
-// Used when initializing the edit form so existing saved values are preserved.
+// Load device/property/function options WITHOUT clearing form selections.
 const loadProductOptions = async (productId: string) => {
   const [devResp, metaResp] = await Promise.all([
     getDevicesByProduct(productId),
@@ -328,7 +327,7 @@ onMounted(async () => {
 
   if (props.record) {
     const rec = props.record
-    // Seed form state first, before loading options, so selections are not cleared.
+    // Seed form state first so options loading does not clear saved values.
     formState.value = {
       id: rec.id,
       name: rec.name,
@@ -346,9 +345,7 @@ onMounted(async () => {
     }
 
     if (rec.productId) {
-      // Load options only — do not clear saved selections.
       await loadProductOptions(rec.productId)
-      // Restore function input schema for the saved functionId.
       if (rec.functionId) {
         onFunctionChange(rec.functionId)
       }

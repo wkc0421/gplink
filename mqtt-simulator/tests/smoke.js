@@ -44,7 +44,7 @@ async function run() {
   if (!payloadPreview.includes('"type":"change"')) {
     throw new Error(`unexpected payload type preview: ${payloadPreview}`);
   }
-  if (!payloadPreview.includes('"product-smoke-000001"')) {
+  if (!payloadPreview.includes('"000001"')) {
     throw new Error(`unexpected device id preview: ${payloadPreview}`);
   }
 

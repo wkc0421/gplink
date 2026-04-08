@@ -26,6 +26,8 @@
       </div>
     </header>
 
+    <section id="notice" class="notice hidden" aria-live="polite"></section>
+
     <main class="layout">
       <aside class="panel sidebar">
         <div class="panel-header">
@@ -140,7 +142,7 @@
           <section class="panel">
             <div class="panel-header">
               <div>
-                <h2>Runtime stats</h2>
+              <h2>Runtime stats</h2>
                 <p id="runtime-status" class="muted">Idle</p>
               </div>
               <span id="stream-chip" class="chip">No stream</span>
@@ -148,8 +150,9 @@
             <div class="stats-grid">
               <div class="stat"><span>Status</span><strong id="stat-status">Stopped</strong></div>
               <div class="stat"><span>Connected</span><strong id="stat-connected">0</strong></div>
-              <div class="stat"><span>Sent</span><strong id="stat-sent">0</strong></div>
-              <div class="stat"><span>Per minute</span><strong id="stat-rate">0</strong></div>
+              <div class="stat"><span>Sent Total</span><strong id="stat-sent">0</strong></div>
+              <div class="stat"><span>Target Rate</span><strong id="stat-target-rate">0/min</strong></div>
+              <div class="stat"><span>Actual Rate</span><strong id="stat-rate">0/sec</strong></div>
               <div class="stat"><span>Errors</span><strong id="stat-errors">0</strong></div>
               <div class="stat"><span>Uptime</span><strong id="stat-uptime">00:00:00</strong></div>
             </div>

@@ -155,7 +155,7 @@ nssm start mqtt-simulator
   "sn": "product-001",
   "time": "2026-04-07 21:20:50",
   "data": {
-    "product-001-000001": [
+    "000001": [
       { "id": "Ua", "desc": "A相电压", "value": "235.031" }
     ]
   }
