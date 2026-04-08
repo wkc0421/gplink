@@ -10,14 +10,17 @@ function registerModulesAlias() {
   const folders = fs.readdirSync(pattern)
 
   for (const name of folders || []) {
+    const modulePath = path.resolve(modulesBasePath, name)
     const configPath = path.resolve(rootPath, modulesBasePath, `${name}/config.json`)
+
+    modulesAlias[`@${name}`] = modulePath
 
     if (!fs.existsSync(configPath)) continue
 
     try {
       const content = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
       if (content.aliasName) {
-        modulesAlias[content.aliasName] = path.resolve(modulesBasePath, name)
+        modulesAlias[content.aliasName] = modulePath
       }
     } catch (err) {
       console.warn(`读取或解析 ${configPath} 时出错:`, err)
