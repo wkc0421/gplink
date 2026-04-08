@@ -929,6 +929,135 @@
                 ]
               }
             ]
+          },
+          {
+            "code": "device/scheduledTask",
+            "name": "定时任务",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "定时任务",
+                "en_US": "Scheduled Tasks",
+                "en": "Scheduled Tasks"
+              }
+            },
+            "owner": "iot",
+            "id": "scheduled-task-management",
+            "url": "/iot/device/scheduledTask",
+            "icon": "icon-dingshirenwu",
+            "sortIndex": 4,
+            "showPage": [
+              "scheduled-task"
+            ],
+            "permissions": [
+              {
+                "permission": "scheduled-task",
+                "actions": [
+                  "query"
+                ]
+              },
+              {
+                "permission": "device-product",
+                "actions": [
+                  "query"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "add",
+                "name": "新增",
+                "i18nMessages": {
+                  "zh_CN": "新增",
+                  "en_US": "Add",
+                  "en": "Add"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "save",
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "update",
+                "name": "编辑",
+                "i18nMessages": {
+                  "zh_CN": "编辑",
+                  "en_US": "Edit",
+                  "en": "Edit"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "save",
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "save",
+                "name": "启用/禁用",
+                "i18nMessages": {
+                  "zh_CN": "启用/禁用",
+                  "en_US": "Enable/Disable",
+                  "en": "Enable/Disable"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "save",
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "query",
+                "name": "日志",
+                "i18nMessages": {
+                  "zh_CN": "日志",
+                  "en_US": "Logs",
+                  "en": "Logs"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "delete",
+                "name": "删除",
+                "i18nMessages": {
+                  "zh_CN": "删除",
+                  "en_US": "Delete",
+                  "en": "Delete"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "delete",
+                      "query"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accessSupport": {
+              "text": "不支持",
+              "value": "unsupported"
+            },
+            "supportDataAccess": false
           }
         ]
       },

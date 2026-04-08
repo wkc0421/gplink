@@ -18,6 +18,7 @@ import { TimeSelect } from './Dashboard/components'
 import FullCalendar from './FullCalendar/index.vue'
 import Image from './Image/index.vue'
 import VirtualScroll from './VirtualScroll/index.vue'
+import JPermissionButton from './JPermissionButton'
 
 export default {
     install(app: App) {
@@ -42,6 +43,7 @@ export default {
           .component('FullCalendar', FullCalendar)
           .component('Image', Image)
           .component('VirtualScroll', VirtualScroll)
+          .component('JPermissionButton', JPermissionButton)
 
         Object.keys(FormItemValue).forEach(key => {
             app.component(key, FormItemValue[key])
