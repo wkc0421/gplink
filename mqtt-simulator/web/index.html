@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MQTT Simulator Studio</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Independent MQTT simulator</p>
+        <h1>MQTT Simulator Studio</h1>
+        <p class="lede">Create, edit, start, and observe MQTT simulation tasks with a lightweight static UI.</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="inline-field">
+          <span>API base</span>
+          <input id="api-base" type="text" placeholder="Optional backend base URL" />
+        </label>
+        <button id="reload-btn" class="secondary">Reload</button>
+        <button id="new-btn" class="primary">New task</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel sidebar">
+        <div class="panel-header">
+          <div>
+            <h2>Tasks</h2>
+            <p id="task-count" class="muted">0 simulations</p>
+          </div>
+          <span id="storage-mode" class="chip">API</span>
+        </div>
+        <div id="task-list" class="task-list"></div>
+      </aside>
+
+      <section class="content">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 id="editor-title">Create simulation</h2>
+              <p class="muted">Build the task definition, import metadata, and preview the payload.</p>
+            </div>
+            <div class="actions">
+              <button id="start-btn" class="success">Start</button>
+              <button id="stop-btn" class="warning">Stop</button>
+              <button id="delete-btn" class="danger">Delete</button>
+            </div>
+          </div>
+
+          <form id="task-form" class="form-grid">
+            <input type="hidden" id="task-id" />
+            <label>
+              <span>Name</span>
+              <input id="name" type="text" placeholder="Warehouse floor simulator" required />
+            </label>
+            <label>
+              <span>Product ID</span>
+              <input id="productId" type="text" placeholder="simulator-product" required />
+            </label>
+            <label>
+              <span>Message type</span>
+              <input id="messageType" type="text" placeholder="property-report" required />
+            </label>
+            <label>
+              <span>Device count</span>
+              <input id="deviceCount" type="number" min="1" step="1" value="10" />
+            </label>
+            <label>
+              <span>Messages per minute</span>
+              <input id="messagesPerMinute" type="number" min="1" step="1" value="60" />
+            </label>
+            <label>
+              <span>Broker URL</span>
+              <input id="brokerUrl" type="url" placeholder="mqtt://broker.example.com:1883" />
+            </label>
+            <label>
+              <span>Username</span>
+              <input id="username" type="text" placeholder="mqtt-user" />
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="password" type="password" placeholder="secret" />
+            </label>
+            <label>
+              <span>Client ID</span>
+              <input id="clientId" type="text" placeholder="mqtt-sim-client" />
+            </label>
+            <label>
+              <span>Client ID prefix</span>
+              <input id="clientIdPrefix" type="text" placeholder="mqtt-test-" />
+            </label>
+            <label class="wide">
+              <span>Topic template</span>
+              <input id="topicTemplate" type="text" placeholder="/{productId}/{clientId}/properties/report" />
+            </label>
+            <label class="wide">
+              <span>Metadata import</span>
+              <textarea id="metadata-text" rows="7" placeholder='Paste JSON metadata here, or upload a file below.'></textarea>
+            </label>
+            <div class="wide import-row">
+              <label class="file-field">
+                <span>Upload metadata</span>
+                <input id="metadata-file" type="file" accept=".json,application/json,.txt" />
+              </label>
+              <button id="apply-metadata" type="button" class="secondary">Apply import</button>
+              <button id="clear-metadata" type="button" class="ghost">Clear metadata</button>
+            </div>
+            <label class="wide">
+              <span>Metadata preview</span>
+              <pre id="metadata-preview" class="preview-box"></pre>
+            </label>
+            <div class="wide editor-footer">
+              <div class="hint">
+                <strong>Tip:</strong> Metadata is imported as raw JSON and only the <code>properties</code> array is used.
+              </div>
+              <div class="actions">
+                <button id="reset-btn" type="button" class="secondary">Reset</button>
+                <button id="save-btn" type="submit" class="primary">Save task</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="split">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Payload preview</h2>
+                <p class="muted">Generated from the current form values.</p>
+              </div>
+            </div>
+            <pre id="payload-preview" class="preview-box tall"></pre>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Runtime stats</h2>
+                <p id="runtime-status" class="muted">Idle</p>
+              </div>
+              <span id="stream-chip" class="chip">No stream</span>
+            </div>
+            <div class="stats-grid">
+              <div class="stat"><span>Status</span><strong id="stat-status">Stopped</strong></div>
+              <div class="stat"><span>Connected</span><strong id="stat-connected">0</strong></div>
+              <div class="stat"><span>Sent</span><strong id="stat-sent">0</strong></div>
+              <div class="stat"><span>Per minute</span><strong id="stat-rate">0</strong></div>
+              <div class="stat"><span>Errors</span><strong id="stat-errors">0</strong></div>
+              <div class="stat"><span>Uptime</span><strong id="stat-uptime">00:00:00</strong></div>
+            </div>
+            <div class="log-wrap">
+              <div class="log-title">Event stream</div>
+              <div id="runtime-log" class="runtime-log"></div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
