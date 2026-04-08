@@ -1,6 +1,6 @@
 # Network Component Leak Fix - Testing Suite
 
-This directory contains comprehensive testing tools for validating resource leak fixes in the JetLinks network components.
+This directory contains comprehensive testing tools for validating resource leak fixes in the GPLink network components.
 
 ## Quick Start
 
@@ -138,7 +138,7 @@ chmod +x tcp_load_test.sh
 
 **Requirements:**
 - netcat (`nc`) command available
-- JetLinks TCP server running on localhost:8848
+- GPLink TCP server running on localhost:8848
 
 ### MQTT Load Test
 
@@ -153,7 +153,7 @@ python3 mqtt_load_test.py
 **Requirements:**
 - Python 3.7+
 - paho-mqtt library
-- JetLinks MQTT server running on localhost:1883
+- GPLink MQTT server running on localhost:1883
 
 ### HTTP/WebSocket Load Test
 
@@ -168,7 +168,7 @@ node --expose-gc http_load_test.js
 **Requirements:**
 - Node.js 14+
 - ws and axios packages
-- JetLinks HTTP server running on localhost:8848
+- GPLink HTTP server running on localhost:8848
 
 ## Test Workflow
 

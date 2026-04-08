@@ -1,4 +1,4 @@
-# jetlinks-ui-vue
+# gplink-ui-vue
 
 [更新说明](./CHANGELOG.md)
 

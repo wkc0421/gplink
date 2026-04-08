@@ -2,7 +2,7 @@
 
 ## 1. 背景
 
-当前后端采用 JetLinks + TimescaleDB 作为设备时序数据主存储，已经具备以下基础能力：
+当前后端采用 GPLink + TimescaleDB 作为设备时序数据主存储，已经具备以下基础能力：
 
 - 使用 TimescaleDB 存储设备属性、事件、日志等时序数据
 - 设备属性查询、历史查询、聚合查询主要仍走 TimescaleDB 原始表

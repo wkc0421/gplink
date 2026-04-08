@@ -2,7 +2,7 @@
 
 **Test Date**: _______________
 **Tester Name**: _______________
-**Software Version**: JetLinks Community 2.10
+**Software Version**: GPLink Community 2.10
 **Test Environment**: [ ] Development [ ] Staging [ ] Production
 
 ---

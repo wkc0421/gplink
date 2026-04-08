@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Memory Monitoring Script
-# Monitors JetLinks process memory usage over time
+# Monitors GPLink process memory usage over time
 # Usage: ./memory-monitor.sh [interval_seconds] [duration_minutes]
 ################################################################################
 
@@ -12,11 +12,11 @@ echo "Memory Monitor"
 echo "Interval: ${INTERVAL}s"
 echo "Duration: ${DURATION}min"
 
-# Find JetLinks process
+# Find GPLink process
 PID=$(jps | grep -i jetlinks | awk '{print $1}')
 
 if [ -z "$PID" ]; then
-    echo "Error: JetLinks process not found"
+    echo "Error: GPLink process not found"
     echo "Start the application first"
     exit 1
 fi

@@ -1,6 +1,6 @@
 # Network Component Leak Fix - Testing Documentation Index
 
-This directory contains all testing materials for validating the network component resource leak fixes in JetLinks IoT Platform.
+This directory contains all testing materials for validating the network component resource leak fixes in GPLink IoT Platform.
 
 ## 📚 Documentation Files
 
@@ -265,4 +265,4 @@ cd load-tests && ./tcp_load_test.sh
 
 **Last Updated**: 2026-04-05  
 **Maintained By**: Development Team  
-**For**: JetLinks Community Edition 2.10 - Network Component Leak Fixes
+**For**: GPLink Community Edition 2.10 - Network Component Leak Fixes
