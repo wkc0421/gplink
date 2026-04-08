@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "aedes": "^1.0.2",
+    "mqtt": "^5.15.1",
+    "playwright": "^1.59.1"
+  }
+}
