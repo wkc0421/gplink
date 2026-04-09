@@ -50,7 +50,7 @@ public class TimescaleDBThingsDataProperties {
     /**
      * 压缩 segmentby 列（逗号分隔，直接写入 SQL），与实际 DB 列名对齐
      */
-    private String compressSegmentBy = ThingsDataConstants.COLUMN_THING_ID + "," + ThingsDataConstants.COLUMN_PROPERTY_ID;
+    private String compressSegmentBy = "\"" + ThingsDataConstants.COLUMN_THING_ID + "\"," + ThingsDataConstants.COLUMN_PROPERTY_ID;
 
     /**
      * 压缩 orderby 子句
