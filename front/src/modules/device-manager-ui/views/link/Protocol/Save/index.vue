@@ -76,16 +76,15 @@
         </a-form>
         <template #footer>
             <a-button key="back" @click="handleCancel">{{ $t('Save.index.903552-11') }}</a-button>
-            <j-permission-button
+            <a-button
                 key="submit"
                 type="primary"
                 :loading="loading"
                 @click="handleOk"
                 style="margin-left: 8px"
-                :hasPermission="`link/Protocol:${id ? 'update' : 'add'}`"
             >
                 {{ $t('Save.index.903552-12') }}
-            </j-permission-button>
+            </a-button>
         </template>
     </a-modal>
 </template>
@@ -112,7 +111,7 @@ const props = defineProps({
 const route = useRoute();
 const emit = defineEmits(['change']);
 
-const id = props.data.id;
+const id = computed(() => props.data?.id);
 const options = [
     {
         label: 'Jar',
@@ -137,22 +136,43 @@ const formData = ref<FormDataType>({
 
 const { onBack } = useTabSaveSuccessBack()
 
-const changeType = (value: Array<string>) => {
-    formData.value.type = value[0];
+const normalizeType = (value: unknown) => {
+    if (Array.isArray(value)) {
+        return value[0] || 'jar';
+    }
+    if (typeof value === 'string' && value) {
+        return value;
+    }
+    return 'jar';
+};
+
+const changeType = (value: Array<string> | string) => {
+    formData.value.type = normalizeType(value);
     formData.value.configuration.location = '';
 };
 
 const onSubmit = async () => {
-    const data: any = await formRef.value?.validate();
+    const data: any = await formRef.value?.validate().catch(() => undefined);
+    if (!data) {
+        return;
+    }
+
     loading.value = true;
-    const response: any = !id
-        ? await save(data).catch(() => {})
-        : await update({ ...props.data, ...data }).catch(() => {});
+    const payload = {
+        ...data,
+        type: normalizeType(data.type ?? formData.value.type),
+    };
+    const response: any = !id.value
+        ? await save(payload).catch(() => undefined)
+        : await update({ ...props.data, ...payload }).catch(() => undefined);
+
     if (response?.status === 200) {
         emit('change', response?.status === 200);
         if (response.result?.id) {
           onBack(response)
         }
+    } else {
+        onlyMessage(response?.message || $t('Save.index.903552-3'), 'error');
     }
     loading.value = false;
 };
@@ -181,11 +201,23 @@ const handleCancel = () => {
 watch(
     () => props.data,
     (value) => {
-        if (value.id) {
-            formData.value = value as FormDataType;
-            if (!!value.type[0]?.value) {
-                formData.value.type = value.type.map((i: any) => i.value);
-            }
+        if (value?.id) {
+            formData.value = {
+                ...(value as FormDataType),
+                type: normalizeType((value as any).type),
+                configuration: {
+                    location: (value as any)?.configuration?.location || '',
+                },
+            };
+        } else {
+            formData.value = {
+                type: 'jar',
+                name: '',
+                configuration: {
+                    location: '',
+                },
+                description: '',
+            };
         }
     },
     { immediate: true, deep: true },
