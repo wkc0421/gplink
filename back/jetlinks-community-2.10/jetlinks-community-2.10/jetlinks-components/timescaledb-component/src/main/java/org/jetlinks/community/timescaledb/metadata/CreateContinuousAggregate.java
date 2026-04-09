@@ -55,6 +55,9 @@ public class CreateContinuousAggregate implements Feature, FeatureType {
     /** 是否在日级 cagg 之上建立月级层级 cagg（需要 dailyEnabled=true） */
     private final boolean monthlyEnabled;
 
+    /** 物ID列名（实际 DB 列名，如 "deviceId" 或 "thingId"），用于生成 cagg 视图 SQL */
+    private final String thingIdColumn;
+
     @Override
     public String getId() {
         return ID.getId();

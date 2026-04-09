@@ -55,14 +55,14 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
                  sqlRequest.addBatch(createCaggRetentionPolicySQL(hourlyCaggName(table), cagg.getRetention()));
                  // 日级层级 cagg（在小时 cagg 之上）
                  if (cagg.isDailyEnabled()) {
-                     sqlRequest.addBatch(createDailyCaggViewSQL(table));
+                     sqlRequest.addBatch(createDailyCaggViewSQL(table, cagg));
                      sqlRequest.addBatch(createCaggMaterializedOnlySQL(dailyCaggName(table)));
                      sqlRequest.addBatch(createDailyCaggRefreshPolicySQL(table));
                      sqlRequest.addBatch(createCaggRetentionPolicySQL(dailyCaggName(table), cagg.getRetention()));
                  }
                  // 月级层级 cagg（在日级 cagg 之上，需要 dailyEnabled）
                  if (cagg.isDailyEnabled() && cagg.isMonthlyEnabled()) {
-                     sqlRequest.addBatch(createMonthlyCaggViewSQL(table));
+                     sqlRequest.addBatch(createMonthlyCaggViewSQL(table, cagg));
                      sqlRequest.addBatch(createCaggMaterializedOnlySQL(monthlyCaggName(table)));
                      sqlRequest.addBatch(createMonthlyCaggRefreshPolicySQL(table));
                      sqlRequest.addBatch(createCaggRetentionPolicySQL(monthlyCaggName(table), cagg.getRetention()));
@@ -132,22 +132,24 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         return i.getNumber().intValue() + " " + i.getUnit().name().toLowerCase();
     }
 
-    private String quotedThingIdColumn() {
-        return "\"" + ThingsDataConstants.COLUMN_THING_ID + "\"";
-    }
-
     private String quotedPropertyColumn() {
         return "\"" + ThingsDataConstants.COLUMN_PROPERTY_ID + "\"";
+    }
+
+    /** 将实际列名加双引号，用于 SQL 标识符引用 */
+    private String quoted(String columnName) {
+        return "\"" + columnName + "\"";
     }
 
     /** 小时级 cagg：直接在原始表上聚合，物化 first/last/avg/sum/min/max/count */
     private SqlRequest createCaggViewSQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         String view = hourlyCaggName(table);
         String raw  = table.getFullName();
+        String qThingId = quoted(cagg.getThingIdColumn());
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
             "SELECT time_bucket('1 hour',\"timestamp\") AS bucket_start," +
-            quotedThingIdColumn() + "," + quotedPropertyColumn() + "," +
+            qThingId + "," + quotedPropertyColumn() + "," +
             "first(\"numberValue\",\"timestamp\") AS first_value," +
             "last(\"numberValue\",\"timestamp\")  AS last_value," +
             "avg(\"numberValue\")                 AS avg_value," +
@@ -156,7 +158,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "max(\"numberValue\")                 AS max_value," +
             "count(*)                             AS sample_count " +
             "FROM " + raw + " " +
-            "GROUP BY 1," + quotedThingIdColumn() + "," + quotedPropertyColumn() + " WITH NO DATA"
+            "GROUP BY 1," + qThingId + "," + quotedPropertyColumn() + " WITH NO DATA"
         );
     }
 
@@ -164,13 +166,14 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
      * 日级层级 cagg：在 _hourly_agg 之上聚合。
      * avg_value 不单独存储，查询时由 sum_value/sample_count 派生。
      */
-    private SqlRequest createDailyCaggViewSQL(RDBTableMetadata table) {
+    private SqlRequest createDailyCaggViewSQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         String view   = dailyCaggName(table);
         String hourly = hourlyCaggName(table);
+        String qThingId = quoted(cagg.getThingIdColumn());
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
             "SELECT time_bucket('1 day',bucket_start) AS bucket_start," +
-            quotedThingIdColumn() + "," + quotedPropertyColumn() + "," +
+            qThingId + "," + quotedPropertyColumn() + "," +
             "first(first_value,bucket_start) AS first_value," +
             "last(last_value,bucket_start)   AS last_value," +
             "sum(sum_value)                  AS sum_value," +
@@ -178,20 +181,21 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "max(max_value)                  AS max_value," +
             "sum(sample_count)               AS sample_count " +
             "FROM " + hourly + " " +
-            "GROUP BY 1," + quotedThingIdColumn() + "," + quotedPropertyColumn() + " WITH NO DATA"
+            "GROUP BY 1," + qThingId + "," + quotedPropertyColumn() + " WITH NO DATA"
         );
     }
 
     /**
      * 月级层级 cagg：在 _daily_agg 之上聚合。
      */
-    private SqlRequest createMonthlyCaggViewSQL(RDBTableMetadata table) {
+    private SqlRequest createMonthlyCaggViewSQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         String view  = monthlyCaggName(table);
         String daily = dailyCaggName(table);
+        String qThingId = quoted(cagg.getThingIdColumn());
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
             "SELECT time_bucket('1 month',bucket_start) AS bucket_start," +
-            quotedThingIdColumn() + "," + quotedPropertyColumn() + "," +
+            qThingId + "," + quotedPropertyColumn() + "," +
             "first(first_value,bucket_start) AS first_value," +
             "last(last_value,bucket_start)   AS last_value," +
             "sum(sum_value)                  AS sum_value," +
@@ -199,7 +203,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "max(max_value)                  AS max_value," +
             "sum(sample_count)               AS sample_count " +
             "FROM " + daily + " " +
-            "GROUP BY 1," + quotedThingIdColumn() + "," + quotedPropertyColumn() + " WITH NO DATA"
+            "GROUP BY 1," + qThingId + "," + quotedPropertyColumn() + " WITH NO DATA"
         );
     }
 

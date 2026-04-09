@@ -76,7 +76,6 @@ timescaledb:
 #        chunk-time-interval: 7d # 分区时间间隔，默认 7 天
         compress: true          # 启用列压缩（30 天以上自动压缩）
         compress-after: 30d
-        compress-segment-by: "thing_id,property"
         compress-order-by: "timestamp DESC"
         cagg:
           enabled: true         # 建立小时级 continuous aggregate（仅属性表）
