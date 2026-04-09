@@ -12,7 +12,7 @@
 
 <script lang="ts" setup>
 import { getImage } from "@jetlinks-web/utils";
-import { USER_CENTER_MENU_DATA } from "../data/baseMenu";
+import {ACCESS_AI_AGENT_CODE_DATA, USER_CENTER_MENU_DATA} from "../data/baseMenu";
 import BaseMenuData, { mergeTrees, handleMenuOptions } from '../data'
 import {
   updateMenus,
@@ -23,6 +23,8 @@ import {
 import { OpenMicroApp } from "@/utils/consts";
 import { BASE_API } from '@jetlinks-web/constants'
 import { useApplication } from '@/store'
+import {saveAgentList} from "@/api/comm";
+import {agentData} from "../data/aiData";
 
 const app = useApplication()
 /**
@@ -32,6 +34,7 @@ const menusData = reactive({
   count: 0,
   current: [],
 });
+const hasAgentPermission = ref(false)
 
 /**
  * 查询支持的协议
@@ -62,15 +65,15 @@ const getSystemPermissionData = async ( BaseMenu: any[] ) => {
   const hasProtocol = await getProvidersFn();
   const resp = await getSystemPermission();
   if (resp.success) {
-    const newTree = filterMenu(
-      resp.result.map((item: any) => JSON.parse(item).id),
+    const _permission = resp.result.map((item: any) => JSON.parse(item).id)
+    const newTree = filterMenu(_permission,
       BaseMenu,
       hasProtocol,
     );
     const _count = menuCount(newTree);
     menusData.current = newTree;
     menusData.count = _count;
-    console.log(newTree)
+    hasAgentPermission.value = _permission.includes('ai-agent-deploy')
   }
 };
 
@@ -88,6 +91,13 @@ const filterMenu = (
       isShow = item.showPage.some((pItem: any) => {
         return permissions.includes(pItem);
       });
+    }
+    if (item.buttons?.length) {
+      item.buttons = item.buttons.filter((bItem: Record<string, any>) => {
+        return bItem.permissions.some((permission: any) => {
+          return permissions.includes(permission.permission)
+        })
+      })
     }
     if (item.children) {
       item.children = filterMenu(permissions, item.children, hasProtocol);
@@ -120,10 +130,11 @@ const dealMenu = (data: any) => {
     item.options = Object.assign(
       {
         show: true,
-        builtIn: true
       },
       item?.options || {},
     );
+
+    item.owner = import.meta.env.VITE_APP_NAME
     if (item.children) {
       dealMenu(item.children);
     }
@@ -136,11 +147,24 @@ const initMenu = async () => {
   return new Promise(async (resolve) => {
     //  用户中心
     dealMenu(menusData.current);
+    if(hasAgentPermission.value){
+      USER_CENTER_MENU_DATA.buttons.push(ACCESS_AI_AGENT_CODE_DATA)
+    }
     const res = await updateMenus([
       ...menusData.current!,
       USER_CENTER_MENU_DATA,
     ]);
-    resolve(res.success)
+    if(res.success){
+      // 保存ai初始化数据
+      if(hasAgentPermission.value){
+        const resp = await saveAgentList(agentData)
+        resolve(resp.success)
+      } else {
+        resolve(res.success)
+      }
+    } else {
+      resolve(res.success)
+    }
   });
 };
 

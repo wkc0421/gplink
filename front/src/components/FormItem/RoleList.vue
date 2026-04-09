@@ -3,7 +3,7 @@ import {filterSelectNode} from "@/utils";
 import {useI18n} from "vue-i18n";
 import { useRequest } from '@jetlinks-web/hooks'
 import {getRoleList} from "@/api/system/user";
-import {randomString} from "@jetlinks-web/utils";
+import { useTabSaveSuccess } from '@/hooks'
 
 const { t: $t } = useI18n();
 const emit = defineEmits(['update:value', 'change'])
@@ -28,9 +28,27 @@ const props = defineProps({
   extraData: { // 为了修改没有权限，但是要展示名称的数据
     type: Array,
     default: []
+  },
+  showAdd: {
+    type: Boolean,
+    default: true
   }
 })
-const dataMap = new Map()
+const dataMap = ref(new Map())
+
+const { onOpen } = useTabSaveSuccess('system/Role', {
+  onSuccess(value) {
+    if (props.extraProps?.multiple) {
+      let oldValue = myValue.value || []
+      myValue.value = [...oldValue, value]
+    } else {
+      myValue.value = value
+    }
+
+    emit('update:value', myValue.value);
+    reload()
+  }
+})
 
 const _treeData = computed(() => {
   const arr = (treeData?.value || []).map((item)=>{
@@ -39,7 +57,7 @@ const _treeData = computed(() => {
       id: item.groupId,
       disabled: true,
       children: item.roles?.map((i)=>{
-        dataMap.set(i.id, i);
+        dataMap.value.set(i.id, i);
         return {
           name:i.name,
           id:i.id,
@@ -49,7 +67,7 @@ const _treeData = computed(() => {
     }
   })
   const _arr = props.extraData.filter(i => {
-    return !dataMap.get(i.id)
+    return !dataMap.value.get(i.id)
   }).map(item => {
     return {
       ...item,
@@ -70,26 +88,9 @@ const { data: treeData, reload } = useRequest(getRoleList, {
 const myValue = ref()
 const _extraData = computed(() => {
   return props.extraData.filter(i => {
-    return !dataMap.get(i.id)
+    return !dataMap.value.get(i.id)
   }).map(i => i.id)
 })
-const clickAddItem = () => {
-  const sourceId = `position_add_${randomString()}`; // 唯一标识
-  const tab = window.open(`${origin}/#/system/Role?save=true&sourceId=${sourceId}`);
-  tab.onTabSaveSuccess = (_sourceId, value) => {
-    if(sourceId === _sourceId){
-      if (props.extraProps?.multiple) {
-        let oldValue = myValue.value || []
-        myValue.value = [...oldValue, value]
-      } else {
-        myValue.value = value
-      }
-
-      emit('update:value', myValue.value);
-      reload()
-    }
-  };
-}
 
 const onChange = (value, label,  extra) => {
   emit('update:value', myValue.value)
@@ -102,6 +103,7 @@ watch(() => props.value, () => {
 
 onMounted(() => {
   reload()
+  dataMap.value = new Map()
 })
 </script>
 
@@ -118,10 +120,11 @@ onMounted(() => {
           :fieldNames="{ label: 'name', value: 'id', children:'children' }"
           :disabled="disabled"
           :filterTreeNode="(v, node) => filterSelectNode(v, node, 'name')"
+          :height="233"
           @change="onChange"
       >
         <template #title="record">
-          <div style="width: calc(100% - 10px) ">
+          <div>
             <a-tooltip :title="$t('components.EditUserDialog.939453-34')"  v-if="_extraData.includes(record.id)">
               <span class="j-ellipsis j-ellipsis-line-clamp" style="-webkit-line-clamp: 1;">{{ record.name }}</span>
             </a-tooltip>
@@ -145,8 +148,8 @@ onMounted(() => {
     </div>
     <j-permission-button
       hasPermission="system/Role:add"
-      @click="clickAddItem('roleIdList', 'Role')"
-      v-if="!disabled"
+      v-if="!disabled && showAdd"
+      @click="onOpen({save: true})"
     >
       <template #icon>
         <AIcon type="PlusOutlined" />
@@ -165,6 +168,12 @@ onMounted(() => {
     background: #e6f7ff;
     border-color: #91d5ff;
     color: #096dd9;
+  }
+
+  :deep(.ant-select-selection-overflow-item){
+    & > span {
+      width: 100%;
+    }
   }
 }
 

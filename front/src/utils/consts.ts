@@ -2,7 +2,9 @@ export const USER_CENTER_MENU_CODE = 'account-center'
 export const USER_CENTER_MENU_BUTTON_CODE = 'user-center-passwd-update'
 export const messageSubscribe  = 'message-subscribe'
 
-export const OWNER_KEY = 'iot'
+export const ACCESS_AI_AGENT_CODE = 'access-ai-agent-code'
+
+export const OWNER_KEY = import.meta.env.VITE_APP_NAME
 
 export const default_app_id = 'authentication-service'
 
@@ -28,3 +30,9 @@ export const MODULES_KEYS: string[] = import.meta.env.VITE_BUILD_MODULES || [];
 export const isSubApp = (window as any).__MICRO_APP_ENVIRONMENT__
 
 export const OpenMicroApp = import.meta.env.VITE_MICRO_APP
+
+export const PersonalKey = import.meta.env.VITE_PERSONAL_TOKEN_KEY
+export const PersonalUrlKey = import.meta.env.VITE_PERSONAL_TOKEN_URL_KEY
+export const PersonalAIKey = import.meta.env.VITE_PERSONAL_TOKEN_AI_KEY
+
+export const PersonalToken: { value?: string, aiToken?: string} = { value: undefined, aiToken: undefined}

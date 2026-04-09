@@ -3,7 +3,7 @@ import {queryRole_api} from "@authentication-manager-ui/api/system/user";
 import {getTreeData_api} from "@authentication-manager-ui/api/system/department";
 import {useRequest} from "@jetlinks-web/hooks";
 import {queryPageNoPage} from "@authentication-manager-ui/api/system/positions";
-import { useTermOptions } from '@/utils/useTermOptions'
+import { useTermOptions } from '@jetlinks-web/components/es/Search/hooks/useTermOptions'
 
 export const useColumns = () => {
   const { t: $t } = useI18n();

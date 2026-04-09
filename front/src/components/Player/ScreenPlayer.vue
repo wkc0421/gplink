@@ -20,7 +20,7 @@
                             <AIcon type="QuestionCircleOutlined" />
                         </a-tooltip>
                         <a-popover
-                            v-model:visible="visible"
+                            v-model:open="visible"
                             trigger="click"
                             :title="$t('Player.ScreenPlayer.521467-5')"
                         >
@@ -127,7 +127,7 @@
                             >
                                 {{ $t('Player.ScreenPlayer.521467-11') }}
                             </div>
-                            <LivePlayer ref="playersRef" :live="true" :url="item.url" autoplay/>
+                            <LivePlayer :live="true" :url="item.url" autoplay />
                         </div>
                     </template>
                 </div>
@@ -200,7 +200,6 @@ const formRef = ref();
 const formData = ref({
     name: '',
 });
-const playersRef = ref()
 
 // 全屏元素
 const fullscreenRef = ref(null);
@@ -437,10 +436,6 @@ const handleMouseUp = (type: string) => {
     }
 };
 
-const destroyPlayer = () => {
-  playersRef.value.forEach((item: any) => { item.destroy?.() })
-}
-
 watch(
     () => props.url,
     (val) => {
@@ -456,15 +451,6 @@ watchEffect(() => {
     }
     mediaInit();
 });
-
-onMounted(() => {
-  window.addEventListener('beforeunload', destroyPlayer)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', destroyPlayer)
-  destroyPlayer()
-})
 
 defineExpose({
     replaceVideo,

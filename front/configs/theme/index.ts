@@ -1,5 +1,6 @@
-// 主题色变量参考 https://3x.antdv.com/docs/vue/customize-theme-cn
+// 主题色变量参考 https://next.antdv.com/docs/vue/customize-theme-cn 下的SeedToken内容
 export default {
-    primaryColor: "#1677FF",
-    linkColor: "#1677FF"
+    colorPrimary: "#1677FF",
+    colorLink: "#1677FF",
+    borderRadius: 2,
 }

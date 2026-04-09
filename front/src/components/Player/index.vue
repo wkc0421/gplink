@@ -209,7 +209,6 @@ defineExpose({
   play,
   pause,
   paused,
-  destroy
 });
 </script>
 <style lang="less" scoped>

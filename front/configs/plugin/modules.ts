@@ -7,26 +7,62 @@ const modulesBasePath = 'src/modules'
 function registerModulesAlias() {
   const modulesAlias = {}
   const pattern = path.resolve(rootPath, modulesBasePath)
-  const folders = fs.readdirSync(pattern)
-
-  for (const name of folders || []) {
-    const modulePath = path.resolve(modulesBasePath, name)
-    const configPath = path.resolve(rootPath, modulesBasePath, `${name}/config.json`)
-
-    modulesAlias[`@${name}`] = modulePath
-
-    if (!fs.existsSync(configPath)) continue
-
-    try {
-      const content = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-      if (content.aliasName) {
-        modulesAlias[content.aliasName] = modulePath
+  try {
+    const folders = fs.readdirSync(pattern)
+    folders?.map((name) => {
+      try {
+        if (fs.existsSync(path.resolve(rootPath, modulesBasePath, `${name}/package.json`))) {
+          const result = fs.readFileSync(path.resolve(rootPath, modulesBasePath, `${name}/package.json`), 'utf-8')
+          const content = JSON.parse(result)
+          if (content.name) {
+            modulesAlias[`@${content.name}`] = path.resolve(modulesBasePath, name)
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to load ${modulesBasePath} configuration file!`)
       }
-    } catch (err) {
-      console.warn(`读取或解析 ${configPath} 时出错:`, err)
-    }
+    })
+  } catch (error) {
+    console.warn(`Failed to load ${modulesBasePath} Folder`)
   }
+
   return modulesAlias
 }
 
-export { registerModulesAlias }
+function registerModulesLessVariable() {
+  const pattern = path.resolve(rootPath, modulesBasePath)
+  try {
+    const folders = fs.readdirSync(pattern)
+    return folders
+      ?.filter((module) => fs.existsSync(path.resolve(`${pattern}/${module}/style/variable.less`)))
+      .map((module) => `@import (reference) "${path.resolve(`${pattern}/${module}/style/variable.less`)}";`)
+      .join('\n')
+  } catch (error) {
+    console.warn(`Failed to load ${modulesBasePath} style/variable.less`)
+  }
+}
+
+function loadViteModulesPlugins() {
+  const modulesPlugins = []
+  const pattern = path.resolve(rootPath, modulesBasePath)
+  try {
+    const folders = fs.readdirSync(pattern)
+    folders?.map((name) => {
+      try {
+        if (fs.existsSync(path.resolve(rootPath, modulesBasePath, `${name}/vite-plugin.js`))) {
+          const plugin = require(path.resolve(rootPath, modulesBasePath, `${name}/vite-plugin.js`))
+          if (plugin.default) {
+            modulesPlugins.push(...plugin.default)
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to load ${modulesBasePath} vite-plugin file!`)
+      }
+    })
+  } catch (error) {
+    console.warn(`Failed to load ${modulesBasePath} Folder`)
+  }
+  return modulesPlugins
+}
+
+export { registerModulesAlias, registerModulesLessVariable, loadViteModulesPlugins }

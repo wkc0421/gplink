@@ -230,7 +230,7 @@ import { Modal } from 'ant-design-vue';
 import { device } from '../../../assets';
 import { isNoCommunity } from '@/utils/utils';
 import { useI18n } from 'vue-i18n';
-import { useTermOptions } from '@/utils/useTermOptions'
+import { useTermOptions } from '@jetlinks-web/components/es/Search/hooks/useTermOptions'
 import {deviceStateList} from "@device-manager-ui/views/device/data";
 
 const { t: $t } = useI18n();

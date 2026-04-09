@@ -91,7 +91,7 @@ const userName = ref('-')
 const internal = ref('false')
 const params = ref()
 
-document.title = $t('auth.index.559799-6', 'GPLink');
+document.title = $t('auth.index.559799-6', 'Jetlinks');
 headerImg.value = getImage('/logo.png')
 
 type LoginParam = {
