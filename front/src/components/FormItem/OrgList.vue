@@ -3,7 +3,7 @@ import { filterSelectNode } from "@/utils";
 import { useI18n } from "vue-i18n";
 import { useRequest } from "@jetlinks-web/hooks";
 import { getDepartmentList_api } from "@/api/system/user";
-import {randomString} from "@jetlinks-web/utils";
+import { useTabSaveSuccess } from '@/hooks'
 
 const { t: $t } = useI18n();
 const emit = defineEmits(["update:value", "change"]);
@@ -17,7 +17,11 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  disabledData: {
+  disabledData: { // 用于提示职位关联
+    type: Array,
+    default: [],
+  },
+  disabledShowTips: {
     type: Array,
     default: [],
   },
@@ -26,19 +30,29 @@ const props = defineProps({
     type: Array,
     default: [],
   },
+  showAdd:{
+    type: Boolean,
+    default: true,
+  }
 });
-const dataMap = new Map();
+const dataMap = ref(new Map());
 const handleData = (arr) => {
   return arr.map((i) => {
-    dataMap.set(i.id, i);
+    dataMap.value.set(i.id, i);
     if (i.children?.length) {
       i.children = handleData(i.children);
     }
-    if (props.disabledData?.includes(i.id)) {
-      i.disabled = true;
-    } else {
-      i.disabled = false;
-    }
+
+    i.disabled = (props.disabledShowTips || []).includes(i.id) || props.disabledData?.includes(i.id);
+
+    // if (!i.disabled) {
+    //   if (props.disabledData?.includes(i.id)) {
+    //     i.disabled = true;
+    //   } else {
+    //     i.disabled = false;
+    //   }
+    // }
+
     return i;
   });
 };
@@ -47,7 +61,7 @@ const _treeData = computed(() => {
   const arr = handleData(treeData.value || []);
   const _arr = props.extraData
     .filter((i) => {
-      return !dataMap.get(i.id);
+      return !dataMap.value.get(i.id);
     })
     .map((item) => {
       return {
@@ -61,7 +75,7 @@ const _treeData = computed(() => {
 const _extraData = computed(() => {
   return props.extraData
     .filter((i) => {
-      return !dataMap.get(i.id);
+      return !dataMap.value.get(i.id);
     })
     .map((i) => i.id);
 });
@@ -77,26 +91,20 @@ const { data: treeData, reload } = useRequest(getDepartmentList_api, {
   defaultValue: [],
 });
 
-const myValue = ref();
-
-const clickAddItem = () => {
-  const sourceId = `org_add_${randomString()}`; // 唯一标识
-  const tab = window.open(
-    `${origin}/#/system/Department?save=true&sourceId=${sourceId}`
-  );
-  tab.onTabSaveSuccess = (_sourceId, value) => {
-    if (sourceId === _sourceId) {
-      if (props.extraProps?.multiple) {
-        let oldValue = myValue.value || [];
-        myValue.value = [...oldValue, value];
-      } else {
-        myValue.value = value;
-      }
-      emit("update:value", myValue.value);
-      reload();
+const { onOpen } = useTabSaveSuccess('system/Department', {
+  onSuccess(value) {
+    if (props.extraProps?.multiple) {
+      let oldValue = myValue.value || [];
+      myValue.value = [...oldValue, value];
+    } else {
+      myValue.value = value;
     }
-  };
-};
+    emit("update:value", myValue.value);
+    reload();
+  }
+})
+
+const myValue = ref();
 
 const onChange = (value, label, extra) => {
   emit("update:value", myValue.value);
@@ -111,9 +119,10 @@ watch(
   { immediate: true }
 );
 
-// onMounted(() => {
-//   run()
-// })
+onMounted(() => {
+  // run()
+  dataMap.value = new Map()
+})
 </script>
 
 <template>
@@ -128,6 +137,7 @@ watch(
         :tree-data="_treeData"
         :fieldNames="{ label: 'name', value: 'id' }"
         :filterTreeNode="(v, node) => filterSelectNode(v, node, 'name')"
+        :height="233"
         v-bind="props.extraProps"
         @change="onChange"
       >
@@ -152,7 +162,7 @@ watch(
               >{{ record.name }}</span
             >
           </a-tooltip>
-          <div style="width: calc(100% - 10px)" v-else>
+          <div v-else>
             <j-ellipsis>{{ record.name }}</j-ellipsis>
           </div>
         </template>
@@ -168,7 +178,7 @@ watch(
             </div>
             <div
               v-if="
-                !disabledData.includes(value) && !_extraData.includes(value)
+                !disabledData.includes(value) && !_extraData.includes(value) && !disabledShowTips.includes(value)
               "
               @click.stop="onClose"
               class="ant-select-selection-item-remove"
@@ -181,8 +191,8 @@ watch(
     </div>
     <j-permission-button
       hasPermission="system/Department:add"
-      @click="clickAddItem('orgIdList', 'Department')"
-      v-if="!props.extraProps?.disabled"
+      @click="onOpen({ save: true})"
+      v-if="!props.extraProps?.disabled && showAdd"
     >
       <template #icon>
         <AIcon type="PlusOutlined" />
@@ -201,6 +211,12 @@ watch(
     background: #e6f7ff;
     border-color: #91d5ff;
     color: #096dd9;
+  }
+
+  :deep(.ant-select-selection-overflow-item){
+    & > span {
+      width: 100%;
+    }
   }
 }
 </style>

@@ -1,8 +1,24 @@
 import {
+    ACCESS_AI_AGENT_CODE,
     USER_CENTER_MENU_BUTTON_CODE,
     USER_CENTER_MENU_CODE
 } from '@/utils/consts'
 
+export const ACCESS_AI_AGENT_CODE_DATA = {
+    id: ACCESS_AI_AGENT_CODE,
+    name: '访问智能体',
+    i18nMessages: {
+        zh_CN: "访问智能体",
+        en_US: "Access Ai Agent",
+        en: "Access Ai Agent"
+    },
+    permissions: [
+        {
+            permission: 'ai-agent-deploy',
+            actions: ['use']
+        },
+    ]
+}
 export const USER_CENTER_MENU_DATA = {
     id: '19a1f2c763e1231f1e1',
     accessSupport: {value: 'unsupported', label: '不支持'},
@@ -22,12 +38,15 @@ export const USER_CENTER_MENU_DATA = {
     owner: 'iot',
     options: {
         show: true,
-        builtIn: true
     },
     permissions: [
         {
             permission: 'system_config',
             actions: ['query'],
+        },
+        {
+            permission: 'permission',
+            actions: ['grant'],
         },
     ],
     buttons: [
@@ -59,10 +78,8 @@ export const USER_CENTER_MENU_DATA = {
                     actions: ['query'],
                 },
             ]
-        }
+        },
     ]
 }
 
-export default [
-
-];
+export default [];

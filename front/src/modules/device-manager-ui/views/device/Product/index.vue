@@ -190,7 +190,7 @@ import { device } from "../../../assets";
 import TagSearch from "../Instance/components/TagSearch.vue";
 import { accessType } from "../data";
 import { useI18n } from "vue-i18n";
-import { useTermOptions } from '@/utils/useTermOptions'
+import { useTermOptions } from '@jetlinks-web/components/es/Search/hooks/useTermOptions'
 import BatchDropdown from "@/components/BatchDropdown/index.vue";
 
 const { t: $t } = useI18n();

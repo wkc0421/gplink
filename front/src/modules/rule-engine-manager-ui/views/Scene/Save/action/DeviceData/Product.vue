@@ -78,7 +78,7 @@ import { queryProductSortTree } from '@rule-engine-manager-ui/api/others';
 import { accessConfigTypeFilter } from '@rule-engine-manager-ui/utils/setting';
 import { sceneImages } from '@rule-engine-manager-ui/assets/index';
 import { useI18n } from 'vue-i18n'
-import { useTermOptions } from '@/utils/useTermOptions'
+import { useTermOptions } from '@jetlinks-web/components/es/Search/hooks/useTermOptions'
 
 const { t: $t } = useI18n()
 type Emit = {

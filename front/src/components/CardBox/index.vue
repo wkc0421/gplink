@@ -18,24 +18,42 @@
         <div
             class="card-content-bg1"
             :style="{
-                        background: showStatus ? getBackgroundColor(statusNames[status]) : 'transparent',
-                    }"
+                background: showStatus ? getBackgroundColor(statusNames[status]) : 'transparent',
+            }"
         ></div>
         <div
             class="card-content-bg2"
             :style="{
-                        background: showStatus ? getBackgroundColor(statusNames[status]) : 'transparent',
-                    }"
+                background: showStatus ? getBackgroundColor(statusNames[status]) : 'transparent',
+            }"
         ></div>
         <div style="display: flex">
           <!-- 图片 -->
           <div class="card-item-avatar">
-            <slot name="img"></slot>
+            <slot name="img">
+              <img
+                  :width="80"
+                  :height="80"
+                  v-if="imgUrl"
+                  :src="imgUrl"
+              />
+            </slot>
           </div>
-
           <!-- 内容 -->
           <div class="card-item-body">
-            <slot name="content"></slot>
+            <slot name="content">
+              <j-ellipsis style="width: calc(100% - 100px);">
+                <span class="card-item-heard-name">
+                  {{ value.name }}
+                </span>
+              </j-ellipsis>
+              <a-row :gutter="24">
+                <a-col v-for="(_item, index) in contentList" :key="index" :span="24 / contentList.length">
+                  <div class="card-item-content-text">{{ _item?.text }}</div>
+                  <j-ellipsis>{{ _item?.value || "--" }}</j-ellipsis>
+                </a-col>
+              </a-row>
+            </slot>
           </div>
         </div>
         <!-- 勾选 -->
@@ -67,7 +85,6 @@
         </div>
       </div>
     </div>
-
     <!-- 按钮 -->
     <slot name="bottom-tool">
       <div
@@ -75,14 +92,39 @@
           class="card-tools"
       >
         <div
-            v-for="item in actions"
+            v-for="item in _actions"
             :key="item.key"
             class="card-button"
             :class="{
-                        delete: item.key === 'delete',
-                    }"
+                delete: item.key === 'delete',
+            }"
+            @click.stop
         >
-          <slot name="actions" v-bind="item"></slot>
+          <slot name="actions" v-bind="item">
+            <j-permission-button
+                :disabled="handleFuncValue(item.disabled, value)"
+                :popConfirm="item.popConfirm ? {
+                  title: handleFuncValue(item.popConfirm.title, value),
+                  onConfirm: (e) => {
+                    item.popConfirm.onConfirm?.(value, e)
+                  }
+                } : null"
+                :tooltip="item.tooltip ? {
+                  title: handleFuncValue(item.tooltip.title, value)
+                } : null"
+                @click="(e) => item.onClick?.(value, e)"
+                type="link"
+                style="padding: 0 5px"
+                :danger="item.key === 'delete'"
+                :hasPermission="item.hasPermission"
+            >
+              <AIcon type="DeleteOutlined" v-if="item.key === 'delete'"/>
+              <template v-else>
+                <AIcon :type="handleFuncValue(item.icon, value)"/>
+                <span>{{ handleFuncValue(item?.text, value) }}</span>
+              </template>
+            </j-permission-button>
+          </slot>
         </div>
       </div>
     </slot>
@@ -90,9 +132,10 @@
 </template>
 
 <script setup lang="ts" name='CardBox'>
-import { getHexColor } from '@jetlinks-web/components/es/BadgeStatus/color';
-import { PropType } from 'vue';
+import {getHexColor} from '@jetlinks-web/components/es/BadgeStatus/color';
+import {PropType} from 'vue';
 import i18n from '@/locales';
+import {handleFuncValue} from "@/components/CrudTable/utils";
 
 type EmitProps = {
   // (e: 'update:modelValue', data: Record<string, any>): void;
@@ -144,6 +187,13 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false,
+  },
+  imgUrl: {
+    type: String
+  },
+  contentList: {
+    type: Array,
+    default: []
   }
 });
 
@@ -156,6 +206,10 @@ const getBackgroundColor = (code: string) => {
                 ${_color2} 80%
             )`;
 };
+
+const _actions = computed(() => {
+  return props.actions.filter(i => handleFuncValue(i.show === undefined ? true : i.show, props.value))
+})
 
 const handleClick = () => {
   emit('click', props.value);
@@ -253,7 +307,7 @@ const handleClick = () => {
         width: 0;
 
         .ant-row {
-          margin-top: 19px;
+          margin-top: 18px;
         }
       }
 
