@@ -18,6 +18,7 @@ package org.jetlinks.community.timescaledb.thing;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetlinks.community.Interval;
+import org.jetlinks.community.things.data.ThingsDataConstants;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
@@ -49,7 +50,7 @@ public class TimescaleDBThingsDataProperties {
     /**
      * 压缩 segmentby 列（逗号分隔，直接写入 SQL），与实际 DB 列名对齐
      */
-    private String compressSegmentBy = "thing_id,property";
+    private String compressSegmentBy = ThingsDataConstants.COLUMN_THING_ID + "," + ThingsDataConstants.COLUMN_PROPERTY_ID;
 
     /**
      * 压缩 orderby 子句

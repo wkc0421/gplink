@@ -107,6 +107,7 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
     }
 
     static final String timestampAlias = "_ts";
+    private static final String CAGG_THING_ID_COLUMN = ThingsDataConstants.COLUMN_THING_ID;
 
     /** cagg thing_id 过滤的允许列名（Java camelCase 和 DB snake_case 均接受） */
     private static final Set<String> THING_ID_COLUMNS = new HashSet<>(Arrays.asList(
@@ -382,13 +383,13 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
             if (in.equals(term.getTermType())) {
                 // in 条件：value 可能是 Collection 或 Array，直接传递给 cdt.in
                 if (value instanceof Collection) {
-                    cdt.in("thing_id", (Collection<?>) value);
+                    cdt.in(CAGG_THING_ID_COLUMN, (Collection<?>) value);
                 } else {
                     // 其他类型（如逗号字符串），让 ezorm 按原始方式处理
-                    cdt.in("thing_id", value);
+                    cdt.in(CAGG_THING_ID_COLUMN, value);
                 }
             } else {
-                cdt.is("thing_id", value.toString());
+                cdt.is(CAGG_THING_ID_COLUMN, value.toString());
             }
         }
     }

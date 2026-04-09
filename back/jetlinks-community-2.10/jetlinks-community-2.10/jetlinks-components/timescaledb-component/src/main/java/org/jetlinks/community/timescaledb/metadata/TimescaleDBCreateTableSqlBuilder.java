@@ -20,6 +20,7 @@ import org.hswebframework.ezorm.rdb.executor.SqlRequest;
 import org.hswebframework.ezorm.rdb.executor.SqlRequests;
 import org.hswebframework.ezorm.rdb.metadata.RDBTableMetadata;
 import org.hswebframework.ezorm.rdb.operator.builder.fragments.ddl.CommonCreateTableSqlBuilder;
+import org.jetlinks.community.things.data.ThingsDataConstants;
 
 public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilder {
 
@@ -131,6 +132,14 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         return i.getNumber().intValue() + " " + i.getUnit().name().toLowerCase();
     }
 
+    private String quotedThingIdColumn() {
+        return "\"" + ThingsDataConstants.COLUMN_THING_ID + "\"";
+    }
+
+    private String quotedPropertyColumn() {
+        return "\"" + ThingsDataConstants.COLUMN_PROPERTY_ID + "\"";
+    }
+
     /** 小时级 cagg：直接在原始表上聚合，物化 first/last/avg/sum/min/max/count */
     private SqlRequest createCaggViewSQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         String view = hourlyCaggName(table);
@@ -138,7 +147,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
             "SELECT time_bucket('1 hour',\"timestamp\") AS bucket_start," +
-            "\"thing_id\",\"property\"," +
+            quotedThingIdColumn() + "," + quotedPropertyColumn() + "," +
             "first(\"numberValue\",\"timestamp\") AS first_value," +
             "last(\"numberValue\",\"timestamp\")  AS last_value," +
             "avg(\"numberValue\")                 AS avg_value," +
@@ -147,7 +156,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "max(\"numberValue\")                 AS max_value," +
             "count(*)                             AS sample_count " +
             "FROM " + raw + " " +
-            "GROUP BY 1,\"thing_id\",\"property\" WITH NO DATA"
+            "GROUP BY 1," + quotedThingIdColumn() + "," + quotedPropertyColumn() + " WITH NO DATA"
         );
     }
 
@@ -161,7 +170,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
             "SELECT time_bucket('1 day',bucket_start) AS bucket_start," +
-            "thing_id,property," +
+            quotedThingIdColumn() + "," + quotedPropertyColumn() + "," +
             "first(first_value,bucket_start) AS first_value," +
             "last(last_value,bucket_start)   AS last_value," +
             "sum(sum_value)                  AS sum_value," +
@@ -169,7 +178,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "max(max_value)                  AS max_value," +
             "sum(sample_count)               AS sample_count " +
             "FROM " + hourly + " " +
-            "GROUP BY 1,thing_id,property WITH NO DATA"
+            "GROUP BY 1," + quotedThingIdColumn() + "," + quotedPropertyColumn() + " WITH NO DATA"
         );
     }
 
@@ -182,7 +191,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         return SqlRequests.of(
             "CREATE MATERIALIZED VIEW " + view + " WITH (timescaledb.continuous) AS " +
             "SELECT time_bucket('1 month',bucket_start) AS bucket_start," +
-            "thing_id,property," +
+            quotedThingIdColumn() + "," + quotedPropertyColumn() + "," +
             "first(first_value,bucket_start) AS first_value," +
             "last(last_value,bucket_start)   AS last_value," +
             "sum(sum_value)                  AS sum_value," +
@@ -190,7 +199,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
             "max(max_value)                  AS max_value," +
             "sum(sample_count)               AS sample_count " +
             "FROM " + daily + " " +
-            "GROUP BY 1,thing_id,property WITH NO DATA"
+            "GROUP BY 1," + quotedThingIdColumn() + "," + quotedPropertyColumn() + " WITH NO DATA"
         );
     }
 
