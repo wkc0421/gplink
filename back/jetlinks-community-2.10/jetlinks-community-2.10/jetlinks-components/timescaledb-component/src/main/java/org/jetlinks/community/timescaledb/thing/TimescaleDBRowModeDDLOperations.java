@@ -139,8 +139,11 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
 
         // 仅对属性表启用列压缩，事件/日志表不压缩
         if (this.properties.isCompress() && metricType == MetricType.properties) {
+            // 动态构建 segmentBy，使用实际 DB 列名（设备为 "deviceId"，通用为 "thingId"）
+            String thingIdCol = metricBuilder.getThingIdProperty();
+            String segmentBy = "\"" + thingIdCol + "\"," + ThingsDataConstants.COLUMN_PROPERTY_ID;
             table.addFeature(new CreateCompressionPolicy(
-                this.properties.getCompressSegmentBy(),
+                segmentBy,
                 this.properties.getCompressOrderBy(),
                 this.properties.getCompressAfter()
             ));
@@ -149,13 +152,15 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
         // 仅对属性表建立 cagg（小时/日/月层级），当 cagg.enabled=true
         if (this.properties.getCagg().isEnabled() && metricType == MetricType.properties) {
             TimescaleDBThingsDataProperties.Cagg c = this.properties.getCagg();
+            String thingIdCol = metricBuilder.getThingIdProperty();
             table.addFeature(new CreateContinuousAggregate(
                 c.getRefreshInterval(),
                 c.getStartOffset(),
                 c.getEndOffset(),
                 c.getRetention(),
                 c.isDailyEnabled(),
-                c.isMonthlyEnabled()
+                c.isMonthlyEnabled(),
+                thingIdCol
             ));
         }
 

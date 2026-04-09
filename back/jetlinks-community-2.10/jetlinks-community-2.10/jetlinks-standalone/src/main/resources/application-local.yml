@@ -19,5 +19,4 @@ REDIS_DATABASE: 0 # redis 数据库索引
 TIMESCALEDB_SCHEMA: public # timescaledb 数据库schema,默认public
 
 timescaledb:
-    things-data:
-        compress-segment-by: "\"thingId\",property"
+    things-data: {}

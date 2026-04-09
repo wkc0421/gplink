@@ -73,6 +73,10 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
         super(thingType, thingTemplateId, thingId, metricBuilder, settings, registry);
         this.database = database;
         this.properties = properties;
+        this.caggThingIdColumn = metricBuilder.getThingIdProperty();
+        this.thingIdColumns = new HashSet<>(Arrays.asList(
+            ThingsDataConstants.COLUMN_THING_ID, "thing_id", metricBuilder.getThingIdProperty()
+        ));
     }
 
     @Override
@@ -107,12 +111,12 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
     }
 
     static final String timestampAlias = "_ts";
-    private static final String CAGG_THING_ID_COLUMN = ThingsDataConstants.COLUMN_THING_ID;
 
-    /** cagg thing_id 过滤的允许列名（Java camelCase 和 DB snake_case 均接受） */
-    private static final Set<String> THING_ID_COLUMNS = new HashSet<>(Arrays.asList(
-        ThingsDataConstants.COLUMN_THING_ID, "thing_id"
-    ));
+    /** 实际 cagg 视图中物ID列名（设备为 "deviceId"，通用为 "thingId"） */
+    private final String caggThingIdColumn;
+
+    /** cagg thing_id 过滤的允许列名（包含通用名、snake_case 及实际列名） */
+    private final Set<String> thingIdColumns;
 
     @Override
     protected Flux<AggregationData> doAggregation(String metric,
@@ -351,7 +355,7 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
             if (term.getTerms() != null && !term.getTerms().isEmpty()) {
                 return false;
             }
-            if (!THING_ID_COLUMNS.contains(term.getColumn())) {
+            if (!thingIdColumns.contains(term.getColumn())) {
                 return false;
             }
             String type = term.getTermType();
@@ -373,7 +377,7 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
             return;
         }
         for (Term term : terms) {
-            if (!THING_ID_COLUMNS.contains(term.getColumn())) {
+            if (!thingIdColumns.contains(term.getColumn())) {
                 continue;
             }
             Object value = term.getValue();
@@ -383,13 +387,13 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
             if (in.equals(term.getTermType())) {
                 // in 条件：value 可能是 Collection 或 Array，直接传递给 cdt.in
                 if (value instanceof Collection) {
-                    cdt.in(CAGG_THING_ID_COLUMN, (Collection<?>) value);
+                    cdt.in(caggThingIdColumn, (Collection<?>) value);
                 } else {
                     // 其他类型（如逗号字符串），让 ezorm 按原始方式处理
-                    cdt.in(CAGG_THING_ID_COLUMN, value);
+                    cdt.in(caggThingIdColumn, value);
                 }
             } else {
-                cdt.is(CAGG_THING_ID_COLUMN, value.toString());
+                cdt.is(caggThingIdColumn, value.toString());
             }
         }
     }
