@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,12 +19,15 @@ type SQLiteStore struct {
 }
 
 func NewSQLite(path string) (*SQLiteStore, error) {
+	log.Printf("opening sqlite database path=%s", path)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		log.Printf("create sqlite directory failed path=%s err=%v", filepath.Dir(path), err)
 		return nil, err
 	}
 
 	db, err := sql.Open("sqlite", path+"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)")
 	if err != nil {
+		log.Printf("sql open failed path=%s err=%v", path, err)
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
@@ -31,9 +35,11 @@ func NewSQLite(path string) (*SQLiteStore, error) {
 
 	store := &SQLiteStore{db: db}
 	if err = store.migrate(); err != nil {
+		log.Printf("sqlite migrate failed path=%s err=%v", path, err)
 		return nil, err
 	}
 
+	log.Printf("sqlite ready path=%s", path)
 	return store, nil
 }
 

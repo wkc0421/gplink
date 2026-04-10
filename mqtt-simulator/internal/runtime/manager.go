@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net/url"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -40,8 +42,10 @@ type runningTask struct {
 func NewManager(store *store.SQLiteStore, broker *Broker) (*Manager, error) {
 	runtimes, err := store.LoadRuntimes()
 	if err != nil {
+		log.Printf("load task runtimes failed: %v", err)
 		return nil, err
 	}
+	log.Printf("runtime manager initialized runtimes=%d", len(runtimes))
 	return &Manager{
 		store:   store,
 		broker:  broker,
@@ -85,15 +89,18 @@ func (m *Manager) GetRuntime(id string) model.TaskRuntime {
 }
 
 func (m *Manager) Start(config model.TaskConfig) error {
+	log.Printf("task start requested id=%s name=%s devices=%d mpm=%d broker=%s", config.ID, config.Name, config.DeviceCount, config.MessagesPerMinute, config.BrokerURL)
 	m.mu.Lock()
 	if _, exists := m.tasks[config.ID]; exists {
 		m.mu.Unlock()
+		log.Printf("task start skipped id=%s reason=already_running", config.ID)
 		return fmt.Errorf("task already running")
 	}
 	m.mu.Unlock()
 
 	counters, err := m.store.LoadECounters(config.ID)
 	if err != nil {
+		log.Printf("load e counters failed id=%s err=%v", config.ID, err)
 		return err
 	}
 
@@ -110,6 +117,7 @@ func (m *Manager) Start(config model.TaskConfig) error {
 		task.runtime.Status = "error"
 		task.runtime.LastError = err.Error()
 		m.updateRuntime(config.ID, task.runtime)
+		log.Printf("task start failed id=%s connectErr=%v", config.ID, err)
 		return err
 	}
 
@@ -122,6 +130,7 @@ func (m *Manager) Start(config model.TaskConfig) error {
 	m.tasks[config.ID] = task
 	m.mu.Unlock()
 	m.updateRuntime(config.ID, task.snapshot())
+	log.Printf("task start success id=%s workers=%d", config.ID, task.workerCount())
 
 	go task.run(ctx, m)
 	go task.flushLoop(ctx, m.store)
@@ -130,6 +139,7 @@ func (m *Manager) Start(config model.TaskConfig) error {
 }
 
 func (m *Manager) Stop(id string) error {
+	log.Printf("task stop requested id=%s", id)
 	m.mu.Lock()
 	task, exists := m.tasks[id]
 	if exists {
@@ -137,18 +147,25 @@ func (m *Manager) Stop(id string) error {
 	}
 	m.mu.Unlock()
 	if !exists {
+		log.Printf("task stop skipped id=%s reason=not_running", id)
 		return nil
 	}
 
 	task.cancel()
 	if task.client != nil && task.client.IsConnected() {
+		log.Printf("disconnect mqtt client id=%s", id)
 		task.client.Disconnect(250)
 	}
 	rt := task.snapshot()
 	rt.Status = "stopped"
 	rt.Connected = false
 	m.updateRuntime(id, rt)
-	return m.store.SaveECounters(id, task.builder.Counters())
+	if err := m.store.SaveECounters(id, task.builder.Counters()); err != nil {
+		log.Printf("save e counters on stop failed id=%s err=%v", id, err)
+		return err
+	}
+	log.Printf("task stopped id=%s sent=%d failed=%d", id, rt.SentTotal, rt.FailedTotal)
+	return nil
 }
 
 func (m *Manager) Delete(id string) error {
@@ -165,7 +182,9 @@ func (m *Manager) updateRuntime(id string, runtime model.TaskRuntime) {
 	m.mu.Lock()
 	m.runtime[id] = runtime
 	m.mu.Unlock()
-	_ = m.store.SaveRuntime(id, runtime)
+	if err := m.store.SaveRuntime(id, runtime); err != nil {
+		log.Printf("save runtime failed id=%s status=%s err=%v", id, runtime.Status, err)
+	}
 	m.broker.Publish(map[string]any{"taskId": id, "runtime": runtime})
 }
 
@@ -182,6 +201,7 @@ func (t *runningTask) snapshot() model.TaskRuntime {
 }
 
 func (t *runningTask) connect() error {
+	log.Printf("connecting mqtt broker id=%s broker=%s clientId=%s", t.config.ID, t.config.BrokerURL, resolveClientID(t.config))
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(t.config.BrokerURL)
 	opts.SetClientID(resolveClientID(t.config))
@@ -190,6 +210,18 @@ func (t *runningTask) connect() error {
 	opts.SetKeepAlive(30 * time.Second)
 	opts.SetAutoReconnect(true)
 	opts.SetConnectTimeout(10 * time.Second)
+	opts.SetConnectionLostHandler(func(client mqtt.Client, err error) {
+		log.Printf("mqtt connection lost id=%s err=%v", t.config.ID, err)
+		t.runtime.Connected = false
+		t.runtime.LastError = err.Error()
+	})
+	opts.SetOnConnectHandler(func(client mqtt.Client) {
+		log.Printf("mqtt connected id=%s broker=%s", t.config.ID, t.config.BrokerURL)
+		t.runtime.Connected = true
+	})
+	opts.SetReconnectingHandler(func(client mqtt.Client, options *mqtt.ClientOptions) {
+		log.Printf("mqtt reconnecting id=%s broker=%s", t.config.ID, t.config.BrokerURL)
+	})
 	if t.config.Username != "" {
 		opts.SetUsername(t.config.Username)
 		opts.SetPassword(t.config.Password)
@@ -202,16 +234,21 @@ func (t *runningTask) connect() error {
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	if ok := token.WaitTimeout(15 * time.Second); !ok {
+		log.Printf("mqtt connect timeout id=%s", t.config.ID)
 		return fmt.Errorf("connect broker timeout")
 	}
 	if err := token.Error(); err != nil {
+		log.Printf("mqtt connect failed id=%s err=%v", t.config.ID, err)
 		return err
 	}
 	t.client = client
+	log.Printf("mqtt connect success id=%s", t.config.ID)
 	return nil
 }
 
 func (t *runningTask) run(ctx context.Context, manager *Manager) {
+	defer recoverTaskPanic(t.config.ID, "run")
+
 	perSecond := float64(t.config.MessagesPerMinute) / 60.0
 	if perSecond < 1 {
 		perSecond = 1
@@ -224,6 +261,7 @@ func (t *runningTask) run(ctx context.Context, manager *Manager) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer recoverTaskPanic(t.config.ID, "worker")
 			for {
 				select {
 				case <-ctx.Done():
@@ -264,6 +302,7 @@ func (t *runningTask) run(ctx context.Context, manager *Manager) {
 				default:
 					t.failedTotal.Add(1)
 					t.runtime.LastError = "worker queue full"
+					log.Printf("task publish queue full id=%s workers=%d", t.config.ID, workers)
 				}
 			}
 		}
@@ -284,6 +323,7 @@ func (t *runningTask) publishDevice(idx int, manager *Manager) {
 		t.failedTotal.Add(1)
 		t.runtime.LastError = err.Error()
 		t.runtime.Connected = t.client.IsConnected()
+		log.Printf("publish failed id=%s topic=%s err=%v", t.config.ID, topic, err)
 		manager.updateRuntime(t.config.ID, t.snapshot())
 		return
 	}
@@ -298,6 +338,7 @@ func (t *runningTask) publishDevice(idx int, manager *Manager) {
 }
 
 func (t *runningTask) statsLoop(ctx context.Context, manager *Manager) {
+	defer recoverTaskPanic(t.config.ID, "statsLoop")
 	secondTicker := time.NewTicker(time.Second)
 	minuteTicker := time.NewTicker(time.Minute)
 	defer secondTicker.Stop()
@@ -306,27 +347,36 @@ func (t *runningTask) statsLoop(ctx context.Context, manager *Manager) {
 	for {
 		select {
 		case <-ctx.Done():
+			log.Printf("stats loop stopping id=%s", t.config.ID)
 			manager.updateRuntime(t.config.ID, t.snapshot())
 			return
 		case <-secondTicker.C:
 			manager.updateRuntime(t.config.ID, t.snapshot())
 			t.lastSecond.Store(0)
 		case <-minuteTicker.C:
+			snapshot := t.snapshot()
+			log.Printf("task heartbeat id=%s sent=%d failed=%d connected=%t lastError=%q", t.config.ID, snapshot.SentTotal, snapshot.FailedTotal, snapshot.Connected, snapshot.LastError)
 			t.lastMinute.Store(0)
 		}
 	}
 }
 
 func (t *runningTask) flushLoop(ctx context.Context, store *store.SQLiteStore) {
+	defer recoverTaskPanic(t.config.ID, "flushLoop")
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
-			_ = store.SaveECounters(t.config.ID, t.builder.Counters())
+			if err := store.SaveECounters(t.config.ID, t.builder.Counters()); err != nil {
+				log.Printf("flush e counters on shutdown failed id=%s err=%v", t.config.ID, err)
+			}
+			log.Printf("flush loop stopped id=%s", t.config.ID)
 			return
 		case <-ticker.C:
-			_ = store.SaveECounters(t.config.ID, t.builder.Counters())
+			if err := store.SaveECounters(t.config.ID, t.builder.Counters()); err != nil {
+				log.Printf("flush e counters failed id=%s err=%v", t.config.ID, err)
+			}
 		}
 	}
 }
@@ -361,4 +411,10 @@ func NormalizeBrokerURL(raw string) string {
 		return raw
 	}
 	return "tcp://" + strings.TrimSpace(raw)
+}
+
+func recoverTaskPanic(taskID string, component string) {
+	if r := recover(); r != nil {
+		log.Printf("panic recovered task=%s component=%s err=%v stack=%s", taskID, component, r, debug.Stack())
+	}
 }
