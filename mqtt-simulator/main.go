@@ -4,11 +4,14 @@ import (
 	"log"
 	"os"
 
+	"mqtt-simulator/internal/logging"
 	"mqtt-simulator/internal/server"
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
+	if err := logging.Setup(); err != nil {
+		log.Fatalf("setup logging: %v", err)
+	}
 	log.Printf("mqtt-simulator starting pid=%d", os.Getpid())
 
 	srv, err := server.New()
