@@ -31,13 +31,16 @@ import org.jetlinks.core.things.ThingType;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
+import org.jetlinks.community.utils.TimeUtils;
+
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 按需更新的物数据管理器
@@ -56,13 +59,14 @@ public class AutoUpdateThingsDataManager extends LocalFileThingsDataManager {
 
     private final Map<ThingId, Updater> updaters = Caffeine
         .newBuilder()
-        //10分钟没有任何读取则dispose取消订阅
-        .expireAfterAccess(Duration.ofMinutes(10))
+        .maximumSize(Long.parseLong(
+            System.getProperty("jetlinks.things.data.local.max-updaters", "20000")))
+        //没有任何读取则dispose取消订阅
+        .expireAfterAccess(TimeUtils.parse(
+            System.getProperty("jetlinks.things.data.local.updater-expire", "5m")))
         .<ThingId, Updater>removalListener((key, value, cause) -> {
-            if (cause == RemovalCause.EXPIRED) {
-                if (value != null) {
-                    value.dispose();
-                }
+            if (value != null && (cause == RemovalCause.EXPIRED || cause == RemovalCause.SIZE)) {
+                value.dispose();
             }
         })
         .build()
@@ -73,6 +77,8 @@ public class AutoUpdateThingsDataManager extends LocalFileThingsDataManager {
     public AutoUpdateThingsDataManager(String fileName, EventBus eventBus) {
         super(fileName);
         this.eventBus = eventBus;
+        // 'updaters' field initializer has run by now — safe to register gauge
+        Metrics.globalRegistry.gaugeMapSize("things.data.updaters.size", Tags.empty(), updaters);
     }
 
     @Override
@@ -171,7 +177,14 @@ public class AutoUpdateThingsDataManager extends LocalFileThingsDataManager {
         private final String thingId;
         private final Disposable disposable;
 
-        private final Set<String> include = ConcurrentHashMap.newKeySet();
+        private final Set<String> include = Collections.newSetFromMap(
+            Caffeine.newBuilder()
+                    .maximumSize(Long.parseLong(
+                        System.getProperty("jetlinks.things.data.local.max-include-per-updater", "256")))
+                    .expireAfterAccess(TimeUtils.parse(
+                        System.getProperty("jetlinks.things.data.local.include-expire", "5m")))
+                    .<String, Boolean>build()
+                    .asMap());
 
         private boolean loading;
         private Mono<Void> loader;
