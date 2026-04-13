@@ -87,7 +87,7 @@ import ValueRender from './ValueRender.vue'
 import Save from './Save.vue'
 import Detail from './Detail/index.vue'
 import Indicators from './Indicators.vue'
-import { getProperty, queryPropertyMetric } from '../../../../../../api/instance'
+import { getProperty, queryMetric } from '../../../../../../api/instance'
 import { dashboard } from '../../../../../../api/dashboard'
 import { useInstanceStore } from '../../../../../../store/instance'
 import { wsClient } from '@jetlinks-web/core'
@@ -338,10 +338,20 @@ const query = (params: Record<string, any>) =>
   })
 
 const getMetric = async (arr = []) => {
-  const resp = await queryPropertyMetric(instanceStore.current.id, arr)
-  if (resp.success) {
-    metric.value = resp.result.filter((i: any) => i.metrics.length).map((item: any) => item.property)
-  }
+  const requests = arr.map((property: string) =>
+    queryMetric(instanceStore.current.id, property)
+      .then((resp) => ({
+        property,
+        hasMetrics: !!(resp?.success && Array.isArray(resp?.result) && resp.result.length)
+      }))
+      .catch(() => ({
+        property,
+        hasMetrics: false
+      }))
+  )
+
+  const results = await Promise.all(requests)
+  metric.value = results.filter((item) => item.hasMetrics).map((item) => item.property)
 }
 
 watch(
