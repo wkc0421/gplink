@@ -73,6 +73,9 @@ public class BufferSettings {
 
     private final int fileConcurrency;
 
+    // FileQueue 底层 H2 MVStore 的读缓存大小(MB),防止无上限缓存占满堆内存
+    private final int mvstoreCacheMb;
+
     private final ConsumeStrategy strategy;
 
     public static BufferSettings create(String filePath, String fileName) {
@@ -87,6 +90,7 @@ public class BufferSettings {
             Math.max(1, Runtime.getRuntime().availableProcessors() / 2),
             5,
             1,
+            8,
             ConsumeStrategy.FIFO);
     }
 
@@ -108,6 +112,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -121,6 +126,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -134,6 +140,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -147,6 +154,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -160,6 +168,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -173,6 +182,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -186,6 +196,21 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
+                                  strategy);
+    }
+
+    public BufferSettings mvstoreCacheMb(int mvstoreCacheMb) {
+        return new BufferSettings(filePath,
+                                  fileName,
+                                  eviction,
+                                  retryWhenError,
+                                  bufferSize,
+                                  bufferTimeout,
+                                  parallelism,
+                                  maxRetryTimes,
+                                  fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -199,6 +224,7 @@ public class BufferSettings {
                                   parallelism,
                                   maxRetryTimes,
                                   fileConcurrency,
+                                  mvstoreCacheMb,
                                   strategy);
     }
 
@@ -212,6 +238,7 @@ public class BufferSettings {
                                   properties.getParallelism(),
                                   properties.getMaxRetryTimes(),
                                   properties.getFileConcurrency(),
+                                  properties.getMvstoreCacheMb(),
                                   properties.getStrategy()
                                   );
     }

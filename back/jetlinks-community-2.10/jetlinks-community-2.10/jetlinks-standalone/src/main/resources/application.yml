@@ -85,6 +85,18 @@ timescaledb:
           retention: 3y         # cagg 视图数据保留时长
           daily-enabled: true   # 在小时 cagg 之上建立日级层级 cagg（_daily_agg）
           monthly-enabled: true # 在日级 cagg 之上建立月级层级 cagg（_monthly_agg）
+    write-buffer:
+        parallelism: 16         # 原默认 cpu/2≈4；5000msg/min×150属性=12500条/秒，需要更多 worker
+        size: 2000              # 更大批次减少 DB round-trip 次数（原默认 1000）
+        timeout: 500ms          # 最多等 500ms 触发一次 flush（原默认 1s）
+        mvstore-cache-mb: 8     # 限制 FileQueue H2 MVStore 读缓存为 8MB
+                                # 原来无上限，会默认占用 ~50% JVM 最大堆（本次堆快照中 184MB）
+        # JVM 启动参数补充（docker-compose JAVA_OPTS 或启动脚本中设置）:
+        #   -XX:SoftRefLRUPolicyMSPerMB=0   → 让 GC 积极回收 Spring soft-reference 缓存（~107MB）
+        #   -Djetlinks.things.data.local.max-l1-cache=50000  → L1缓存条目数 300000→50000
+        #   -Djetlinks.things.data.local.l1-expire=120s      → 过期时间 10m→2m
+        #   -Djetlinks.things.data.local.mvstore-cache-mb=8  → things-data MVStore缓存上限
+        #   -Djetlinks.things.data.store.flush-interval=1s   → dirty条目落盘间隔 5s→1s
 tdengine:
     enabled: false # 使用tdengine来存储设备数据
     database: jetlinks
@@ -160,7 +172,7 @@ jetlinks:
             latest:
                 buffer:
                     size: 500               # 写入缓冲大小（原默认 1000，收紧）
-                    parallelism: 2          # 并行写入线程数
+                    parallelism: 4          # 并行写入线程数
     logging:
         system:
             context:
@@ -183,7 +195,7 @@ rule:
         server-name: ${spring.application.name}
 logging:
     level:
-        org.jetlinks: debug
+        org.jetlinks: warn
         rule.engine: debug
         org.hswebframework: debug
         org.springframework.transaction: debug
