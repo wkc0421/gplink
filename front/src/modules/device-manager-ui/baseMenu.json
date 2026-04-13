@@ -929,6 +929,108 @@
                 ]
               }
             ]
+          },
+          {
+            "code": "device/scheduledTask",
+            "name": "定时任务",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "定时任务",
+                "en_US": "Scheduled Task",
+                "en": "Scheduled Task"
+              }
+            },
+            "owner": "iot",
+            "id": "scheduled-task-menu",
+            "sortIndex": 5,
+            "url": "/iot/device/scheduledTask",
+            "icon": "ClockCircleOutlined",
+            "accessSupport": {
+              "text": "支持",
+              "value": "support"
+            },
+            "supportDataAccess": true,
+            "showPage": [
+              "scheduled-task"
+            ],
+            "permissions": [
+              {
+                "permission": "scheduled-task",
+                "actions": [
+                  "query"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "add",
+                "name": "新增",
+                "i18nMessages": {
+                  "zh_CN": "新增",
+                  "en_US": "Add",
+                  "en": "Add"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "update",
+                "name": "编辑",
+                "i18nMessages": {
+                  "zh_CN": "编辑",
+                  "en_US": "Edit",
+                  "en": "Edit"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "delete",
+                "name": "删除",
+                "i18nMessages": {
+                  "zh_CN": "删除",
+                  "en_US": "Delete",
+                  "en": "Delete"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "delete"
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
