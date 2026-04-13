@@ -47,6 +47,9 @@ public class BufferProperties {
     //淘汰策略
     private BufferEvictionSpec eviction = new BufferEvictionSpec();
 
+    //FileQueue 底层 H2 MVStore 的读缓存大小(MB),默认 8MB,防止无上限缓存占满堆内存
+    private int mvstoreCacheMb = 8;
+
     public boolean isExceededRetryCount(int count) {
         return maxRetryTimes > 0 && count >= maxRetryTimes;
     }

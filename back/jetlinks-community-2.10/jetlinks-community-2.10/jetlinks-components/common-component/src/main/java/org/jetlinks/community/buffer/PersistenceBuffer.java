@@ -259,6 +259,7 @@ public class PersistenceBuffer<T extends Serializable> implements EvictionContex
                               .name(fileName)
                               .path(path)
                               .option("valueType", dataType)
+                              .option("cacheSize", settings.getMvstoreCacheMb())
                               .option("concurrency", settings.getFileConcurrency())
                               .build());
         this.remainder = queue.size();
@@ -268,6 +269,7 @@ public class PersistenceBuffer<T extends Serializable> implements EvictionContex
                                   .name(fileName + ".dead")
                                   .path(path)
                                   .option("valueType", dataType)
+                                  .option("cacheSize", settings.getMvstoreCacheMb())
                                   .build());
         this.deadSize = this.deadQueue.size();
         this.buffer = newBuffer();
