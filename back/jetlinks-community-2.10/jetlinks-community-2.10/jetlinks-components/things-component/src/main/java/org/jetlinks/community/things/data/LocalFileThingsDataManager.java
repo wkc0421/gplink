@@ -46,7 +46,12 @@ import reactor.function.Function4;
 import reactor.util.function.Tuple3;
 import reactor.util.function.Tuples;
 
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
 import javax.annotation.Nonnull;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
+
 import java.io.*;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
@@ -65,28 +70,33 @@ public class LocalFileThingsDataManager implements ThingsDataManager, ThingsData
     private static final AtomicIntegerFieldUpdater<LocalFileThingsDataManager>
         TAG_INC = AtomicIntegerFieldUpdater.newUpdater(LocalFileThingsDataManager.class, "tagInc");
 
-    //单个属性最大缓存数量 java -Dthings.data.store.max-size=8
+    //单个属性最大缓存数量 java -Dthings.data.store.max-size=2
     static int DEFAULT_MAX_STORE_SIZE_EACH_KEY = Integer
         .parseInt(
-            System.getProperty("jetlinks.things.data.store.max-size", "8")
+            System.getProperty("jetlinks.things.data.store.max-size", "2")
         );
 
     static Duration FLUSH_INTERVAL = TimeUtils
         .parse(
-            System.getProperty("jetlinks.things.data.store.flush-interval", "30s")
+            System.getProperty("jetlinks.things.data.store.flush-interval", "5s")
         );
 
-    static int CACHE_SIZE = (int) Math.max(64, Runtime.getRuntime().maxMemory() / 1024 / 1024 / 64);
+    static int CACHE_SIZE = Integer.parseInt(
+        System.getProperty("jetlinks.things.data.local.mvstore-cache-mb", "24"));
 
     protected final MVStore mvStore;
 
     //记录key的标签缓存,此方式决定了支持的最大(物实例数量+属性数量)为2^32(42亿)
-    private final Map<String, Integer> tagCache = new ConcurrentHashMap<>();
+    private final Map<String, Integer> tagCache = Caffeine.newBuilder()
+        .maximumSize(Long.parseLong(
+            System.getProperty("jetlinks.things.data.local.max-tag-cache", "100000")))
+        .<String, Integer>build()
+        .asMap();
     private final MVMap<String, Integer> tagStore;
 
     //  历史数据缓存
     // key为什么不直接使用Long?因为tag的生成规则会导致hash冲突严重.(同一个物实例的所有属性tag hash值一样)
-    private final Map<StoreKey, PropertyHistory> l1Cache = new ConcurrentHashMap<>();
+    private final Map<StoreKey, PropertyHistory> l1Cache;
     private final MVMap<Long, PropertyHistory> historyStore;
     private final Scheduler writerScheduler = Schedulers.newSingle("things-data-writer");
     private final Scheduler readerScheduler = Schedulers.newSingle("things-data-reader");
@@ -113,6 +123,22 @@ public class LocalFileThingsDataManager implements ThingsDataManager, ThingsData
         this.tagStore = tp3.getT2();
         this.historyStore = tp3.getT3();
         this.tagInc = this.tagStore.size();
+        this.l1Cache = Caffeine.newBuilder()
+            .maximumSize(Long.parseLong(
+                System.getProperty("jetlinks.things.data.local.max-l1-cache", "300000")))
+            .expireAfterAccess(TimeUtils.parse(
+                System.getProperty("jetlinks.things.data.local.l1-expire", "10m")))
+            .<StoreKey, PropertyHistory>removalListener((key, value, cause) -> {
+                if (key != null && value != null && !value.isStored()
+                        && (cause == RemovalCause.SIZE || cause == RemovalCause.EXPIRED)) {
+                    synchronized (LocalFileThingsDataManager.this) {
+                        historyStore.operate(key.toTag(), value, MERGE);
+                    }
+                    Metrics.counter("things.data.l1cache.evict_flush").increment();
+                }
+            })
+            .build()
+            .asMap();
         init();
     }
 
@@ -130,6 +156,12 @@ public class LocalFileThingsDataManager implements ThingsDataManager, ThingsData
                 .subscribe());
         disposable.add(this.writerScheduler);
         disposable.add(this.readerScheduler);
+        registerMetrics();
+    }
+
+    protected void registerMetrics() {
+        Metrics.globalRegistry.gaugeMapSize("things.data.l1cache.size", Tags.empty(), l1Cache);
+        Metrics.globalRegistry.gaugeMapSize("things.data.tagcache.size", Tags.empty(), tagCache);
     }
 
     static final MVMap.DecisionMaker<PropertyHistory> MERGE = new MVMap.DecisionMaker<PropertyHistory>() {
