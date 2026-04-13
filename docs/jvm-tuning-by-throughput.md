@@ -7,7 +7,8 @@
 
 | 参数 | 说明 | 计算方式 |
 |------|------|----------|
-| `-Xmx` | JVM 最大堆 | L1 cache 条目数 × 160 B + 应用基础内存 300MB，向上取整 |
+| `-Xms` | JVM 初始堆（**必须设置**） | 固定 256m；JVM 按需增长，避免启动即占满 `-Xmx` |
+| `-Xmx` | JVM 最大堆上限 | L1 cache 条目数 × 160 B + 应用基础内存 300MB，向上取整 |
 | `max-l1-cache` | LocalFileThingsDataManager L1 缓存条目数 | 设备数 × 150 × 0.7（70% 命中率即可，其余走 H2 MVStore） |
 | `l1-expire` | L1 缓存 TTL | 高吞吐时缩短以加速淘汰，低吞吐可适当放宽 |
 | `mvstore-cache-mb` | things-data H2 MVStore 读缓存上限 | 固定 8MB，高吞吐场景可适当调大 |
@@ -16,12 +17,16 @@
 | `write-buffer.size` | TimescaleDB 批次大小 | 吞吐越高批次越大，减少 DB round-trip |
 | `-XX:SoftRefLRUPolicyMSPerMB=0` | GC 积极回收 soft-reference | 固定加上，消除 Spring 反射缓存堆积（可节省 ~100MB） |
 
+> **注意**：`-Xms` 和 `-Xmx` 必须同时设置。若只写 `-Xmx4g` 不写 `-Xms`，
+> JVM 默认初始堆为 `-Xmx` 的 1/4（即 1g），加上 Metaspace、直接内存、线程栈，
+> 进程启动时即占用 3~4GB 物理内存。
+
 ---
 
 ## 500 msg/min × 150 pts = 1,250 条/秒
 
 ```bash
-java -Xmx512m \
+java -Xms256m -Xmx512m \
      -XX:SoftRefLRUPolicyMSPerMB=0 \
      -Djetlinks.things.data.local.max-l1-cache=100000 \
      -Djetlinks.things.data.local.l1-expire=120s \
@@ -37,7 +42,7 @@ java -Xmx512m \
 ## 1,000 msg/min × 150 pts = 2,500 条/秒
 
 ```bash
-java -Xmx768m \
+java -Xms256m -Xmx768m \
      -XX:SoftRefLRUPolicyMSPerMB=0 \
      -Djetlinks.things.data.local.max-l1-cache=200000 \
      -Djetlinks.things.data.local.l1-expire=120s \
@@ -53,7 +58,7 @@ java -Xmx768m \
 ## 2,000 msg/min × 150 pts = 5,000 条/秒
 
 ```bash
-java -Xmx1g \
+java -Xms256m -Xmx1g \
      -XX:SoftRefLRUPolicyMSPerMB=0 \
      -Djetlinks.things.data.local.max-l1-cache=300000 \
      -Djetlinks.things.data.local.l1-expire=120s \
@@ -69,7 +74,7 @@ java -Xmx1g \
 ## 5,000 msg/min × 150 pts = 12,500 条/秒
 
 ```bash
-java -Xmx2g \
+java -Xms256m -Xmx2g \
      -XX:SoftRefLRUPolicyMSPerMB=0 \
      -Djetlinks.things.data.local.max-l1-cache=500000 \
      -Djetlinks.things.data.local.l1-expire=120s \
@@ -85,7 +90,7 @@ java -Xmx2g \
 ## 10,000 msg/min × 150 pts = 25,000 条/秒
 
 ```bash
-java -Xmx4g \
+java -Xms256m -Xmx4g \
      -XX:SoftRefLRUPolicyMSPerMB=0 \
      -Djetlinks.things.data.local.max-l1-cache=800000 \
      -Djetlinks.things.data.local.l1-expire=60s \
@@ -100,13 +105,13 @@ java -Xmx4g \
 
 ## 快速对照表
 
-| msg/min | pts/msg | 条/秒 | `-Xmx` | `max-l1-cache` | `parallelism` | `buffer.size` |
-|--------:|--------:|------:|--------|---------------:|--------------:|--------------:|
-| 500 | 150 | 1,250 | 512m | 100,000 | 4 | 1,000 |
-| 1,000 | 150 | 2,500 | 768m | 200,000 | 6 | 1,500 |
-| 2,000 | 150 | 5,000 | 1g | 300,000 | 8 | 2,000 |
-| 5,000 | 150 | 12,500 | 2g | 500,000 | 16 | 2,000 |
-| 10,000 | 150 | 25,000 | 4g | 800,000 | 24 | 3,000 |
+| msg/min | pts/msg | 条/秒 | `-Xms` | `-Xmx` | `max-l1-cache` | `parallelism` | `buffer.size` |
+|--------:|--------:|------:|--------|--------|---------------:|--------------:|--------------:|
+| 500 | 150 | 1,250 | 256m | 512m | 100,000 | 4 | 1,000 |
+| 1,000 | 150 | 2,500 | 256m | 768m | 200,000 | 6 | 1,500 |
+| 2,000 | 150 | 5,000 | 256m | 1g | 300,000 | 8 | 2,000 |
+| 5,000 | 150 | 12,500 | 256m | 2g | 500,000 | 16 | 2,000 |
+| 10,000 | 150 | 25,000 | 256m | 4g | 800,000 | 24 | 3,000 |
 
 ---
 
@@ -118,6 +123,7 @@ services:
     image: jetlinks-standalone:latest
     environment:
       JAVA_OPTS: >-
+        -Xms256m
         -Xmx2g
         -XX:SoftRefLRUPolicyMSPerMB=0
         -Djetlinks.things.data.local.max-l1-cache=500000
