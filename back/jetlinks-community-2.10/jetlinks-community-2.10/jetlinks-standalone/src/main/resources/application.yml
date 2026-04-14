@@ -73,7 +73,7 @@ timescaledb:
     things-data:
         enabled: true # 开启设备数据存储
         retention-policy: 3y  # 原始数据保留 3 年后自动删除
-#        chunk-time-interval: 7d # 分区时间间隔，默认 7 天
+        chunk-time-interval: 1d # 分区时间间隔，1天1分区避免单chunk写入竞争（默认7天会导致DataFileWrite等待）
         compress: true          # 启用列压缩（30 天以上自动压缩）
         compress-after: 30d
         compress-order-by: "timestamp DESC"
@@ -84,11 +84,12 @@ timescaledb:
           end-offset: 1h        # 刷新策略 end_offset
           retention: 3y         # cagg 视图数据保留时长
           daily-enabled: true   # 在小时 cagg 之上建立日级层级 cagg（_daily_agg）
+          daily-start-offset: 25h # 日级 cagg 刷新 start_offset（默认25h覆盖完整1天，避免3days导致32min超长刷新）
           monthly-enabled: true # 在日级 cagg 之上建立月级层级 cagg（_monthly_agg）
     write-buffer:
-        parallelism: 16         # 原默认 cpu/2≈4；5000msg/min×150属性=12500条/秒，需要更多 worker
-        size: 2000              # 更大批次减少 DB round-trip 次数（原默认 1000）
-        timeout: 500ms          # 最多等 500ms 触发一次 flush（原默认 1s）
+        parallelism: 4          # 并发写入 worker 数；16 并发会导致同一 chunk 锁竞争，单机 PG 用 4 更稳
+        size: 1000              # 恢复默认值；大批次写入持锁时间长，导致读查询被阻塞
+        timeout: 1s             # 恢复默认值
         mvstore-cache-mb: 8     # 限制 FileQueue H2 MVStore 读缓存为 8MB
                                 # 原来无上限，会默认占用 ~50% JVM 最大堆（本次堆快照中 184MB）
         # JVM 启动参数补充（docker-compose JAVA_OPTS 或启动脚本中设置）:

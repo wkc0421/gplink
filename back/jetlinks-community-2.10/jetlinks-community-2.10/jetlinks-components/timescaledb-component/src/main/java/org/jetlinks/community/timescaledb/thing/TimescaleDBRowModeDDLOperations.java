@@ -159,6 +159,7 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
                 c.getEndOffset(),
                 c.getRetention(),
                 c.isDailyEnabled(),
+                c.getDailyStartOffset(),
                 c.isMonthlyEnabled(),
                 thingIdCol
             ));
