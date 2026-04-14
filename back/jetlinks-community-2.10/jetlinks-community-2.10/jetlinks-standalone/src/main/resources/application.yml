@@ -84,7 +84,7 @@ timescaledb:
           end-offset: 1h        # 刷新策略 end_offset
           retention: 3y         # cagg 视图数据保留时长
           daily-enabled: true   # 在小时 cagg 之上建立日级层级 cagg（_daily_agg）
-          daily-start-offset: 25h # 日级 cagg 刷新 start_offset（默认25h覆盖完整1天，避免3days导致32min超长刷新）
+          daily-start-offset: 2d  # 日级 cagg 刷新 start_offset；window=2d-1d=1d满足TimescaleDB最小窗口要求，且比原3d更快
           monthly-enabled: true # 在日级 cagg 之上建立月级层级 cagg（_monthly_agg）
     write-buffer:
         parallelism: 4          # 并发写入 worker 数；16 并发会导致同一 chunk 锁竞争，单机 PG 用 4 更稳
