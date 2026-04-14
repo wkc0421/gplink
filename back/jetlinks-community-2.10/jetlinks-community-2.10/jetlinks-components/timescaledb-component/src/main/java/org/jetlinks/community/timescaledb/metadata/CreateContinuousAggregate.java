@@ -52,6 +52,9 @@ public class CreateContinuousAggregate implements Feature, FeatureType {
     /** 是否在小时 cagg 之上建立日级层级 cagg */
     private final boolean dailyEnabled;
 
+    /** 日级 cagg 刷新策略 start_offset，默认 25h */
+    private final Interval dailyStartOffset;
+
     /** 是否在日级 cagg 之上建立月级层级 cagg（需要 dailyEnabled=true） */
     private final boolean monthlyEnabled;
 

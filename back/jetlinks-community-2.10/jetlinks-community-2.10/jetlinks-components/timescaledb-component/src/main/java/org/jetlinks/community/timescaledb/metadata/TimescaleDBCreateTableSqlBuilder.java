@@ -57,7 +57,7 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
                  if (cagg.isDailyEnabled()) {
                      sqlRequest.addBatch(createDailyCaggViewSQL(table, cagg));
                      sqlRequest.addBatch(createCaggMaterializedOnlySQL(dailyCaggName(table)));
-                     sqlRequest.addBatch(createDailyCaggRefreshPolicySQL(table));
+                     sqlRequest.addBatch(createDailyCaggRefreshPolicySQL(table, cagg));
                      sqlRequest.addBatch(createCaggRetentionPolicySQL(dailyCaggName(table), cagg.getRetention()));
                  }
                  // 月级层级 cagg（在日级 cagg 之上，需要 dailyEnabled）
@@ -225,11 +225,11 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         );
     }
 
-    /** 日级 cagg 刷新策略：start_offset=3d, end_offset=1d, schedule=1d */
-    private SqlRequest createDailyCaggRefreshPolicySQL(RDBTableMetadata table) {
+    /** 日级 cagg 刷新策略：start_offset 由配置决定（默认 25h），end_offset=1d, schedule=1d */
+    private SqlRequest createDailyCaggRefreshPolicySQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         return SqlRequests.of(
             "SELECT " + schema + ".add_continuous_aggregate_policy(?," +
-            "start_offset => INTERVAL '3 days'," +
+            "start_offset => INTERVAL '" + intervalStr(cagg.getDailyStartOffset()) + "'," +
             "end_offset   => INTERVAL '1 days'," +
             "schedule_interval => INTERVAL '1 days')",
             dailyCaggName(table)

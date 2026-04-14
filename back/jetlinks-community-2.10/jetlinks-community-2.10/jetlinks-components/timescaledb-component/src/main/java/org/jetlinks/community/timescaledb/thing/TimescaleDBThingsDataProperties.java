@@ -96,6 +96,11 @@ public class TimescaleDBThingsDataProperties {
         private boolean dailyEnabled = false;
 
         /**
+         * 日级 cagg 刷新策略 start_offset，默认 25 小时（确保覆盖完整一天+1h缓冲，避免32min超长刷新）
+         */
+        private Interval dailyStartOffset = Interval.ofHours(25);
+
+        /**
          * 是否在日级 cagg 之上建立月级层级 cagg（_monthly_agg），需要 dailyEnabled=true，默认 false
          */
         private boolean monthlyEnabled = false;
