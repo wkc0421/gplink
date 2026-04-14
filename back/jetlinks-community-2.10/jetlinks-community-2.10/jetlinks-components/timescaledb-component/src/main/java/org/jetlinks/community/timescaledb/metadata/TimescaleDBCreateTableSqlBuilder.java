@@ -225,12 +225,14 @@ public class TimescaleDBCreateTableSqlBuilder extends CommonCreateTableSqlBuilde
         );
     }
 
-    /** 日级 cagg 刷新策略：start_offset 由配置决定（默认 25h），end_offset=1d, schedule=1d */
+    /** 日级 cagg 刷新策略：start_offset 由配置决定（默认 2d），end_offset=0，schedule=1d
+     *  TimescaleDB 要求 (start_offset - end_offset) > schedule_interval(1d)，
+     *  end_offset=0 使窗口=start_offset=2d > 1d，满足约束。 */
     private SqlRequest createDailyCaggRefreshPolicySQL(RDBTableMetadata table, CreateContinuousAggregate cagg) {
         return SqlRequests.of(
             "SELECT " + schema + ".add_continuous_aggregate_policy(?," +
             "start_offset => INTERVAL '" + intervalStr(cagg.getDailyStartOffset()) + "'," +
-            "end_offset   => INTERVAL '1 days'," +
+            "end_offset   => INTERVAL '0 days'," +
             "schedule_interval => INTERVAL '1 days')",
             dailyCaggName(table)
         );
