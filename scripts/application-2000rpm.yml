@@ -1,0 +1,35 @@
+# GPLink application.yml 调参片段 - 2000 msg/min × 100 采集项 = 3333 rows/s
+# 将以下配置合并到 application.yml 对应节点（覆盖同名 key）
+#
+# 推算依据：
+#   rows/s = 2000 × 100 / 60 ≈ 3333
+#   chunk 目标行数 = RAM × 25% / 100B
+#     16GB → 40M 行 / 3333 ≈ 12,001s ≈ 3.3h → chunk: 3h
+#     32GB → 80M 行 / 3333 ≈ 24,001s ≈ 6.7h → chunk: 6h
+#   写入量高，cagg 刷新改为 2h 间隔，减少每日触发次数（诊断根因之一）
+
+spring:
+  r2dbc:
+    pool:
+      max-size: 32
+
+timescaledb:
+  things-data:
+    chunk-time-interval: 3h      # 16GB RAM 选此值
+    # chunk-time-interval: 6h    # 32GB RAM 选此值
+    compress: true
+    compress-after: 30d
+    cagg:
+      enabled: true
+      refresh-interval: 2h       # 降低刷新频率，每天 12 次（对比默认 24 次）
+      start-offset: 6h           # 满足 start > end(2h) + refresh(2h) = 4h 约束
+      end-offset: 2h             # 跳过最近 2h，避免刷新仍在写入的数据块
+      retention: 3y
+      daily-enabled: true
+      daily-start-offset: 3d
+      monthly-enabled: true
+  write-buffer:
+    parallelism: 4
+    size: 1000
+    timeout: 1s
+    mvstore-cache-mb: 8

@@ -1,0 +1,38 @@
+# GPLink application.yml 调参片段 - 5000 msg/min × 100 采集项 = 8333 rows/s
+# 将以下配置合并到 application.yml 对应节点（覆盖同名 key）
+#
+# 推算依据：
+#   rows/s = 5000 × 100 / 60 ≈ 8333
+#   chunk 目标行数 = RAM × 25% / 100B
+#     16GB → 40M 行 / 8333 ≈ 4,800s ≈ 1.3h → chunk: 1h（单 chunk ~3GB，接近 4GB 目标）
+#     32GB → 80M 行 / 8333 ≈ 9,601s ≈ 2.7h → chunk: 2h（单 chunk ~6GB，接近 8GB 目标）
+#
+# ⚠ 此速率为诊断数据所对应场景（402K invalidation log/天），需同时调整 PostgreSQL：
+#   pgsql-16g.sql：max_wal_size=4GB、work_mem=64MB、autovacuum_vacuum_cost_delay=0ms
+#   pgsql-32g.sql：max_wal_size=4GB、work_mem=128MB、autovacuum_vacuum_cost_delay=0ms
+
+spring:
+  r2dbc:
+    pool:
+      max-size: 32
+
+timescaledb:
+  things-data:
+    chunk-time-interval: 1h      # 16GB RAM 选此值；1h chunk ≈ 3GB，接近 4GB 目标
+    # chunk-time-interval: 2h    # 32GB RAM 选此值；2h chunk ≈ 6GB，接近 8GB 目标
+    compress: true
+    compress-after: 30d
+    cagg:
+      enabled: true
+      refresh-interval: 2h       # 每天刷新 12 次（原 24 次），CPU 峰值减半
+      start-offset: 6h           # 满足 start > end(3h) + refresh(2h) = 5h 约束
+      end-offset: 3h             # 跳过最近 3h 活跃写入区；materialized_only=false 保证查询实时性
+      retention: 3y
+      daily-enabled: true
+      daily-start-offset: 3d
+      monthly-enabled: true
+  write-buffer:
+    parallelism: 4               # 单机 PG 不建议超过 4；更多并发导致同 chunk 锁竞争
+    size: 1000
+    timeout: 1s
+    mvstore-cache-mb: 8

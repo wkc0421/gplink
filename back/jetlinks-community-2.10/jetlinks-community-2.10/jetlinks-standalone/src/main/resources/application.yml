@@ -79,9 +79,9 @@ timescaledb:
         compress-order-by: "timestamp DESC"
         cagg:
           enabled: true         # 建立小时级 continuous aggregate（仅属性表）
-          refresh-interval: 1h  # cagg 自动刷新间隔
-          start-offset: 3h      # 刷新策略 start_offset
-          end-offset: 1h        # 刷新策略 end_offset
+          refresh-interval: 2h  # cagg 自动刷新间隔；见 scripts/application-{rate}rpm.yml 按速率精确选配
+          start-offset: 6h      # 刷新策略 start_offset（满足 start > end + refresh 约束）
+          end-offset: 2h        # 刷新策略 end_offset；跳过最近2h活跃写入区，大幅减少 invalidation log 处理
           retention: 3y         # cagg 视图数据保留时长
           daily-enabled: true   # 在小时 cagg 之上建立日级层级 cagg（_daily_agg）
           daily-start-offset: 3d  # 日级 cagg 刷新 start_offset；window=3d-1d=2d>1d满足约束，1d chunk后刷新速度快
