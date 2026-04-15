@@ -1,0 +1,35 @@
+# GPLink application.yml 调参片段 - 4000 msg/min × 100 采集项 = 6667 rows/s
+# 将以下配置合并到 application.yml 对应节点（覆盖同名 key）
+#
+# 推算依据：
+#   rows/s = 4000 × 100 / 60 ≈ 6667
+#   chunk 目标行数 = RAM × 25% / 100B
+#     16GB → 40M 行 / 6667 ≈ 5,999s ≈ 1.7h → chunk: 2h（向上取整保证单 chunk 不超限）
+#     32GB → 80M 行 / 6667 ≈ 12,001s ≈ 3.3h → chunk: 3h
+#   超高写入：PostgreSQL 同时需调高 max_wal_size=4GB、autovacuum_vacuum_cost_delay=0ms
+
+spring:
+  r2dbc:
+    pool:
+      max-size: 32
+
+timescaledb:
+  things-data:
+    chunk-time-interval: 2h      # 16GB RAM 选此值
+    # chunk-time-interval: 3h    # 32GB RAM 选此值
+    compress: true
+    compress-after: 30d
+    cagg:
+      enabled: true
+      refresh-interval: 2h
+      start-offset: 6h           # 满足 start > end(3h) + refresh(2h) = 5h 约束
+      end-offset: 3h
+      retention: 3y
+      daily-enabled: true
+      daily-start-offset: 3d
+      monthly-enabled: true
+  write-buffer:
+    parallelism: 4
+    size: 1000
+    timeout: 1s
+    mvstore-cache-mb: 8
