@@ -4,9 +4,10 @@
 # 推算依据：
 #   rows/s = 500 × 100 / 60 ≈ 833
 #   chunk 目标行数 = RAM × 25% / 100B
-#     16GB → 40M 行 / 833 ≈ 48,019s ≈ 13.3h → chunk: 12h
-#     32GB → 80M 行 / 833 ≈ 26.7h            → chunk: 1d
-#   写入量适中，cagg end_offset=1h 仍可接受
+#     16GB → 40M 行 / 833 ≈ 13.3h → chunk: 12h
+#     32GB → 80M 行 / 833 ≈ 26.7h → chunk: 1d
+#
+# cagg 策略：start=2h, end=1h → 每次只刷新上一个完整小时（1h~2h 前）
 
 spring:
   r2dbc:
@@ -22,7 +23,7 @@ timescaledb:
     cagg:
       enabled: true
       refresh-interval: 1h
-      start-offset: 3h           # 满足 start > end(1h) + refresh(1h) = 2h 约束
+      start-offset: 2h
       end-offset: 1h
       retention: 3y
       daily-enabled: true

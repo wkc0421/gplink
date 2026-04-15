@@ -4,9 +4,10 @@
 # 推算依据：
 #   rows/s = 4000 × 100 / 60 ≈ 6667
 #   chunk 目标行数 = RAM × 25% / 100B
-#     16GB → 40M 行 / 6667 ≈ 5,999s ≈ 1.7h → chunk: 2h（向上取整保证单 chunk 不超限）
-#     32GB → 80M 行 / 6667 ≈ 12,001s ≈ 3.3h → chunk: 3h
-#   超高写入：PostgreSQL 同时需调高 max_wal_size=4GB、autovacuum_vacuum_cost_delay=0ms
+#     16GB → 40M 行 / 6667 ≈ 1.7h → chunk: 2h（向上取整）
+#     32GB → 80M 行 / 6667 ≈ 3.3h → chunk: 3h
+#
+# cagg 策略：start=2h, end=1h → 每次只刷新上一个完整小时（1h~2h 前）
 
 spring:
   r2dbc:
@@ -21,9 +22,9 @@ timescaledb:
     compress-after: 30d
     cagg:
       enabled: true
-      refresh-interval: 2h
-      start-offset: 6h           # 满足 start > end(3h) + refresh(2h) = 5h 约束
-      end-offset: 3h
+      refresh-interval: 1h
+      start-offset: 2h
+      end-offset: 1h
       retention: 3y
       daily-enabled: true
       daily-start-offset: 3d
