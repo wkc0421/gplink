@@ -73,7 +73,7 @@ timescaledb:
     things-data:
         enabled: true # 开启设备数据存储
         retention-policy: 3y  # 原始数据保留 3 年后自动删除
-        chunk-time-interval: 1d # 分区时间间隔，1天1分区避免单chunk写入竞争（默认7天会导致DataFileWrite等待）
+        chunk-time-interval: 4h # 32GB × 2500msg/min × 100采集项 ≈ 4167 rows/s，目标chunk≈80M行/4167≈5.3h，取4h
         compress: true          # 启用列压缩（30 天以上自动压缩）
         compress-after: 30d
         compress-order-by: "timestamp DESC"

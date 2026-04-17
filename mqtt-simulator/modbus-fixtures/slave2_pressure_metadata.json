@@ -1,0 +1,21 @@
+{
+  "properties": [
+    {
+      "id": "pressure",
+      "name": "压力",
+      "description": "管道压力",
+      "valueType": { "type": "float", "unit": "kPa", "decimalPlace": 2, "min": 0, "max": 1000 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "flow_rate",
+      "name": "流量",
+      "description": "体积流量",
+      "valueType": { "type": "float", "unit": "m³/h", "decimalPlace": 2, "min": 0, "max": 200 },
+      "expands": { "readOnly": true }
+    }
+  ],
+  "functions": [],
+  "events": [],
+  "tags": []
+}

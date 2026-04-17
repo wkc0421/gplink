@@ -1,0 +1,42 @@
+{
+  "properties": [
+    {
+      "id": "output_freq",
+      "name": "输出频率",
+      "description": "变频器输出频率",
+      "valueType": { "type": "float", "unit": "Hz", "decimalPlace": 2, "min": 0, "max": 60 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "output_voltage",
+      "name": "输出电压",
+      "description": "变频器输出电压",
+      "valueType": { "type": "float", "unit": "V", "decimalPlace": 1, "min": 0, "max": 500 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "output_current",
+      "name": "输出电流",
+      "description": "变频器输出电流",
+      "valueType": { "type": "float", "unit": "A", "decimalPlace": 2, "min": 0, "max": 200 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "fault_code",
+      "name": "故障代码",
+      "description": "0=正常，非0为故障码",
+      "valueType": { "type": "int", "min": 0, "max": 999 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "running_status",
+      "name": "运行状态",
+      "description": "变频器启停状态",
+      "valueType": { "type": "boolean", "trueText": "运行中", "falseText": "停止" },
+      "expands": { "readOnly": false }
+    }
+  ],
+  "functions": [],
+  "events": [],
+  "tags": []
+}

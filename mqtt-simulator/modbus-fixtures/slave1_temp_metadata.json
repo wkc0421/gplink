@@ -1,0 +1,21 @@
+{
+  "properties": [
+    {
+      "id": "temperature",
+      "name": "温度",
+      "description": "环境温度",
+      "valueType": { "type": "float", "unit": "℃", "decimalPlace": 1, "min": -40, "max": 125 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "humidity",
+      "name": "湿度",
+      "description": "相对湿度",
+      "valueType": { "type": "float", "unit": "%RH", "decimalPlace": 1, "min": 0, "max": 100 },
+      "expands": { "readOnly": true }
+    }
+  ],
+  "functions": [],
+  "events": [],
+  "tags": []
+}

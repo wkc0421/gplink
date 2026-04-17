@@ -1,0 +1,35 @@
+{
+  "properties": [
+    {
+      "id": "voltage",
+      "name": "电压",
+      "description": "线电压",
+      "valueType": { "type": "float", "unit": "V", "decimalPlace": 1, "min": 0, "max": 500 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "current",
+      "name": "电流",
+      "description": "线电流",
+      "valueType": { "type": "float", "unit": "A", "decimalPlace": 2, "min": 0, "max": 100 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "active_power",
+      "name": "有功功率",
+      "description": "三相有功功率",
+      "valueType": { "type": "float", "unit": "kW", "decimalPlace": 3, "min": 0, "max": 100 },
+      "expands": { "readOnly": true }
+    },
+    {
+      "id": "energy",
+      "name": "电能",
+      "description": "累计有功电能",
+      "valueType": { "type": "float", "unit": "kWh", "decimalPlace": 2, "min": 0 },
+      "expands": { "readOnly": true }
+    }
+  ],
+  "functions": [],
+  "events": [],
+  "tags": []
+}

@@ -116,7 +116,12 @@
                             </a-tooltip>
                           </div>
                         </template>
+                        <ModbusRegisterMapEditor
+                            v-if="item.property === 'registerMap'"
+                            v-model="formData.data[item.property]"
+                        />
                         <j-value-item
+                            v-else
                             :itemType="item.type.type"
                             v-model:modelValue="formData.data[item.property]"
                             :options="getOptions(item)"
@@ -199,7 +204,12 @@
                     </a-tooltip>
                   </div>
                 </template>
+                <ModbusRegisterMapEditor
+                    v-if="item.property === 'registerMap'"
+                    v-model="formData.data[item.property]"
+                />
                 <j-value-item
+                    v-else
                     :itemType="item.type.type"
                     v-model:modelValue="formData.data[item.property]"
                     :options="getOptions(item)"
