@@ -46,8 +46,6 @@ public class MqttClientSession implements PersistentSession {
     @Getter
     private final DeviceOperator operator;
 
-    private MqttClient clientTemp;
-
     @Getter
     @Setter
     private Mono<MqttClient> client;
@@ -71,7 +69,6 @@ public class MqttClientSession implements PersistentSession {
                              MqttClient client,
                              DeviceGatewayMonitor monitor) {
         this(id, operator, Mono.just(client), monitor);
-        this.clientTemp = client;
     }
 
     public MqttClientSession(String id,
@@ -106,12 +103,9 @@ public class MqttClientSession implements PersistentSession {
                 monitor.sentMessage();
             }
             return client
-                .flatMap(client -> {
-                    this.clientTemp = client;
-                    return client
-                        .publish(((MqttMessage) encodedMessage))
-                        .thenReturn(true);
-                });
+                .flatMap(mqttClient -> mqttClient
+                    .publish(((MqttMessage) encodedMessage))
+                    .thenReturn(true));
         }
         return Mono.error(new DeviceOperationException
             .NoStackTrace(ErrorCode.UNSUPPORTED_MESSAGE, "error.unsupported_mqtt_message_type"));

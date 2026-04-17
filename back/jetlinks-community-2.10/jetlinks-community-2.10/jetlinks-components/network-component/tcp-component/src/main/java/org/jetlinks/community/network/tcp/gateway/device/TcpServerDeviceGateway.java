@@ -125,7 +125,7 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
                 if (session != null && session.getDeviceId() != null) {
                     sessionManager
                         .getSession(session.getDeviceId())
-                        .subscribe();
+                        .subscribe(null, err -> log.warn("get session on disconnect error", err));
                 }
 
             });
@@ -241,10 +241,10 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
         }
         disposable = tcpServer
             .handleConnection()
-//            .onBackpressureBuffer(maxConcurrency, client -> {
-//                log.warn("tcp server [{}] connection buffer is full, close it.", client.getRemoteAddress());
-//                closeClient(client);
-//            })
+            .onBackpressureBuffer(1024, client -> {
+                log.warn("tcp server [{}] connection buffer is full, close it.", client.getRemoteAddress());
+                closeClient(client);
+            })
             .publishOn(Schedulers.parallel())
             .flatMap(client -> new TcpConnection(client)
                          .accept()
