@@ -30,8 +30,11 @@ public class DeviceSubscribeRequest {
     @Schema(description = "MQTT QoS，默认 0")
     private int mqttQos;
 
-    @Schema(description = "消息类型，逗号分隔：PROPERTY_REPORT,PROPERTY_READ_REPLY,ONLINE,OFFLINE")
+    @Schema(description = "消息类型，逗号分隔：PROPERTY_REPORT,PROPERTY_READ_REPLY,PROPERTY_CHANGE,ONLINE,OFFLINE")
     private String messageTypes;
+
+    @Schema(description = "只关注的采集项ID，逗号分隔；为空则转发所有属性")
+    private String watchedProperties;
 
     @Schema(description = "状态：enabled / disabled，默认 enabled")
     private String state = "enabled";

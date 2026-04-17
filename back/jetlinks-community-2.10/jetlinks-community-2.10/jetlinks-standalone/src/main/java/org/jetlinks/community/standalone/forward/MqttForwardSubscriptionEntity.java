@@ -56,8 +56,12 @@ public class MqttForwardSubscriptionEntity extends GenericEntity<String> impleme
     private int mqttQos;
 
     @Column(length = 256)
-    @Schema(description = "订阅消息类型，逗号分隔：PROPERTY_REPORT,PROPERTY_READ_REPLY,ONLINE,OFFLINE")
+    @Schema(description = "订阅消息类型，逗号分隔：PROPERTY_REPORT,PROPERTY_READ_REPLY,PROPERTY_CHANGE,ONLINE,OFFLINE")
     private String messageTypes;
+
+    @Column(length = 1024)
+    @Schema(description = "只关注的采集项ID，逗号分隔；为空则转发所有属性")
+    private String watchedProperties;
 
     @Column(nullable = false, length = 32)
     @Schema(description = "状态：enabled / disabled")
@@ -95,6 +99,17 @@ public class MqttForwardSubscriptionEntity extends GenericEntity<String> impleme
             return Collections.emptySet();
         }
         return Arrays.stream(messageTypes.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
+    }
+
+    /** Empty set means "watch all properties". */
+    public Set<String> getWatchedPropertySet() {
+        if (watchedProperties == null || watchedProperties.isBlank()) {
+            return Collections.emptySet();
+        }
+        return Arrays.stream(watchedProperties.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .collect(Collectors.toSet());
