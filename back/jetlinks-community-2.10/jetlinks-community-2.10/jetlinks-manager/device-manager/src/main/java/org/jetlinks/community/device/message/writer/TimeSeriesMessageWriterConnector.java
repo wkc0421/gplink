@@ -18,6 +18,7 @@ package org.jetlinks.community.device.message.writer;
 import lombok.Generated;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.community.device.service.data.DeviceDataService;
+import org.jetlinks.community.device.service.data.RedisDeviceLatestDataService;
 import org.jetlinks.community.device.service.data.RedisDeviceLatestService;
 import org.jetlinks.community.gateway.annotation.Subscribe;
 import org.jetlinks.community.things.data.ThingsDataWriter;
@@ -70,12 +71,13 @@ public class TimeSeriesMessageWriterConnector {
 
     private Mono<Void> writeToThingsDataWriter(DeviceMessage message) {
         if (message instanceof PropertyMessage) {
+            boolean skipCache = message.getHeaderOrDefault(RedisDeviceLatestDataService.ignoreCache);
             return Flux
                 .fromIterable(((PropertyMessage) message).getCompleteProperties())
                 .concatMap(prop -> {
                     Mono<Void> dbWrite = thingsDataWriter
                         .updateProperty(message.getThingType(), message.getThingId(), prop);
-                    if (redisLatestService != null) {
+                    if (redisLatestService != null && !skipCache) {
                         // TimescaleDB 写完后，异步火并忘写 Redis，失败不影响主流程
                         return dbWrite.doOnSuccess(ignored ->
                             redisLatestService

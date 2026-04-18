@@ -24,6 +24,7 @@ import org.jetlinks.community.timeseries.query.AggregationColumn;
 import org.jetlinks.core.device.DeviceThingType;
 import org.jetlinks.core.event.Subscription;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.HeaderKey;
 import org.jetlinks.core.metadata.DeviceMetadata;
 import org.jetlinks.core.things.ThingProperty;
 import org.jetlinks.community.gateway.DeviceMessageUtils;
@@ -50,6 +51,8 @@ import java.util.Map;
 @Slf4j
 public class RedisDeviceLatestDataService implements DeviceLatestDataService {
 
+    public static final HeaderKey<Boolean> ignoreCache = HeaderKey.of("ignoreCache", false, Boolean.class);
+
     private final RedisDeviceLatestService redisService;
     private final ThingsDataRepository thingsDataRepository;
 
@@ -66,6 +69,9 @@ public class RedisDeviceLatestDataService implements DeviceLatestDataService {
     @Override
     @Subscribe(topics = "/device/**", features = Subscription.Feature.local)
     public Mono<Void> saveAsync(DeviceMessage message) {
+        if (message.getHeaderOrDefault(ignoreCache)) {
+            return Mono.empty();
+        }
         Map<String, Object> properties = DeviceMessageUtils
             .tryGetProperties(message)
             .orElse(null);
