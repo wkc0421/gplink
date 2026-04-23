@@ -25,11 +25,11 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.cache.annotation.EnableCaching;
 
 
-@SpringBootApplication(scanBasePackages = "org.jetlinks.community", exclude = {
+@SpringBootApplication(scanBasePackages = {"org.jetlinks.community", "gp.saas"}, exclude = {
     DataSourceAutoConfiguration.class
 })
 @EnableCaching
-@EnableEasyormRepository("org.jetlinks.community.**.entity")
+@EnableEasyormRepository({"org.jetlinks.community.**.entity", "gp.saas.entity.TenantEntity"})
 @EnableAopAuthorize
 @EnableAccessLogger
 @Slf4j

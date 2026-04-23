@@ -346,3 +346,7 @@ trace:
         - "/java/TimeSeriesMessageWriterConnector/writeDeviceMessageToTs"
         - "/java/DeviceStatusMeasurementProvider/incrementOnline"
         - "/java/DeviceMessageMeasurementProvider/incrementMessage"
+
+saas:
+  api:
+    username: admin  # POST /api/v1/authorization/token 允许的用户名，可通过环境变量 SAAS_API_USERNAME 覆盖

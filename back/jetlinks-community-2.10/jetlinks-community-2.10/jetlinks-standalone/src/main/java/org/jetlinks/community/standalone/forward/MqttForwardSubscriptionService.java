@@ -9,6 +9,7 @@ import org.hswebframework.web.crud.events.EntityDeletedEvent;
 import org.hswebframework.web.crud.events.EntityModifyEvent;
 import org.hswebframework.web.crud.events.EntitySavedEvent;
 import org.hswebframework.web.crud.service.GenericReactiveCrudService;
+import org.jetlinks.community.standalone.forward.entity.MqttForwardSubscriptionEntity;
 import org.jetlinks.community.network.DefaultNetworkType;
 import org.jetlinks.community.network.NetworkManager;
 import org.jetlinks.community.network.mqtt.client.MqttClient;

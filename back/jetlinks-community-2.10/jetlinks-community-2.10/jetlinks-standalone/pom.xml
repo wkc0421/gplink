@@ -305,6 +305,12 @@
         </dependency>
 
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>saas-manager</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.jetlinks</groupId>
             <artifactId>jetlinks-supports</artifactId>
             <version>${jetlinks.version}</version>

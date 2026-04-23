@@ -3,6 +3,7 @@ package org.jetlinks.community.standalone.forward;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.jetlinks.community.standalone.forward.entity.MqttForwardSubscriptionEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
