@@ -25,6 +25,7 @@ import TabsCard from './TabsCard/index.vue'
 import BatchImport from './BatchImport/index.vue'
 import Echarts from './Echarts'
 import RemoteComponent from './RemoteComponent/index.vue'
+import ModbusRegisterMapEditor from './ModbusRegisterMapEditor/index.vue'
 
 
 export default {
@@ -56,6 +57,7 @@ export default {
           .component('TabsCard', TabsCard)
           .component('BatchImport', BatchImport)
           .component('RemoteComponent', RemoteComponent)
+          .component('ModbusRegisterMapEditor', ModbusRegisterMapEditor)
 
         Object.keys(FormItemValue).forEach(key => {
             app.component(key, FormItemValue[key])

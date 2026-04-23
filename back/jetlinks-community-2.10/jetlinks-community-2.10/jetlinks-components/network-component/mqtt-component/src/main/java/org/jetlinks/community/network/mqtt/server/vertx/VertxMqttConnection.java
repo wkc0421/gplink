@@ -46,8 +46,11 @@ import reactor.core.publisher.*;
 import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -83,15 +86,16 @@ class VertxMqttConnection implements MqttConnection {
         this.keepAliveTimeoutMs = (endpoint.keepAliveTimeSeconds() + 10) * 1000L;
     }
 
-    private final Consumer<MqttConnection> defaultListener = mqttConnection -> {
-        VertxMqttConnection.log.debug("mqtt client [{}] disconnected", getClientId());
-        subscription.tryEmitComplete();
-        unsubscription.tryEmitComplete();
-        messageProcessor.tryEmitComplete();
+    private final List<Consumer<MqttConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
-    };
-
-    private Consumer<MqttConnection> disconnectConsumer = defaultListener;
+    {
+        closeListeners.add(mqttConnection -> {
+            VertxMqttConnection.log.debug("mqtt client [{}] disconnected", getClientId());
+            subscription.tryEmitComplete();
+            unsubscription.tryEmitComplete();
+            messageProcessor.tryEmitComplete();
+        });
+    }
 
     @Override
     public Duration getKeepAliveTimeout() {
@@ -100,7 +104,11 @@ class VertxMqttConnection implements MqttConnection {
 
     @Override
     public void onClose(Consumer<MqttConnection> listener) {
-        disconnectConsumer = disconnectConsumer.andThen(listener);
+        if (closed) {
+            listener.accept(this);
+            return;
+        }
+        closeListeners.add(listener);
     }
 
     @Override
@@ -375,7 +383,14 @@ class VertxMqttConnection implements MqttConnection {
             return;
         }
         closed = true;
-        disconnectConsumer.accept(this);
+        List<Consumer<MqttConnection>> listeners = new ArrayList<>(closeListeners);
+        closeListeners.clear();
+        for (Consumer<MqttConnection> listener : listeners) {
+            try {
+                listener.accept(this);
+            } catch (Throwable ignore) {
+            }
+        }
     }
 
 

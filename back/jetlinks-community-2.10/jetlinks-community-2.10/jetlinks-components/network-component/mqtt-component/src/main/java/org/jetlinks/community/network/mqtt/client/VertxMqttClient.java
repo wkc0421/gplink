@@ -256,7 +256,7 @@ public class VertxMqttClient implements MqttClient {
                     doPublish(message)
                         .doOnSuccess(sink::success)
                         .doOnError(sink::error)
-                        .subscribe();
+                        .subscribe(null, sink::error);
                 });
             });
         }

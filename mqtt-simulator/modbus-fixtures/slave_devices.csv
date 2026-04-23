@@ -1,0 +1,6 @@
+id,name,productId,parentId
+mb_4000_1,1号温湿度传感器,modbus-slave-temp,mb_4000
+mb_4000_2,压力流量变送器,modbus-slave-pressure,mb_4000
+mb_4000_3,电能表,modbus-slave-meter,mb_4000
+mb_4000_4,继电器控制器,modbus-slave-relay,mb_4000
+mb_4000_5,变频器,modbus-slave-vfd,mb_4000

@@ -4,32 +4,34 @@
 # 推算依据：
 #   rows/s = 250 × 100 / 60 ≈ 417
 #   chunk 目标行数 = RAM × 25% / 100B
-#     16GB → 40M 行 / 417 ≈ 95,924s ≈ 26.6h → chunk: 1d（保守）
-#     32GB → 80M 行 / 417 ≈ 53.3h ≈ 2.2d  → chunk: 2d
-#   写入压力低，cagg end_offset=1h 即可，不会有 invalidation log 堆积问题
+#     16GB → 40M 行 / 417 ≈ 26.6h → chunk: 1d
+#     32GB → 80M 行 / 417 ≈ 53.3h → chunk: 2d
+#
+# cagg 策略：start=2h, end=1h → 每次只刷新上一个完整小时（1h~2h 前）
+#   不重算历史，不触碰仍在写入的当前小时，窗口最小化
 
 spring:
   r2dbc:
     pool:
-      max-size: 16               # 低速率场景 16 个 DB 连接已足够
+      max-size: 16
 
 timescaledb:
   things-data:
     chunk-time-interval: 1d      # 16GB RAM 选此值
-    # chunk-time-interval: 2d    # 32GB RAM 选此值（注释掉上面一行）
+    # chunk-time-interval: 2d    # 32GB RAM 选此值
     compress: true
     compress-after: 30d
     cagg:
       enabled: true
-      refresh-interval: 1h       # 写入量小，每小时刷新代价低
-      start-offset: 3h           # 满足 start > end(1h) + refresh(1h) = 2h 约束
-      end-offset: 1h             # 低写入：跳过最近 1h 即可
+      refresh-interval: 1h       # 每小时刷新一次（每次只刷上一个完整小时）
+      start-offset: 2h           # 满足 start > end(1h) + refresh(1h) = 2h 约束
+      end-offset: 1h             # 跳过当前正在写入的小时，只刷已完成的 bucket
       retention: 3y
       daily-enabled: true
       daily-start-offset: 3d
       monthly-enabled: true
   write-buffer:
-    parallelism: 2               # 低速率 2 个 worker 足够，避免锁竞争
-    size: 500                    # 小批次，降低写入延迟
-    timeout: 2s                  # 可等待更长时间凑批
+    parallelism: 2
+    size: 500
+    timeout: 2s
     mvstore-cache-mb: 8

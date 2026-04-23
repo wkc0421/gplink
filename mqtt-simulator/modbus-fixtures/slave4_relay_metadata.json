@@ -1,0 +1,38 @@
+{
+  "properties": [
+    {
+      "id": "relay1",
+      "name": "继电器1",
+      "valueType": { "type": "boolean", "trueText": "闭合", "falseText": "断开" },
+      "expands": { "readOnly": false }
+    },
+    {
+      "id": "relay2",
+      "name": "继电器2",
+      "valueType": { "type": "boolean", "trueText": "闭合", "falseText": "断开" },
+      "expands": { "readOnly": false }
+    },
+    {
+      "id": "relay3",
+      "name": "继电器3",
+      "valueType": { "type": "boolean", "trueText": "闭合", "falseText": "断开" },
+      "expands": { "readOnly": false }
+    },
+    {
+      "id": "relay4",
+      "name": "继电器4",
+      "valueType": { "type": "boolean", "trueText": "闭合", "falseText": "断开" },
+      "expands": { "readOnly": false }
+    },
+    {
+      "id": "supply_voltage",
+      "name": "供电电压",
+      "description": "控制器供电电压",
+      "valueType": { "type": "float", "unit": "V", "decimalPlace": 1, "min": 0, "max": 300 },
+      "expands": { "readOnly": true }
+    }
+  ],
+  "functions": [],
+  "events": [],
+  "tags": []
+}

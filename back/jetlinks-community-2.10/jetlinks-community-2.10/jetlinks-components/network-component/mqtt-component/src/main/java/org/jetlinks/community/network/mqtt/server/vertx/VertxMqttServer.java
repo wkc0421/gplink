@@ -125,7 +125,12 @@ public class VertxMqttServer implements MqttServer {
 
         return sink
             .asFlux()
-            .doOnCancel(() -> sinks.remove(sink));
+            .doOnCancel(() -> this.sinks.compute(holder, (k, list) -> {
+                if (list != null) {
+                    list.remove(sink);
+                }
+                return (list == null || list.isEmpty()) ? null : list;
+            }));
     }
 
     @Override
