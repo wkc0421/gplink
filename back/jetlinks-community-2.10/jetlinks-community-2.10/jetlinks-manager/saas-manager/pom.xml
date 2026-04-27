@@ -14,6 +14,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.hswebframework.web</groupId>
             <artifactId>hsweb-starter</artifactId>
             <version>${hsweb.framework.version}</version>
@@ -44,6 +49,18 @@
         <dependency>
             <groupId>org.jetlinks.community</groupId>
             <artifactId>common-component</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>device-manager</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>rule-engine-manager</artifactId>
             <version>${project.version}</version>
         </dependency>
 
