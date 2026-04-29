@@ -60,6 +60,7 @@ public class RedisDeviceLatestDataService implements DeviceLatestDataService {
                                         ThingsDataRepository thingsDataRepository) {
         this.redisService = redisService;
         this.thingsDataRepository = thingsDataRepository;
+        log.warn("Redis latest data service initialized, subscribe topic=/device/**");
     }
 
     // -----------------------------------------------------------------------
@@ -69,22 +70,34 @@ public class RedisDeviceLatestDataService implements DeviceLatestDataService {
     @Override
     @Subscribe(topics = "/device/**", features = Subscription.Feature.local)
     public Mono<Void> saveAsync(DeviceMessage message) {
+        log.warn("Redis latest subscriber received message: type={}, device={}, timestamp={}, ignoreCache={}",
+                 message.getMessageType(), message.getDeviceId(), message.getTimestamp(),
+                 message.getHeaderOrDefault(ignoreCache));
         if (message.getHeaderOrDefault(ignoreCache)) {
+            log.warn("Redis latest write skipped by ignoreCache: type={}, device={}",
+                     message.getMessageType(), message.getDeviceId());
             return Mono.empty();
         }
         Map<String, Object> properties = DeviceMessageUtils
             .tryGetProperties(message)
             .orElse(null);
         if (properties == null || properties.isEmpty()) {
+            log.warn("Redis latest write skipped because message has no properties: type={}, device={}, messageClass={}",
+                     message.getMessageType(), message.getDeviceId(), message.getClass().getName());
             return Mono.empty();
         }
         long timestamp = message.getTimestamp();
         String deviceId = message.getDeviceId();
+        log.warn("Redis latest writing properties: device={}, propertyCount={}, properties={}",
+                 deviceId, properties.size(), properties.keySet());
 
         return Flux
             .fromIterable(properties.entrySet())
             .flatMap(entry -> redisService
                 .writeProperty(deviceId, entry.getKey(), entry.getValue(), timestamp)
+                .doOnNext(success -> log.warn(
+                    "Redis latest write result: device={}, property={}, success={}",
+                    deviceId, entry.getKey(), success))
                 .onErrorResume(e -> {
                     log.warn("Redis latest saveAsync write failed: device={}, property={}", deviceId, entry.getKey(), e);
                     return Mono.just(false);

@@ -35,7 +35,6 @@ import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.event.EventBus;
 import org.jetlinks.core.server.MessageHandler;
 import org.jetlinks.core.things.ThingsRegistry;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -44,6 +43,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 
 import java.time.Duration;
@@ -76,28 +76,33 @@ public class DeviceManagerConfiguration {
     @ConditionalOnProperty(prefix = "device.message.writer.time-series", name = "enabled", havingValue = "true", matchIfMissing = true)
     public TimeSeriesMessageWriterConnector timeSeriesMessageWriterConnector(
         DeviceDataService dataService,
-        ThingsDataWriter writer,
-        ObjectProvider<RedisDeviceLatestService> redisProvider) {
-        TimeSeriesMessageWriterConnector connector = new TimeSeriesMessageWriterConnector(dataService, writer);
-        redisProvider.ifAvailable(connector::setRedisLatestService);
-        return connector;
+        ThingsDataWriter writer) {
+        return new TimeSeriesMessageWriterConnector(dataService, writer);
     }
 
     @Bean
-    @ConditionalOnBean(ReactiveStringRedisTemplate.class)
+    @ConditionalOnBean(ReactiveRedisConnectionFactory.class)
+    @ConditionalOnMissingBean(ReactiveStringRedisTemplate.class)
+    public ReactiveStringRedisTemplate reactiveStringRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
+        return new ReactiveStringRedisTemplate(connectionFactory);
+    }
+
+    @Bean
+    @ConditionalOnBean(ReactiveRedisConnectionFactory.class)
     @ConditionalOnProperty(prefix = "jetlinks.device.storage.redis-latest", name = "enabled",
                            havingValue = "true", matchIfMissing = true)
     public RedisDeviceLatestService redisDeviceLatestService(
-        ReactiveStringRedisTemplate redisTemplate,
+        ReactiveRedisConnectionFactory connectionFactory,
         ObjectMapper objectMapper,
         MeterRegistry meterRegistry,
         DeviceDataStorageProperties storageProperties) {
         long ttlSeconds = storageProperties.getRedisLatest().getTtlHours() * 3600;
+        ReactiveStringRedisTemplate redisTemplate = new ReactiveStringRedisTemplate(connectionFactory);
         return new RedisDeviceLatestService(redisTemplate, objectMapper, ttlSeconds, meterRegistry);
     }
 
     @Bean
-    @ConditionalOnBean(ReactiveStringRedisTemplate.class)
+    @ConditionalOnBean(RedisDeviceLatestService.class)
     @ConditionalOnProperty(prefix = "jetlinks.device.storage.redis-latest", name = "enabled",
                            havingValue = "true", matchIfMissing = true)
     @ConditionalOnMissingBean(DeviceLatestDataService.class)

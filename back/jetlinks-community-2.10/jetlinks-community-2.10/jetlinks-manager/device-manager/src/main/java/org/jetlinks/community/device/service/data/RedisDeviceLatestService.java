@@ -97,6 +97,7 @@ public class RedisDeviceLatestService {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.ttlSeconds = ttlSeconds;
+        log.warn("Redis latest service initialized, keyPattern=device:{deviceId}:latest, ttlSeconds={}", ttlSeconds);
         this.hitCounter = Counter.builder("redis.latest.hit")
                                  .description("Redis latest 命中次数")
                                  .register(meterRegistry);
@@ -130,6 +131,8 @@ public class RedisDeviceLatestService {
         String field = buildField(propertyId);
         String tsStr = String.valueOf(timestamp);
         String ttlStr = String.valueOf(ttlSeconds);
+        log.warn("Redis latest writeProperty start: key={}, field={}, timestamp={}, value={}",
+                 key, field, timestamp, value);
 
         String json;
         try {
@@ -137,6 +140,7 @@ public class RedisDeviceLatestService {
             entry.put("v", value);
             entry.put("ts", timestamp);
             json = objectMapper.writeValueAsString(entry);
+            log.warn("Redis latest serialized payload: key={}, field={}, json={}", key, field, json);
         } catch (JsonProcessingException e) {
             writeFailCounter.increment();
             log.warn("Redis latest serialize failed: device={}, property={}", deviceId, propertyId, e);
@@ -149,13 +153,20 @@ public class RedisDeviceLatestService {
                      field, json, tsStr, ttlStr)
             .next()
             .map(result -> {
+                log.warn("Redis latest lua result: key={}, field={}, result={}", key, field, result);
                 if (result == 0L) {
                     staleBlockedCounter.increment();
+                    log.warn("Redis latest write blocked by stale timestamp: key={}, field={}, timestamp={}",
+                             key, field, timestamp);
                     return false;
                 }
+                log.warn("Redis latest write success: key={}, field={}", key, field);
                 return true;
             })
-            .defaultIfEmpty(true)
+            .switchIfEmpty(Mono.fromSupplier(() -> {
+                log.warn("Redis latest lua returned empty result: key={}, field={}", key, field);
+                return true;
+            }))
             .onErrorResume(e -> {
                 writeFailCounter.increment();
                 log.warn("Redis latest write failed: device={}, property={}", deviceId, propertyId, e);
