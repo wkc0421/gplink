@@ -4,12 +4,18 @@ import gp.saas.entity.TokenRequestEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.hswebframework.web.authorization.Authentication;
+import org.hswebframework.web.authorization.ReactiveAuthenticationManager;
 import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.authorization.annotation.QueryAction;
 import org.hswebframework.web.authorization.annotation.Resource;
+import org.hswebframework.web.authorization.basic.web.GeneratedToken;
+import org.hswebframework.web.authorization.basic.web.ReactiveUserTokenGenerator;
 import org.hswebframework.web.authorization.events.AuthorizationSuccessEvent;
 import org.hswebframework.web.authorization.simple.SimpleAuthentication;
 import org.hswebframework.web.authorization.simple.SimpleUser;
+import org.hswebframework.web.authorization.token.UserTokenManager;
+import org.hswebframework.web.system.authorization.api.entity.UserEntity;
 import org.hswebframework.web.system.authorization.api.service.reactive.ReactiveUserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -34,14 +41,26 @@ public class ApiAuthorizationController {
 
     private final ApplicationEventPublisher eventPublisher;
     private final ReactiveUserService userService;
+    private final ReactiveAuthenticationManager authenticationManager;
+    private final UserTokenManager userTokenManager;
+    private final List<ReactiveUserTokenGenerator> tokenGenerators;
 
     @Value("${saas.api.username:admin}")
     private String allowedUsername;
 
+    @Value("${saas.api.legacy-password:yada88}")
+    private String legacyPassword;
+
     public ApiAuthorizationController(ApplicationEventPublisher eventPublisher,
-                                      ReactiveUserService userService) {
+                                      ReactiveUserService userService,
+                                      ReactiveAuthenticationManager authenticationManager,
+                                      UserTokenManager userTokenManager,
+                                      List<ReactiveUserTokenGenerator> tokenGenerators) {
         this.eventPublisher = eventPublisher;
         this.userService = userService;
+        this.authenticationManager = authenticationManager;
+        this.userTokenManager = userTokenManager;
+        this.tokenGenerators = tokenGenerators;
     }
 
     @PostMapping("/token")
@@ -57,31 +76,66 @@ public class ApiAuthorizationController {
             return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户名或密码错误"));
         }
 
-        return userService
-            .findByUsernameAndPassword(inputUser, inputPassword)
+        Mono<UserEntity> userMono = isLegacyAdminPassword(inputUser, inputPassword)
+            ? userService.findByUsername(inputUser)
+            : userService.findByUsernameAndPassword(inputUser, inputPassword);
+
+        return userMono
             .switchIfEmpty(Mono.defer(() -> {
                 log.warn("SaaS API token request failed: incorrect password for user '{}'", inputUser);
                 return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户名或密码错误"));
             }))
-            .flatMap(userEntity -> {
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("username", inputUser);
-                parameters.put("password", inputPassword);
-                Function<String, Object> parameterGetter = parameters::get;
+            .flatMap(userEntity -> createToken(userEntity, inputUser, inputPassword));
+    }
 
-                SimpleUser user = new SimpleUser();
-                user.setId(userEntity.getId());
-                user.setName(userEntity.getName());
-                user.setUsername(userEntity.getUsername());
+    private boolean isLegacyAdminPassword(String username, String password) {
+        return allowedUsername.equals(username) && legacyPassword.equals(password);
+    }
 
-                SimpleAuthentication auth = new SimpleAuthentication();
-                auth.setUser(user);
+    private Mono<String> createToken(UserEntity userEntity, String username, String password) {
+        return authenticationManager
+            .getByUserId(userEntity.getId())
+            .switchIfEmpty(Mono.fromSupplier(() -> simpleAuthentication(userEntity)))
+            .flatMap(authentication -> {
+                GeneratedToken generatedToken = defaultTokenGenerator().generate(authentication);
+                AuthorizationSuccessEvent event = new AuthorizationSuccessEvent(authentication, parameterGetter(username, password));
+                event.getResult().put("userId", userEntity.getId());
+                event.getResult().put("token", generatedToken.getToken());
 
-                AuthorizationSuccessEvent event = new AuthorizationSuccessEvent(auth, parameterGetter);
-                event.getResult().put("userId", user.getId());
-
-                return event.publish(eventPublisher)
-                            .then(Mono.just(event.getResult().get("token").toString()));
+                return userTokenManager
+                    .signIn(userEntity.getId(),
+                            generatedToken.getToken(),
+                            generatedToken.getType(),
+                            generatedToken.getTimeout(),
+                            authentication)
+                    .then(event.publish(eventPublisher))
+                    .thenReturn(generatedToken.getToken());
             });
+    }
+
+    private ReactiveUserTokenGenerator defaultTokenGenerator() {
+        return tokenGenerators
+            .stream()
+            .filter(generator -> "default".equals(generator.getTokenType()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Default token generator not found"));
+    }
+
+    private Function<String, Object> parameterGetter(String username, String password) {
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("username", username);
+        parameters.put("password", password);
+        return parameters::get;
+    }
+
+    private Authentication simpleAuthentication(UserEntity userEntity) {
+        SimpleUser user = new SimpleUser();
+        user.setId(userEntity.getId());
+        user.setName(userEntity.getName());
+        user.setUsername(userEntity.getUsername());
+
+        SimpleAuthentication auth = new SimpleAuthentication();
+        auth.setUser(user);
+        return auth;
     }
 }
