@@ -206,7 +206,9 @@ public class LegacyDeviceDataController {
     public Flux<DeviceEvent> queryEventHistory(@PathVariable String deviceId,
                                                @PathVariable String event,
                                                @RequestBody QueryParamEntity query) {
-        return deviceDataService.queryEvent(deviceId, event, safeQuery(query), false);
+        return deviceDataService
+            .queryEvent(deviceId, event, safeQuery(query), false)
+            .onErrorResume(UnsupportedOperationException.class, ignore -> Flux.empty());
     }
 
     @PostMapping("/devices/agg/_query")
@@ -278,11 +280,12 @@ public class LegacyDeviceDataController {
                     List<String> ids = properties.isEmpty() ? orderedPropertyIds(metadata) : properties;
                     return Flux
                         .fromIterable(ids)
-                        .map(property -> {
+                        .flatMap(property -> {
                             LatestValue value = values.get(property);
-                            return value == null ? null : toDeviceProperty(deviceId, property, value, metadata);
-                        })
-                        .filter(Objects::nonNull);
+                            return value == null
+                                ? Mono.empty()
+                                : Mono.just(toDeviceProperty(deviceId, property, value, metadata));
+                        });
                 }));
     }
 
