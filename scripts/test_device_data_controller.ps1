@@ -62,6 +62,7 @@ function Get-TokenFromLoginResult {
         "token",
         "accessToken",
         "access_token",
+        "result",
         "result.token",
         "result.accessToken",
         "result.access_token",
@@ -320,11 +321,16 @@ function Invoke-TestCase {
         }
     } catch {
         $sw.Stop()
+        $errorBody = Read-HttpErrorBody -ErrorRecord $_
+        $summary = $_.Exception.Message
+        if ($errorBody) {
+            $summary = "$summary Response: $errorBody"
+        }
         return [pscustomobject]@{
             Name = $Name
             Ok = $false
             ElapsedMs = $sw.ElapsedMilliseconds
-            Summary = $_.Exception.Message
+            Summary = $summary
         }
     }
 }
