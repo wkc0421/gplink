@@ -1,7 +1,7 @@
 param(
     [string]$BaseUrl = "http://127.0.0.1:8848",
     [string]$Token = "",
-    [string]$LoginPath = "/authorize/login",
+    [string]$LoginPath = "/api/v1/authorization/token",
     [string]$Username = "admin",
     [string]$Password = "admin",
     [string]$LoginBodyJson = "",
@@ -54,6 +54,9 @@ function Get-PropertyValue {
 
 function Get-TokenFromLoginResult {
     param($Result)
+    if ($Result -and $Result -is [string]) {
+        return $Result
+    }
     $paths = @(
         "token",
         "accessToken",
@@ -88,7 +91,7 @@ function Request-AccessToken {
         $bodyJson = $LoginBodyJson
     } else {
         $bodyJson = @{
-            username = $Username
+            user = $Username
             password = $Password
         } | ConvertTo-Json -Depth 10 -Compress
     }
@@ -102,7 +105,7 @@ function Request-AccessToken {
             -TimeoutSec $TimeoutSec
         $accessToken = Get-TokenFromLoginResult -Result $result
         if (-not $accessToken) {
-            throw "Login succeeded but token was not found in common fields: token/accessToken/access_token/result/data."
+            throw "Login succeeded but token was not found. Expected plain string token or common fields: token/accessToken/access_token/result/data."
         }
         return $accessToken
     } catch {
