@@ -4,7 +4,7 @@ param(
     [string]$BootstrapToken = "071f8a4a9de5f036305335397457e642",
     [string]$LoginPath = "auto",
     [string]$Username = "admin",
-    [string]$Password = "yada88",
+    [string]$Password = "JetLinks.C0mmVn1ty",
     [string]$LoginBodyJson = "",
     [string]$Property = "temperature",
     [string]$Event = "report",
