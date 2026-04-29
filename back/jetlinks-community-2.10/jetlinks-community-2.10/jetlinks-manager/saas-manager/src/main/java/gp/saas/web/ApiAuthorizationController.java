@@ -9,8 +9,6 @@ import org.hswebframework.web.authorization.ReactiveAuthenticationManager;
 import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.authorization.annotation.QueryAction;
 import org.hswebframework.web.authorization.annotation.Resource;
-import org.hswebframework.web.authorization.basic.web.GeneratedToken;
-import org.hswebframework.web.authorization.basic.web.ReactiveUserTokenGenerator;
 import org.hswebframework.web.authorization.events.AuthorizationSuccessEvent;
 import org.hswebframework.web.authorization.simple.SimpleAuthentication;
 import org.hswebframework.web.authorization.simple.SimpleUser;
@@ -28,8 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @RequestMapping("/api/v1/authorization")
@@ -43,7 +41,8 @@ public class ApiAuthorizationController {
     private final ReactiveUserService userService;
     private final ReactiveAuthenticationManager authenticationManager;
     private final UserTokenManager userTokenManager;
-    private final List<ReactiveUserTokenGenerator> tokenGenerators;
+    private static final String TOKEN_TYPE_DEFAULT = "default";
+    private static final long TOKEN_TIMEOUT_MS = 30L * 60 * 1000;
 
     @Value("${saas.api.username:admin}")
     private String allowedUsername;
@@ -54,13 +53,11 @@ public class ApiAuthorizationController {
     public ApiAuthorizationController(ApplicationEventPublisher eventPublisher,
                                       ReactiveUserService userService,
                                       ReactiveAuthenticationManager authenticationManager,
-                                      UserTokenManager userTokenManager,
-                                      List<ReactiveUserTokenGenerator> tokenGenerators) {
+                                      UserTokenManager userTokenManager) {
         this.eventPublisher = eventPublisher;
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.userTokenManager = userTokenManager;
-        this.tokenGenerators = tokenGenerators;
     }
 
     @PostMapping("/token")
@@ -97,28 +94,20 @@ public class ApiAuthorizationController {
             .getByUserId(userEntity.getId())
             .switchIfEmpty(Mono.fromSupplier(() -> simpleAuthentication(userEntity)))
             .flatMap(authentication -> {
-                GeneratedToken generatedToken = defaultTokenGenerator().generate(authentication);
+                String token = UUID.randomUUID().toString().replace("-", "");
                 AuthorizationSuccessEvent event = new AuthorizationSuccessEvent(authentication, parameterGetter(username, password));
                 event.getResult().put("userId", userEntity.getId());
-                event.getResult().put("token", generatedToken.getToken());
+                event.getResult().put("token", token);
 
                 return userTokenManager
                     .signIn(userEntity.getId(),
-                            generatedToken.getToken(),
-                            generatedToken.getType(),
-                            generatedToken.getTimeout(),
+                            token,
+                            TOKEN_TYPE_DEFAULT,
+                            TOKEN_TIMEOUT_MS,
                             authentication)
                     .then(event.publish(eventPublisher))
-                    .thenReturn(generatedToken.getToken());
+                    .thenReturn(token);
             });
-    }
-
-    private ReactiveUserTokenGenerator defaultTokenGenerator() {
-        return tokenGenerators
-            .stream()
-            .filter(generator -> "default".equals(generator.getTokenType()))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("Default token generator not found"));
     }
 
     private Function<String, Object> parameterGetter(String username, String password) {
