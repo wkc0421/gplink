@@ -1,6 +1,7 @@
 param(
     [string]$BaseUrl = "http://127.0.0.1:8848",
     [string]$Token = "",
+    [string]$BootstrapToken = "071f8a4a9de5f036305335397457e642",
     [string]$LoginPath = "auto",
     [string]$Username = "admin",
     [string]$Password = "yada88",
@@ -104,11 +105,19 @@ function Invoke-LoginRequest {
 
     $loginUri = "$BaseUrl$Path"
     try {
+        $loginHeaders = @{
+            "Content-Type" = "application/json"
+        }
+        if ($BootstrapToken) {
+            $loginHeaders["X-Access-Token"] = $BootstrapToken
+            $loginHeaders["Authorization"] = "Bearer $BootstrapToken"
+        }
+
         $result = Invoke-RestMethod `
             -Method POST `
             -Uri $loginUri `
             -Body $BodyJson `
-            -ContentType "application/json" `
+            -Headers $loginHeaders `
             -TimeoutSec $TimeoutSec
         $accessToken = Get-TokenFromLoginResult -Result $result
         if (-not $accessToken) {
