@@ -1,9 +1,9 @@
 param(
     [string]$BaseUrl = "http://127.0.0.1:8848",
     [string]$Token = "",
-    [string]$LoginPath = "/api/v1/authorization/token",
+    [string]$LoginPath = "auto",
     [string]$Username = "admin",
-    [string]$Password = "admin",
+    [string]$Password = "yada88",
     [string]$LoginBodyJson = "",
     [string]$Property = "temperature",
     [string]$Event = "report",
@@ -78,29 +78,36 @@ function Get-TokenFromLoginResult {
     return $null
 }
 
-function Request-AccessToken {
-    if ($Token) {
-        return $Token
-    }
-    if ($DryRun) {
+function Read-HttpErrorBody {
+    param($ErrorRecord)
+    try {
+        $response = $ErrorRecord.Exception.Response
+        if ($null -eq $response) {
+            return ""
+        }
+        $stream = $response.GetResponseStream()
+        if ($null -eq $stream) {
+            return ""
+        }
+        $reader = New-Object System.IO.StreamReader($stream)
+        return $reader.ReadToEnd()
+    } catch {
         return ""
     }
+}
 
-    $loginUri = "$BaseUrl$LoginPath"
-    if ($LoginBodyJson) {
-        $bodyJson = $LoginBodyJson
-    } else {
-        $bodyJson = @{
-            user = $Username
-            password = $Password
-        } | ConvertTo-Json -Depth 10 -Compress
-    }
+function Invoke-LoginRequest {
+    param(
+        [string]$Path,
+        [string]$BodyJson
+    )
 
+    $loginUri = "$BaseUrl$Path"
     try {
         $result = Invoke-RestMethod `
             -Method POST `
             -Uri $loginUri `
-            -Body $bodyJson `
+            -Body $BodyJson `
             -ContentType "application/json" `
             -TimeoutSec $TimeoutSec
         $accessToken = Get-TokenFromLoginResult -Result $result
@@ -109,8 +116,58 @@ function Request-AccessToken {
         }
         return $accessToken
     } catch {
-        throw "Failed to get token from $loginUri. Pass -Token manually or adjust -LoginPath/-LoginBodyJson. $($_.Exception.Message)"
+        $errorBody = Read-HttpErrorBody -ErrorRecord $_
+        if ($errorBody) {
+            throw "Failed to get token from $loginUri. $($_.Exception.Message). Response: $errorBody"
+        }
+        throw "Failed to get token from $loginUri. $($_.Exception.Message)"
     }
+}
+
+function Request-AccessToken {
+    if ($Token) {
+        return $Token
+    }
+    if ($DryRun) {
+        return ""
+    }
+
+    if ($LoginBodyJson) {
+        $path = if ($LoginPath -eq "auto") { "/api/v1/authorization/token" } else { $LoginPath }
+        return Invoke-LoginRequest -Path $path -BodyJson $LoginBodyJson
+    }
+
+    if ($LoginPath -ne "auto") {
+        $bodyJson = @{
+            user = $Username
+            username = $Username
+            password = $Password
+            expires = 3600000
+            remember = $false
+        } | ConvertTo-Json -Depth 10 -Compress
+        return Invoke-LoginRequest -Path $LoginPath -BodyJson $bodyJson
+    }
+
+    $tokenBody = @{
+        user = $Username
+        password = $Password
+    } | ConvertTo-Json -Depth 10 -Compress
+
+    try {
+        return Invoke-LoginRequest -Path "/api/v1/authorization/token" -BodyJson $tokenBody
+    } catch {
+        Write-Warning $_.Exception.Message
+        Write-Warning "Fallback to /authorize/login."
+    }
+
+    $loginBody = @{
+        username = $Username
+        password = $Password
+        expires = 3600000
+        remember = $false
+    } | ConvertTo-Json -Depth 10 -Compress
+
+    return Invoke-LoginRequest -Path "/authorize/login" -BodyJson $loginBody
 }
 
 $accessToken = Request-AccessToken
