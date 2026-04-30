@@ -1843,6 +1843,63 @@
             ]
           },
           {
+            "code": "device/MqttForwardLease",
+            "name": "MQTT转发订阅",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "MQTT转发订阅",
+                "en_US": "MQTT Forward Leases",
+                "en": "MQTT Forward Leases"
+              }
+            },
+            "owner": "iot",
+            "id": "a9b42c8f564e4a2f9f07db40cf14de6a",
+            "sortIndex": 10,
+            "url": "/iot/device/MqttForwardLease",
+            "icon": "ApiOutlined",
+            "showPage": [
+              "mqtt-forward-subscription"
+            ],
+            "permissions": [],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": []
+              },
+              {
+                "id": "add",
+                "name": "新增",
+                "i18nMessages": {
+                  "zh_CN": "新增",
+                  "en_US": "Add",
+                  "en": "Add"
+                },
+                "permissions": []
+              },
+              {
+                "id": "delete",
+                "name": "关闭",
+                "i18nMessages": {
+                  "zh_CN": "关闭",
+                  "en_US": "Close",
+                  "en": "Close"
+                },
+                "permissions": []
+              }
+            ],
+            "accessSupport": {
+              "text": "不支持",
+              "value": "unsupported"
+            },
+            "supportDataAccess": false
+          },
+          {
             "code": "link/plugin",
             "name": "插件管理",
             "i18nMessages": {

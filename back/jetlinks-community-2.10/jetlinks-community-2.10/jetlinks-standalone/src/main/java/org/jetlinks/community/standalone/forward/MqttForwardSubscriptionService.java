@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
@@ -129,6 +130,19 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
             .flatMap(index -> index.values().stream())
             .mapToInt(Set::size)
             .sum());
+        result.put("forwardedLeaseCount", leases.values()
+            .stream()
+            .filter(lease -> lease.forwardCount() > 0)
+            .count());
+        result.put("totalForwardCount", leases.values()
+            .stream()
+            .mapToLong(Lease::forwardCount)
+            .sum());
+        result.put("lastForwardTime", leases.values()
+            .stream()
+            .mapToLong(lease -> lease.lastForwardTime)
+            .max()
+            .orElse(0L));
         result.put("leases", leases.values()
             .stream()
             .map(this::toResponse)
@@ -163,6 +177,7 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
             request.getMqttNetworkId().trim(),
             request.getMqttTopicPrefix(),
             request.getMqttQos(),
+            now,
             now + LEASE_TTL.toMillis()
         );
     }
@@ -313,7 +328,14 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                     mqttMessage.setTopic(buildMqttTopic(leaseBeforePublish, msg));
                     mqttMessage.setQosLevel(leaseBeforePublish.mqttQos);
                     mqttMessage.setPayload(Unpooled.copiedBuffer(buildPayload(msg, match.properties)));
-                    return client.publish(mqttMessage);
+                    return client
+                        .publish(mqttMessage)
+                        .doOnSuccess(ignore -> {
+                            Lease leaseAfterPublish = getActiveLease(leaseBeforePublish);
+                            if (leaseAfterPublish != null) {
+                                leaseAfterPublish.recordForward(msg.getDeviceId(), match.properties.keySet());
+                            }
+                        });
                 })
                 .onErrorResume(e -> {
                     log.warn("mqtt-forward publish failed: lease={} device={} cause={}",
@@ -443,12 +465,21 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
     private MqttForwardLeaseResponse toResponse(Lease lease) {
         MqttForwardLeaseResponse response = new MqttForwardLeaseResponse();
         response.setLeaseId(lease.leaseId);
+        response.setProductId(lease.productId);
+        response.setMqttNetworkId(lease.mqttNetworkId);
+        response.setMqttTopicPrefix(lease.mqttTopicPrefix);
+        response.setMqttQos(lease.mqttQos);
+        response.setCreatedAt(lease.createdAt);
         response.setExpiresAt(lease.expiresAt);
         response.setTtlSeconds(LEASE_TTL.getSeconds());
         response.setDeviceIds(new ArrayList<>(lease.deviceIds));
         response.setWatchedProperties(lease.watchedProperties.isEmpty()
             ? List.of()
             : new ArrayList<>(lease.watchedProperties));
+        response.setForwardCount(lease.forwardCount());
+        response.setLastForwardTime(lease.lastForwardTime);
+        response.setLastForwardDeviceId(lease.lastForwardDeviceId);
+        response.setLastForwardProperties(new ArrayList<>(lease.lastForwardProperties));
         return response;
     }
 
@@ -475,7 +506,12 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         final String mqttNetworkId;
         final String mqttTopicPrefix;
         final int mqttQos;
+        final long createdAt;
+        final AtomicLong forwardCount = new AtomicLong();
         volatile long expiresAt;
+        volatile long lastForwardTime;
+        volatile String lastForwardDeviceId;
+        volatile List<String> lastForwardProperties = List.of();
 
         private Lease(String leaseId,
                       String productId,
@@ -484,6 +520,7 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                       String mqttNetworkId,
                       String mqttTopicPrefix,
                       int mqttQos,
+                      long createdAt,
                       long expiresAt) {
             this.leaseId = leaseId;
             this.productId = productId;
@@ -492,6 +529,7 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
             this.mqttNetworkId = mqttNetworkId;
             this.mqttTopicPrefix = mqttTopicPrefix;
             this.mqttQos = mqttQos;
+            this.createdAt = createdAt;
             this.expiresAt = expiresAt;
         }
 
@@ -501,6 +539,17 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
 
         Collection<String> propertyKeys() {
             return watchedProperties.isEmpty() ? List.of(WILDCARD_PROPERTY) : watchedProperties;
+        }
+
+        long forwardCount() {
+            return forwardCount.get();
+        }
+
+        void recordForward(String deviceId, Collection<String> properties) {
+            forwardCount.incrementAndGet();
+            lastForwardTime = System.currentTimeMillis();
+            lastForwardDeviceId = deviceId;
+            lastForwardProperties = List.copyOf(properties);
         }
     }
 

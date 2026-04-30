@@ -1,3 +1,8 @@
+<!--
+  Deprecated: legacy data-collect Modbus RTU point form.
+  This project now uses jetlinks-modbus-protocol + product registerMap
+  for Modbus device access. Keep this file only as historical/reference UI.
+-->
 <template>
   <a-form-item :label="$lang('MODBUS_RTU.point.20250207-1')" :name="['configuration', 'function']"
                :rules="[
