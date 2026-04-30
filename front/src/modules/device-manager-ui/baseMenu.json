@@ -1014,6 +1014,23 @@
                 ]
               },
               {
+                "id": "action",
+                "name": "启用/禁用",
+                "i18nMessages": {
+                  "zh_CN": "启用/禁用",
+                  "en_US": "Enable/Disable",
+                  "en": "Enable/Disable"
+                },
+                "permissions": [
+                  {
+                    "permission": "scheduled-task",
+                    "actions": [
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
                 "id": "delete",
                 "name": "删除",
                 "i18nMessages": {

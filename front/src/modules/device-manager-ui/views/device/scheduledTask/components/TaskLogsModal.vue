@@ -11,7 +11,9 @@
         title="确认删除该任务的全部执行日志？"
         @confirm="clearLogs"
       >
-        <a-button danger>批量删除日志</a-button>
+        <j-permission-button danger hasPermission="scheduled-task:delete">
+          批量删除日志
+        </j-permission-button>
       </a-popconfirm>
     </div>
 
@@ -105,7 +107,9 @@ const logColumns = [
 ]
 
 const fetchLogs = (params: any) => {
-  if (!props.taskId) return Promise.resolve({ result: { data: [], pageIndex: 0, total: 0 } })
+  if (!props.taskId) {
+    return Promise.resolve({ result: { data: [], pageIndex: 0, total: 0 } })
+  }
   return queryLogs(props.taskId, params)
 }
 

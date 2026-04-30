@@ -38,6 +38,7 @@
       <template #logEnabled="slotProps">
         <a-switch
           :checked="slotProps.logEnabled"
+          :disabled="!canAction"
           checked-children="开"
           un-checked-children="关"
           @change="(checked: boolean) => toggleLog(slotProps, checked)"
@@ -114,6 +115,7 @@
 <script setup lang="ts">
 import dayjs from 'dayjs'
 import { onlyMessage } from '@jetlinks-web/utils'
+import { useAuthStore } from '@/store/auth'
 import {
   queryScheduledTasks,
   deleteScheduledTask,
@@ -130,6 +132,8 @@ const queryParams = ref<any>({})
 const formVisible = ref(false)
 const logsVisible = ref(false)
 const currentRecord = ref<any>(null)
+const authStore = useAuthStore()
+const canAction = computed(() => authStore.hasPermission('scheduled-task:save'))
 
 const columns = [
   {
@@ -201,7 +205,11 @@ const columns = [
 ]
 
 const taskTypeLabel = (type: string) => {
-  return type === 'READ_PROPERTY' ? '读取属性' : type === 'INVOKE_FUNCTION' ? '调用功能' : type
+  return type === 'READ_PROPERTY'
+    ? '读取属性'
+    : type === 'INVOKE_FUNCTION'
+      ? '调用功能'
+      : type
 }
 
 const openModal = (record: any) => {
