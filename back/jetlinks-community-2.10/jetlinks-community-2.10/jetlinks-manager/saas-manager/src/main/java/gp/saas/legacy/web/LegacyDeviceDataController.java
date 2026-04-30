@@ -672,6 +672,10 @@ public class LegacyDeviceDataController {
     }
 
     private Interval intervalForType(String type) {
+        Integer minuteInterval = minuteIntervalForType(type);
+        if (minuteInterval != null) {
+            return Interval.ofMinutes(minuteInterval);
+        }
         if ("day".equals(type)) {
             return Interval.ofHours(1);
         }
@@ -687,7 +691,10 @@ public class LegacyDeviceDataController {
     private Long bucketEndFor(String type, long bucketStart, List<Long> boundaries) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(bucketStart);
-        if ("day".equals(type)) {
+        Integer minuteInterval = minuteIntervalForType(type);
+        if (minuteInterval != null) {
+            calendar.add(Calendar.MINUTE, minuteInterval);
+        } else if ("day".equals(type)) {
             calendar.add(Calendar.HOUR_OF_DAY, 1);
         } else if ("month".equals(type)) {
             calendar.add(Calendar.DAY_OF_MONTH, 1);
@@ -721,19 +728,24 @@ public class LegacyDeviceDataController {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(startTime);
-        if ("day".equals(type)) {
+        Integer minuteInterval = minuteIntervalForType(type);
+        if (minuteInterval != null) {
+            alignToMinuteInterval(calendar, minuteInterval);
+            calendar.add(Calendar.MINUTE, minuteInterval);
+            addBoundaries(boundaries, calendar, Calendar.MINUTE, minuteInterval, startTime, endTime);
+        } else if ("day".equals(type)) {
             calendar.set(Calendar.MINUTE, 0);
             calendar.set(Calendar.SECOND, 0);
             calendar.set(Calendar.MILLISECOND, 0);
             calendar.add(Calendar.HOUR_OF_DAY, 1);
-            addBoundaries(boundaries, calendar, Calendar.HOUR_OF_DAY, startTime, endTime);
+            addBoundaries(boundaries, calendar, Calendar.HOUR_OF_DAY, 1, startTime, endTime);
         } else if ("month".equals(type)) {
             calendar.set(Calendar.HOUR_OF_DAY, 0);
             calendar.set(Calendar.MINUTE, 0);
             calendar.set(Calendar.SECOND, 0);
             calendar.set(Calendar.MILLISECOND, 0);
             calendar.add(Calendar.DAY_OF_MONTH, 1);
-            addBoundaries(boundaries, calendar, Calendar.DAY_OF_MONTH, startTime, endTime);
+            addBoundaries(boundaries, calendar, Calendar.DAY_OF_MONTH, 1, startTime, endTime);
         } else if ("year".equals(type)) {
             calendar.set(Calendar.DAY_OF_MONTH, 1);
             calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -741,7 +753,7 @@ public class LegacyDeviceDataController {
             calendar.set(Calendar.SECOND, 0);
             calendar.set(Calendar.MILLISECOND, 0);
             calendar.add(Calendar.MONTH, 1);
-            addBoundaries(boundaries, calendar, Calendar.MONTH, startTime, endTime);
+            addBoundaries(boundaries, calendar, Calendar.MONTH, 1, startTime, endTime);
         } else {
             throw new IllegalArgumentException("Unsupported interval type: " + type);
         }
@@ -755,15 +767,33 @@ public class LegacyDeviceDataController {
     private void addBoundaries(List<Long> boundaries,
                                Calendar calendar,
                                int calendarField,
+                               int amount,
                                long startTime,
                                long endTime) {
         while (calendar.getTimeInMillis() <= startTime) {
-            calendar.add(calendarField, 1);
+            calendar.add(calendarField, amount);
         }
         while (calendar.getTimeInMillis() < endTime) {
             boundaries.add(calendar.getTimeInMillis());
-            calendar.add(calendarField, 1);
+            calendar.add(calendarField, amount);
         }
+    }
+
+    private Integer minuteIntervalForType(String type) {
+        if ("5m".equals(type) || "5min".equals(type) || "5minute".equals(type) || "5minutes".equals(type)) {
+            return 5;
+        }
+        if ("15m".equals(type) || "15min".equals(type) || "15minute".equals(type) || "15minutes".equals(type)) {
+            return 15;
+        }
+        return null;
+    }
+
+    private void alignToMinuteInterval(Calendar calendar, int minuteInterval) {
+        int minute = calendar.get(Calendar.MINUTE);
+        calendar.set(Calendar.MINUTE, minute - (minute % minuteInterval));
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
     }
 
     private Optional<long[]> extractTimeRangeMillis(QueryParamEntity query) {
