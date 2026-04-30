@@ -22,8 +22,7 @@
     "types": [
       "ant-design-vue/typings/global",
       "vite/client"
-    ],
-    "suppressImplicitAnyIndexErrors": true
+    ]
   },
   "include": [
     "src/**/*.ts",
