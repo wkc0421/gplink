@@ -15,8 +15,6 @@
  */
 package org.jetlinks.community.device.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micrometer.core.instrument.MeterRegistry;
 import org.hswebframework.ezorm.rdb.mapping.ReactiveRepository;
 import org.hswebframework.ezorm.rdb.operator.DatabaseOperator;
 import org.jetlinks.community.buffer.BufferProperties;
@@ -28,23 +26,17 @@ import org.jetlinks.community.device.message.writer.TimeSeriesMessageWriterConne
 import org.jetlinks.community.device.service.data.*;
 import org.jetlinks.community.rule.engine.executor.DeviceSelectorBuilder;
 import org.jetlinks.community.rule.engine.executor.device.DeviceSelectorProvider;
-import org.jetlinks.community.things.ThingsDataRepository;
 import org.jetlinks.community.things.data.ThingsDataWriter;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.event.EventBus;
 import org.jetlinks.core.server.MessageHandler;
-import org.jetlinks.core.things.ThingsRegistry;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
-import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 
 import java.time.Duration;
 
@@ -80,38 +72,6 @@ public class DeviceManagerConfiguration {
         return new TimeSeriesMessageWriterConnector(dataService, writer);
     }
 
-    @Bean
-    @ConditionalOnBean(ReactiveRedisConnectionFactory.class)
-    @ConditionalOnMissingBean(ReactiveStringRedisTemplate.class)
-    public ReactiveStringRedisTemplate reactiveStringRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
-        return new ReactiveStringRedisTemplate(connectionFactory);
-    }
-
-    @Bean
-    @ConditionalOnBean(ReactiveRedisConnectionFactory.class)
-    @ConditionalOnProperty(prefix = "jetlinks.device.storage.redis-latest", name = "enabled",
-                           havingValue = "true", matchIfMissing = true)
-    public RedisDeviceLatestService redisDeviceLatestService(
-        ReactiveRedisConnectionFactory connectionFactory,
-        ObjectMapper objectMapper,
-        MeterRegistry meterRegistry,
-        DeviceDataStorageProperties storageProperties) {
-        long ttlSeconds = storageProperties.getRedisLatest().getTtlHours() * 3600;
-        ReactiveStringRedisTemplate redisTemplate = new ReactiveStringRedisTemplate(connectionFactory);
-        return new RedisDeviceLatestService(redisTemplate, objectMapper, ttlSeconds, meterRegistry);
-    }
-
-    @Bean
-    @ConditionalOnBean(RedisDeviceLatestService.class)
-    @ConditionalOnProperty(prefix = "jetlinks.device.storage.redis-latest", name = "enabled",
-                           havingValue = "true", matchIfMissing = true)
-    @ConditionalOnMissingBean(DeviceLatestDataService.class)
-    public DeviceLatestDataService redisDeviceLatestDataService(
-        RedisDeviceLatestService redisService,
-        ThingsDataRepository thingsDataRepository) {
-        return new RedisDeviceLatestDataService(redisService, thingsDataRepository);
-    }
-
     @AutoConfiguration
     @ConditionalOnProperty(prefix = "jetlinks.device.storage", name = "enable-last-data-in-db", havingValue = "true")
     static class DeviceLatestDataServiceConfiguration {
@@ -133,16 +93,5 @@ public class DeviceManagerConfiguration {
                                                        deviceLatestDataServiceBufferProperties());
         }
 
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-        prefix = "jetlinks.device.storage",
-        name = "enable-last-data-in-db",
-        havingValue = "false",
-        matchIfMissing = true)
-    @ConditionalOnMissingBean(DeviceLatestDataService.class)
-    public DeviceLatestDataService deviceLatestDataService() {
-        return new NonDeviceLatestDataService();
     }
 }

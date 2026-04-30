@@ -96,6 +96,16 @@ public class DeviceDataStorageProperties extends DataSettings {
         private boolean enabled = true;
         /** 缓存 TTL（小时），默认 24 小时 */
         private long ttlHours = 24;
+        /** Redis write timeout in milliseconds. */
+        private long writeTimeoutMs = 3000;
+        /** Maximum pending device messages waiting for Redis latest writes. */
+        private int queueSize = 10000;
+        /** Maximum concurrent realtime Redis latest batch writes. */
+        private int workerConcurrency = 32;
+        /** Maximum concurrent Redis latest backfill writes. */
+        private int backfillConcurrency = 8;
+        /** Queue overflow strategy. Currently supports drop-newest. */
+        private String overflowStrategy = "drop-newest";
     }
 
 }

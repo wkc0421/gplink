@@ -170,6 +170,11 @@ jetlinks:
             redis-latest:
                 enabled: true               # 启用 Redis latest 缓存层
                 ttl-hours: 24               # Redis key TTL（小时）
+                write-timeout-ms: 3000
+                queue-size: 10000
+                worker-concurrency: 32
+                backfill-concurrency: 8
+                overflow-strategy: drop-newest
             latest:
                 buffer:
                     size: 500               # 写入缓冲大小（原默认 1000，收紧）

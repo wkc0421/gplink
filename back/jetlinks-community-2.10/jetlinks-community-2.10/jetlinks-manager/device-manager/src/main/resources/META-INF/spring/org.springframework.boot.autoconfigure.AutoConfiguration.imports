@@ -1,0 +1,2 @@
+org.jetlinks.community.device.configuration.DeviceRedisLatestAutoConfiguration
+org.jetlinks.community.device.configuration.DeviceLatestDataServiceFallbackAutoConfiguration
