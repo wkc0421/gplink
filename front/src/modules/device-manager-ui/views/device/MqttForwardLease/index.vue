@@ -4,10 +4,14 @@
             <div class="mqtt-forward-lease-page">
                 <div class="toolbar">
                     <a-space>
-                        <a-button type="primary" @click="openCreate">
+                        <j-permission-button
+                            type="primary"
+                            hasPermission="device/MqttForwardLease:add"
+                            @click="openCreate"
+                        >
                             <template #icon><AIcon type="PlusOutlined" /></template>
                             新增设备订阅
-                        </a-button>
+                        </j-permission-button>
                         <a-button :loading="loading" @click="loadActive">
                             <template #icon><AIcon type="ReloadOutlined" /></template>
                             刷新
@@ -99,16 +103,33 @@
                         </template>
                         <template v-else-if="column.key === 'action'">
                             <a-space>
-                                <a-button type="link" @click="showDetail(record)">详情</a-button>
-                                <a-button type="link" @click="handleRenew(record)">续期</a-button>
-                                <a-popconfirm
-                                    title="确认关闭此 lease？"
-                                    ok-text="确认"
-                                    cancel-text="取消"
-                                    @confirm="handleClose(record)"
+                                <j-permission-button
+                                    type="link"
+                                    hasPermission="device/MqttForwardLease:view"
+                                    @click="showDetail(record)"
                                 >
-                                    <a-button type="link" danger>关闭</a-button>
-                                </a-popconfirm>
+                                    详情
+                                </j-permission-button>
+                                <j-permission-button
+                                    type="link"
+                                    hasPermission="device/MqttForwardLease:renew"
+                                    @click="handleRenew(record)"
+                                >
+                                    续期
+                                </j-permission-button>
+                                <j-permission-button
+                                    type="link"
+                                    danger
+                                    hasPermission="device/MqttForwardLease:delete"
+                                    :popConfirm="{
+                                        title: '确认关闭此 lease？',
+                                        okText: '确认',
+                                        cancelText: '取消',
+                                        onConfirm: () => handleClose(record),
+                                    }"
+                                >
+                                    关闭
+                                </j-permission-button>
                             </a-space>
                         </template>
                     </template>

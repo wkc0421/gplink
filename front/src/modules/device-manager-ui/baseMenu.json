@@ -1860,7 +1860,14 @@
             "showPage": [
               "mqtt-forward-subscription"
             ],
-            "permissions": [],
+            "permissions": [
+              {
+                "permission": "mqtt-forward-subscription",
+                "actions": [
+                  "query"
+                ]
+              }
+            ],
             "buttons": [
               {
                 "id": "view",
@@ -1870,7 +1877,14 @@
                   "en_US": "View",
                   "en": "View"
                 },
-                "permissions": []
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
               },
               {
                 "id": "add",
@@ -1880,7 +1894,33 @@
                   "en_US": "Add",
                   "en": "Add"
                 },
-                "permissions": []
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "renew",
+                "name": "续期",
+                "i18nMessages": {
+                  "zh_CN": "续期",
+                  "en_US": "Renew",
+                  "en": "Renew"
+                },
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
               },
               {
                 "id": "delete",
@@ -1890,7 +1930,15 @@
                   "en_US": "Close",
                   "en": "Close"
                 },
-                "permissions": []
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query",
+                      "delete"
+                    ]
+                  }
+                ]
               }
             ],
             "accessSupport": {
