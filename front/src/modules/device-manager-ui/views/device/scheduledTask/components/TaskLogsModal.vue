@@ -11,7 +11,7 @@
         title="确认删除该任务的全部执行日志？"
         @confirm="clearLogs"
       >
-        <j-permission-button danger hasPermission="scheduled-task:delete">
+        <j-permission-button danger hasPermission="device/scheduledTask:delete">
           批量删除日志
         </j-permission-button>
       </a-popconfirm>

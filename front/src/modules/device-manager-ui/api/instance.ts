@@ -413,6 +413,20 @@ export const executeFunctions = (deviceId: string, functionId: string, data: any
 export const readProperties = (deviceId: string, data: any) => request.post(`/device/instance/${deviceId}/properties/_read`, data)
 
 /**
+ * 保存设备自定义配置。
+ * 目前后端设备配置跟随设备实例实体一起保存，这里统一封装给接入向导使用。
+ */
+export const saveDeviceConfig = (deviceId: string, config: Record<string, any>) => request.patch('/device-instance', {
+    id: deviceId,
+    configuration: config,
+})
+
+/**
+ * 读取设备属性，用于接入向导保存后的通讯测试。
+ */
+export const testReadProperties = (deviceId: string, propertyIds: string[]) => readProperties(deviceId, propertyIds)
+
+/**
  * 设置属性
  * @param deviceId 设备id
  * @param data

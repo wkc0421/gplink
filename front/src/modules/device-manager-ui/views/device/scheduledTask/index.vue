@@ -16,7 +16,7 @@
       <template #headerRightRender>
         <j-permission-button
           type="primary"
-          hasPermission="scheduled-task:add"
+          hasPermission="device/scheduledTask:add"
           @click="openModal(null)"
         >
           新增任务
@@ -41,7 +41,7 @@
           :disabled="!canAction"
           checked-children="开"
           un-checked-children="关"
-          @change="(checked: boolean) => toggleLog(slotProps, checked)"
+          @change="(checked: boolean | string | number) => toggleLog(slotProps, Boolean(checked))"
         />
       </template>
 
@@ -53,7 +53,7 @@
         <a-space :size="16">
           <j-permission-button
             type="link"
-            hasPermission="scheduled-task:update"
+            hasPermission="device/scheduledTask:update"
             :tooltip="{ title: '编辑' }"
             @click="openModal(slotProps)"
           >
@@ -62,7 +62,7 @@
 
           <j-permission-button
             type="link"
-            hasPermission="scheduled-task:save"
+            hasPermission="device/scheduledTask:action"
             :tooltip="{ title: slotProps.state === 'enabled' ? '禁用' : '启用' }"
             :popConfirm="{
               title: slotProps.state === 'enabled' ? '确认禁用该任务？' : '确认启用该任务？',
@@ -74,7 +74,7 @@
 
           <j-permission-button
             type="link"
-            hasPermission="scheduled-task:query"
+            hasPermission="device/scheduledTask:view"
             :tooltip="{ title: '执行日志' }"
             @click="openLogs(slotProps)"
           >
@@ -83,7 +83,7 @@
 
           <j-permission-button
             type="link"
-            hasPermission="scheduled-task:delete"
+            hasPermission="device/scheduledTask:delete"
             :tooltip="{ title: '删除' }"
             :popConfirm="{
               title: '确认删除该任务？',
@@ -133,7 +133,7 @@ const formVisible = ref(false)
 const logsVisible = ref(false)
 const currentRecord = ref<any>(null)
 const authStore = useAuthStore()
-const canAction = computed(() => authStore.hasPermission('scheduled-task:save'))
+const canAction = computed(() => authStore.hasPermission('device/scheduledTask:action'))
 
 const columns = [
   {

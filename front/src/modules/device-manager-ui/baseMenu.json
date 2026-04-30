@@ -832,6 +832,122 @@
             ]
           },
           {
+            "code": "device/ModbusAccess",
+            "name": "Modbus接入向导",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "Modbus接入向导",
+                "en_US": "Modbus Access Wizard",
+                "en": "Modbus Access Wizard"
+              }
+            },
+            "owner": "iot",
+            "id": "e47f5c42cbb3441e8aa769f5dbd7b214",
+            "url": "/iot/device/ModbusAccess",
+            "icon": "ApiOutlined",
+            "sortIndex": 4,
+            "showPage": [
+              "device-product",
+              "device-instance",
+              "device-gateway"
+            ],
+            "permissions": [
+              {
+                "permission": "device-gateway",
+                "actions": [
+                  "query"
+                ]
+              },
+              {
+                "permission": "device-product",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "device-instance",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "device-opt-api",
+                "actions": [
+                  "read-property"
+                ]
+              },
+              {
+                "permission": "protocol-supports",
+                "actions": [
+                  "query"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": [
+                  {
+                    "permission": "device-product",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-instance",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "save",
+                "name": "保存",
+                "i18nMessages": {
+                  "zh_CN": "保存",
+                  "en_US": "Save",
+                  "en": "Save"
+                },
+                "permissions": [
+                  {
+                    "permission": "device-product",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "device-instance",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "device-opt-api",
+                    "actions": [
+                      "read-property"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accessSupport": {
+              "text": "支持",
+              "value": "support"
+            },
+            "supportDataAccess": false
+          },
+          {
             "code": "device/Category",
             "name": "产品分类",
             "i18nMessages": {
@@ -1048,6 +1164,111 @@
                 ]
               }
             ]
+          },
+          {
+            "code": "device/MqttForwardLease",
+            "name": "MQTT转发订阅",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "MQTT转发订阅",
+                "en_US": "MQTT Forward Leases",
+                "en": "MQTT Forward Leases"
+              }
+            },
+            "owner": "iot",
+            "id": "a9b42c8f564e4a2f9f07db40cf14de6a",
+            "sortIndex": 6,
+            "url": "/iot/device/MqttForwardLease",
+            "icon": "ApiOutlined",
+            "showPage": [
+              "mqtt-forward-subscription"
+            ],
+            "permissions": [
+              {
+                "permission": "mqtt-forward-subscription",
+                "actions": [
+                  "query"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "add",
+                "name": "新增",
+                "i18nMessages": {
+                  "zh_CN": "新增",
+                  "en_US": "Add",
+                  "en": "Add"
+                },
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "renew",
+                "name": "续期",
+                "i18nMessages": {
+                  "zh_CN": "续期",
+                  "en_US": "Renew",
+                  "en": "Renew"
+                },
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "delete",
+                "name": "关闭",
+                "i18nMessages": {
+                  "zh_CN": "关闭",
+                  "en_US": "Close",
+                  "en": "Close"
+                },
+                "permissions": [
+                  {
+                    "permission": "mqtt-forward-subscription",
+                    "actions": [
+                      "query",
+                      "delete"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accessSupport": {
+              "text": "不支持",
+              "value": "unsupported"
+            },
+            "supportDataAccess": false
           }
         ]
       },
@@ -1841,111 +2062,6 @@
             "indirectMenus": [
               "8ddbb67de5f65514105d47b448bfd70e"
             ]
-          },
-          {
-            "code": "device/MqttForwardLease",
-            "name": "MQTT转发订阅",
-            "i18nMessages": {
-              "name": {
-                "zh_CN": "MQTT转发订阅",
-                "en_US": "MQTT Forward Leases",
-                "en": "MQTT Forward Leases"
-              }
-            },
-            "owner": "iot",
-            "id": "a9b42c8f564e4a2f9f07db40cf14de6a",
-            "sortIndex": 10,
-            "url": "/iot/device/MqttForwardLease",
-            "icon": "ApiOutlined",
-            "showPage": [
-              "mqtt-forward-subscription"
-            ],
-            "permissions": [
-              {
-                "permission": "mqtt-forward-subscription",
-                "actions": [
-                  "query"
-                ]
-              }
-            ],
-            "buttons": [
-              {
-                "id": "view",
-                "name": "查看",
-                "i18nMessages": {
-                  "zh_CN": "查看",
-                  "en_US": "View",
-                  "en": "View"
-                },
-                "permissions": [
-                  {
-                    "permission": "mqtt-forward-subscription",
-                    "actions": [
-                      "query"
-                    ]
-                  }
-                ]
-              },
-              {
-                "id": "add",
-                "name": "新增",
-                "i18nMessages": {
-                  "zh_CN": "新增",
-                  "en_US": "Add",
-                  "en": "Add"
-                },
-                "permissions": [
-                  {
-                    "permission": "mqtt-forward-subscription",
-                    "actions": [
-                      "query",
-                      "save"
-                    ]
-                  }
-                ]
-              },
-              {
-                "id": "renew",
-                "name": "续期",
-                "i18nMessages": {
-                  "zh_CN": "续期",
-                  "en_US": "Renew",
-                  "en": "Renew"
-                },
-                "permissions": [
-                  {
-                    "permission": "mqtt-forward-subscription",
-                    "actions": [
-                      "query",
-                      "save"
-                    ]
-                  }
-                ]
-              },
-              {
-                "id": "delete",
-                "name": "关闭",
-                "i18nMessages": {
-                  "zh_CN": "关闭",
-                  "en_US": "Close",
-                  "en": "Close"
-                },
-                "permissions": [
-                  {
-                    "permission": "mqtt-forward-subscription",
-                    "actions": [
-                      "query",
-                      "delete"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "accessSupport": {
-              "text": "不支持",
-              "value": "unsupported"
-            },
-            "supportDataAccess": false
           },
           {
             "code": "link/plugin",
