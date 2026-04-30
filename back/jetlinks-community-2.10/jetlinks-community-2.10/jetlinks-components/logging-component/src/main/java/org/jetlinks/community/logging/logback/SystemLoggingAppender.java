@@ -61,28 +61,43 @@ public class SystemLoggingAppender extends UnsynchronizedAppenderBase<ILoggingEv
         String message = event.getFormattedMessage();
         String stack = ShortenedThrowableConverter.getStackTrace(proxies);
 
-        Map<String, String> context = new HashMap<>(staticContext);
+        Map<String, String> context = sanitizeContext(staticContext);
         Map<String, String> mdc = MDC.getCopyOfContextMap();
         if (mdc != null) {
-            context.putAll(mdc);
+            context.putAll(sanitizeContext(mdc));
         }
         SerializableSystemLog info = SerializableSystemLog
             .builder()
             .id(IDGenerator.RANDOM.generate())
             .context(context)
-            .name(event.getLoggerName())
-            .level(event.getLevel().levelStr)
-            .className(element.getClassName())
-            .methodName(element.getMethodName())
+            .name(sanitizePostgresText(event.getLoggerName()))
+            .level(sanitizePostgresText(event.getLevel().levelStr))
+            .className(sanitizePostgresText(element.getClassName()))
+            .methodName(sanitizePostgresText(element.getMethodName()))
             .lineNumber(element.getLineNumber())
-            .exceptionStack(stack)
-            .threadName(event.getThreadName())
+            .exceptionStack(sanitizePostgresText(stack))
+            .threadName(sanitizePostgresText(event.getThreadName()))
             .createTime(event.getTimeStamp())
-            .message(message)
-            .threadId(String.valueOf(Thread.currentThread().getId()))
+            .message(sanitizePostgresText(message))
+            .threadId(sanitizePostgresText(String.valueOf(Thread.currentThread().getId())))
             .build();
 
         return info;
 
+    }
+
+    static Map<String, String> sanitizeContext(Map<String, String> context) {
+        Map<String, String> sanitized = new HashMap<>(context.size());
+        for (Map.Entry<String, String> entry : context.entrySet()) {
+            sanitized.put(sanitizePostgresText(entry.getKey()), sanitizePostgresText(entry.getValue()));
+        }
+        return sanitized;
+    }
+
+    static String sanitizePostgresText(String text) {
+        if (text == null || text.indexOf('\u0000') < 0) {
+            return text;
+        }
+        return text.replace("\u0000", "");
     }
 }
