@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hswebframework.ezorm.rdb.mapping.annotation.ColumnType;
 import org.hswebframework.ezorm.rdb.mapping.annotation.DefaultValue;
+import org.hswebframework.ezorm.rdb.mapping.annotation.JsonCodec;
 import org.hswebframework.web.api.crud.entity.GenericEntity;
 import org.hswebframework.web.api.crud.entity.RecordCreationEntity;
 import org.hswebframework.web.api.crud.entity.RecordModifierEntity;
@@ -17,10 +18,11 @@ import javax.persistence.Index;
 import javax.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.sql.JDBCType;
+import java.util.Map;
 
 @Getter
 @Setter
-@Table(name = "dev_change_property_config", indexes = {
+@Table(name = "device_change_property_config", indexes = {
     @Index(name = "idx_change_prop_product", columnList = "product_id"),
     @Index(name = "idx_change_prop_device", columnList = "device_id"),
     @Index(name = "idx_change_prop_enabled", columnList = "enabled"),
@@ -83,18 +85,11 @@ public class ChangePropertyConfigEntity extends GenericEntity<String>
     @Schema(description = "MQTT QoS")
     private Integer mqttQos;
 
-    @Column(name = "last_value_json")
+    @Column(name = "value_mapping", length = 3000)
+    @JsonCodec
     @ColumnType(jdbcType = JDBCType.LONGVARCHAR, javaType = String.class)
-    @Schema(description = "Last observed raw value serialized as JSON")
-    private String lastValueJson;
-
-    @Column(name = "last_value_time")
-    @Schema(description = "Last observed value timestamp")
-    private Long lastValueTime;
-
-    @Column(name = "last_change_time")
-    @Schema(description = "Last changed timestamp")
-    private Long lastChangeTime;
+    @Schema(description = "Value mapping used by Change MQTT payload")
+    private Map<String, String> valueMapping;
 
     @Column(name = "remark", length = 1024)
     @Schema(description = "Remark")

@@ -21,6 +21,7 @@ public class ChangePropertyConfigWrapper extends RowWrapper<ChangePropertyConfig
         add("mqttNetworkId", "mqttNetworkId");
         add("mqttTopicPrefix", "mqttTopicPrefix");
         add("mqttQos", "mqttQos");
+        add("valueMapping", "valueMapping");
         add("remark", "remark");
     }
 

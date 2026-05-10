@@ -1,5 +1,7 @@
 package org.jetlinks.community.saas.changeproperty.excel;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,6 +17,9 @@ import java.util.Map;
 @Getter
 @Setter
 public class ChangePropertyConfigExcelInfo {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<Map<String, String>> STRING_MAP_TYPE = new TypeReference<>() {};
 
     @Schema(description = "Product ID")
     private String productId;
@@ -46,6 +51,9 @@ public class ChangePropertyConfigExcelInfo {
     @Schema(description = "MQTT QoS")
     private String mqttQos;
 
+    @Schema(description = "Value mapping JSON")
+    private String valueMapping;
+
     @Schema(description = "Remark")
     private String remark;
 
@@ -65,6 +73,7 @@ public class ChangePropertyConfigExcelInfo {
         entity.setMqttNetworkId(trim(mqttNetworkId));
         entity.setMqttTopicPrefix(trim(mqttTopicPrefix));
         entity.setMqttQos(parseInteger(mqttQos));
+        entity.setValueMapping(parseValueMapping(valueMapping));
         entity.setRemark(trim(remark));
         return entity;
     }
@@ -81,6 +90,7 @@ public class ChangePropertyConfigExcelInfo {
         map.put("mqttNetworkId", mqttNetworkId);
         map.put("mqttTopicPrefix", mqttTopicPrefix);
         map.put("mqttQos", mqttQos);
+        map.put("valueMapping", valueMapping);
         map.put("remark", remark);
         return map;
     }
@@ -97,6 +107,7 @@ public class ChangePropertyConfigExcelInfo {
         info.setMqttNetworkId(entity.getMqttNetworkId());
         info.setMqttTopicPrefix(entity.getMqttTopicPrefix());
         info.setMqttQos(entity.getMqttQos() == null ? null : String.valueOf(entity.getMqttQos()));
+        info.setValueMapping(writeValueMapping(entity.getValueMapping()));
         info.setRemark(entity.getRemark());
         return info;
     }
@@ -113,6 +124,7 @@ public class ChangePropertyConfigExcelInfo {
             new ExcelHeader("mqttNetworkId", "mqttNetworkId", CellDataType.STRING),
             new ExcelHeader("mqttTopicPrefix", "mqttTopicPrefix", CellDataType.STRING),
             new ExcelHeader("mqttQos", "mqttQos", CellDataType.STRING),
+            new ExcelHeader("valueMapping", "valueMapping", CellDataType.STRING),
             new ExcelHeader("remark", "remark", CellDataType.STRING)
         );
     }
@@ -134,5 +146,27 @@ public class ChangePropertyConfigExcelInfo {
             return null;
         }
         return Integer.parseInt(value.trim());
+    }
+
+    private static Map<String, String> parseValueMapping(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.readValue(value.trim(), STRING_MAP_TYPE);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String writeValueMapping(Map<String, String> valueMapping) {
+        if (valueMapping == null || valueMapping.isEmpty()) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.writeValueAsString(valueMapping);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
