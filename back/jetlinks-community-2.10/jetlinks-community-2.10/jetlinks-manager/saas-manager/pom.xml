@@ -53,6 +53,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.jetlinks.community</groupId>
+            <artifactId>io-component</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>device-manager</artifactId>
             <version>${project.version}</version>
