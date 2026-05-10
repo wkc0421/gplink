@@ -463,6 +463,30 @@ public class DeviceInstanceController implements
     }
 
     /**
+     * 根据产品ID删除产品下的所有设备.
+     *
+     * @param productId 产品ID
+     * @return 被删除的设备数量
+     */
+    @DeleteMapping("/product/{productId:.+}/devices")
+    @DeleteAction
+    @Operation(summary = "根据产品ID删除产品下的所有设备")
+    public Mono<Integer> deleteByProductId(@PathVariable @Parameter(description = "产品ID") String productId) {
+        return service
+            .createQuery()
+            .select(DeviceInstanceEntity::getId)
+            .where(DeviceInstanceEntity::getProductId, productId)
+            .fetch()
+            .map(DeviceInstanceEntity::getId)
+            .buffer(200)
+            .concatMap(ids -> service
+                .unregisterDevice(Flux.fromIterable(ids))
+                .then(service.deleteById(Flux.fromIterable(ids))))
+            .reduce(Math::addExact)
+            .defaultIfEmpty(0);
+    }
+
+    /**
      * 批量注销设备
      *
      * @param idList ID列表
