@@ -22,6 +22,9 @@ public class LegacyMessagePublishService {
     @Value("${gplink.legacy.default-qos:0}")
     private int defaultQos;
 
+    @Value("${gplink.legacy.device-state-topic-prefix:GPLink}")
+    private String deviceStateTopicPrefix;
+
     public LegacyMessagePublishService(ChangePropertyMqttPublisher mqttPublisher) {
         this.mqttPublisher = mqttPublisher;
     }
@@ -44,6 +47,33 @@ public class LegacyMessagePublishService {
         return publishConfigured(payload, "IOT/" + productId + "/" + deviceId + "/Data/Alarm");
     }
 
+    public Mono<Boolean> standardMqttDeviceStatePublisher(String productId,
+                                                          String deviceId,
+                                                          String state,
+                                                          Long timestamp) {
+        if (!StringUtils.hasText(productId)
+            || !StringUtils.hasText(deviceId)
+            || !StringUtils.hasText(state)) {
+            return Mono.just(false);
+        }
+
+        String normalizedState = state.trim();
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("Key", "Status");
+        item.put("Value", normalizedState);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("MsgType", normalizedState);
+        payload.put("Style", normalizedState);
+        payload.put("Sender", "GPLink");
+        payload.put("Time", timestamp == null ? System.currentTimeMillis() : timestamp);
+        payload.put("ProductId", productId);
+        payload.put("DeviceId", deviceId);
+        payload.put("DataObject", List.of(item));
+
+        return publishConfigured(payload, buildDeviceStateTopic(productId, deviceId, normalizedState));
+    }
+
     public Mono<Void> mqttPublisher(Map<String, Object> payload, String topic) {
         return publishConfigured(payload, topic).then();
     }
@@ -55,5 +85,15 @@ public class LegacyMessagePublishService {
         return mqttPublisher
             .publish(new ChangePropertyMqttPayload(mqttNetworkId, topic, defaultQos, payload))
             .thenReturn(true);
+    }
+
+    private String buildDeviceStateTopic(String productId, String deviceId, String state) {
+        String prefix = StringUtils.hasText(deviceStateTopicPrefix)
+            ? deviceStateTopicPrefix.trim()
+            : "GPLink";
+        while (prefix.endsWith("/")) {
+            prefix = prefix.substring(0, prefix.length() - 1);
+        }
+        return prefix + "/" + productId + "/" + deviceId + "/" + state;
     }
 }
