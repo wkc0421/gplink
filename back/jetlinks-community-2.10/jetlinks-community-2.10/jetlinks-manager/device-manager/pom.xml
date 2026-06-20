@@ -92,6 +92,13 @@
             <artifactId>protocol-component</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.jetlinks.community</groupId>
+            <artifactId>network-manager</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.jetlinks.community</groupId>
             <artifactId>rule-engine-component</artifactId>

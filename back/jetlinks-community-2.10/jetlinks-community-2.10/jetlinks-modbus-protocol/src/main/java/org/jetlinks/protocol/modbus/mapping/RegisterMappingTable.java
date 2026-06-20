@@ -62,6 +62,9 @@ public final class RegisterMappingTable {
         Map<String, RegisterMapping> map = new LinkedHashMap<>();
         for (JsonNode node : root) {
             RegisterMapping mapping = parseOne(node);
+            if (map.containsKey(mapping.getPropertyId())) {
+                throw new IllegalArgumentException("Duplicate registerMap propertyId: " + mapping.getPropertyId());
+            }
             map.put(mapping.getPropertyId(), mapping);
         }
         return new RegisterMappingTable(Collections.unmodifiableMap(map));
@@ -72,10 +75,6 @@ public final class RegisterMappingTable {
         if (propertyId == null) {
             throw new IllegalArgumentException("registerMap entry missing propertyId: " + node);
         }
-        int fc = intValue(node, "functionCode", "fc");
-        if (fc == Integer.MIN_VALUE) {
-            throw new IllegalArgumentException("registerMap entry " + propertyId + " missing functionCode");
-        }
         int address = intValue(node, "address", "addr");
         if (address == Integer.MIN_VALUE) {
             throw new IllegalArgumentException("registerMap entry " + propertyId + " missing address");
@@ -85,17 +84,51 @@ public final class RegisterMappingTable {
         if (quantity == Integer.MIN_VALUE) {
             quantity = type.getRegisterCount();
         }
+        boolean writable = boolValue(node, "writable", false);
+        int legacyFc = intValue(node, "functionCode", "fc");
+        int readFc = intValue(node, "readFunctionCode", "readFc");
+        int writeFc = intValue(node, "writeFunctionCode", "writeFc");
+        if (legacyFc != Integer.MIN_VALUE) {
+            ModbusFunctionCode legacy = ModbusFunctionCode.of(legacyFc);
+            if (legacy.isRead() && readFc == Integer.MIN_VALUE) {
+                readFc = legacyFc;
+            }
+            if (legacy.isWrite() && writeFc == Integer.MIN_VALUE) {
+                writeFc = legacyFc;
+            }
+        }
+        if (writeFc == Integer.MIN_VALUE && writable) {
+            writeFc = deriveWriteFunctionCode(readFc, type, Math.max(quantity, type.getRegisterCount()));
+        }
+        if (readFc == Integer.MIN_VALUE && writeFc == Integer.MIN_VALUE) {
+            throw new IllegalArgumentException("registerMap entry " + propertyId + " missing functionCode");
+        }
         return RegisterMapping.builder()
                 .propertyId(propertyId)
-                .functionCode(ModbusFunctionCode.of(fc))
+                .functionCode(readFc == Integer.MIN_VALUE ? null : ModbusFunctionCode.of(readFc))
+                .writeFunctionCode(writeFc == Integer.MIN_VALUE ? null : ModbusFunctionCode.of(writeFc))
                 .address(address)
                 .quantity(quantity)
                 .dataType(type)
                 .byteOrder(ByteOrder.parse(text(node, "byteOrder", "order")))
                 .scale(doubleValue(node, "scale", 1.0))
                 .offset(doubleValue(node, "offset", 0.0))
-                .writable(boolValue(node, "writable", false))
+                .writable(writable)
                 .build();
+    }
+
+    private static int deriveWriteFunctionCode(int readFc, RegisterDataType type, int quantity) {
+        if (readFc == ModbusFunctionCode.READ_COILS.getCode() && type == RegisterDataType.BIT) {
+            return quantity == 1
+                    ? ModbusFunctionCode.WRITE_SINGLE_COIL.getCode()
+                    : ModbusFunctionCode.WRITE_MULTIPLE_COILS.getCode();
+        }
+        if (readFc == ModbusFunctionCode.READ_HOLDING_REGISTERS.getCode() && type != RegisterDataType.BIT) {
+            return quantity == 1
+                    ? ModbusFunctionCode.WRITE_SINGLE_REGISTER.getCode()
+                    : ModbusFunctionCode.WRITE_MULTIPLE_REGISTERS.getCode();
+        }
+        return Integer.MIN_VALUE;
     }
 
     public RegisterMapping require(String propertyId) {

@@ -763,6 +763,13 @@ public class LocalDeviceInstanceService extends GenericReactiveCrudService<Devic
     //获取设备所有属性
     @SneakyThrows
     public Mono<Map<String, Object>> readProperties(String deviceId, List<String> properties) {
+        return readProperties(deviceId, properties, Collections.emptyMap());
+    }
+
+    @SneakyThrows
+    public Mono<Map<String, Object>> readProperties(String deviceId,
+                                                    List<String> properties,
+                                                    Map<String, Object> headers) {
 
         return registry
             .getDevice(deviceId)
@@ -770,6 +777,7 @@ public class LocalDeviceInstanceService extends GenericReactiveCrudService<Devic
             .map(DeviceOperator::messageSender)
             .flatMapMany((sender) -> sender.readProperty()
                                            .read(properties)
+                                           .headers(headers == null ? Collections.emptyMap() : headers)
                                            .messageId(IDGenerator.SNOW_FLAKE_STRING.generate())
                                            .send())
             .flatMap(mapReply(ReadPropertyMessageReply::getProperties))

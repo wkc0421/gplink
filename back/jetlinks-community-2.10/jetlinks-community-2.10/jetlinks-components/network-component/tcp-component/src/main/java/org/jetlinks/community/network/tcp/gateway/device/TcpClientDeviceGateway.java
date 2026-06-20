@@ -16,6 +16,7 @@
 package org.jetlinks.community.network.tcp.gateway.device;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.hswebframework.web.logger.ReactiveLogger;
 import org.jetlinks.community.gateway.AbstractDeviceGateway;
@@ -30,6 +31,7 @@ import org.jetlinks.core.device.DeviceProductOperator;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.DeviceOnlineMessage;
 import org.jetlinks.core.message.codec.DefaultTransport;
 import org.jetlinks.core.message.codec.FromDeviceMessageContext;
 import org.jetlinks.core.server.DeviceGatewayContext;
@@ -75,6 +77,9 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
     private final AtomicReference<DeviceSession> sessionRef = new AtomicReference<>();
 
     private final Disposable.Composite subscriptions = Disposables.composite();
+
+    @Setter
+    private String bindDeviceId;
 
     TcpClientDeviceGateway(String id,
                            Mono<ProtocolSupport> protocol,
@@ -147,13 +152,33 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
         subscriptions.add(recv);
 
         Disposable connectHook = getProtocol()
-                .flatMap(pt -> pt.onClientConnect(DefaultTransport.TCP, tcpClient, this))
+                .flatMap(pt -> bindConfiguredDevice()
+                        .then(pt.onClientConnect(DefaultTransport.TCP, tcpClient, this)))
                 .onErrorResume(err -> {
                     log.warn("protocol onClientConnect failed", err);
                     return Mono.empty();
                 })
                 .subscribe();
         subscriptions.add(connectHook);
+    }
+
+    private Mono<Void> bindConfiguredDevice() {
+        String deviceId = bindDeviceId;
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            return Mono.empty();
+        }
+        DeviceOnlineMessage online = new DeviceOnlineMessage();
+        online.setDeviceId(deviceId.trim());
+        return handleDeviceMessage(online)
+                .doOnNext(ignore -> log.debug("tcp client gateway[{}] bind connection to configured device [{}]",
+                        getId(), online.getDeviceId()))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("tcp client gateway[{}] bind device[{}] failed, shutdown client connection",
+                            getId(), online.getDeviceId());
+                    tcpClient.shutdown();
+                    return Mono.error(new IllegalStateException("bind device failed: " + online.getDeviceId()));
+                }))
+                .then();
     }
 
     private Mono<Void> handleTcpMessage(TcpMessage message) {
@@ -187,7 +212,7 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
                         },
                         () -> log.warn("TCP client gateway[{}]: device[{}] not found: {}",
                                 getId(), message.getDeviceId(), message))
-                .thenReturn(message);
+                .map(ignore -> message);
     }
 
     @Override

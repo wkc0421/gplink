@@ -23,10 +23,12 @@ public final class ModbusRequest {
                           int quantity,
                           byte[] writeValue) {
         validateSlaveId(slaveId);
+        validateUInt16(address, "address");
+        validateUInt16(quantity, "quantity");
         this.slaveId = slaveId;
         this.function = function;
-        this.address = address & 0xFFFF;
-        this.quantity = quantity & 0xFFFF;
+        this.address = address;
+        this.quantity = quantity;
         this.writeValue = writeValue;
     }
 
@@ -143,6 +145,12 @@ public final class ModbusRequest {
     private static void validateSlaveId(int slaveId) {
         if (slaveId < 0 || slaveId > 247) {
             throw new IllegalArgumentException("slaveId must be in [0, 247]: " + slaveId);
+        }
+    }
+
+    private static void validateUInt16(int value, String name) {
+        if (value < 0 || value > 0xFFFF) {
+            throw new IllegalArgumentException(name + " must be in [0, 65535]: " + value);
         }
     }
 }

@@ -25,6 +25,7 @@ import org.jetlinks.core.device.DeviceProductOperator;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.DeviceOnlineMessage;
 import org.jetlinks.core.message.codec.DefaultTransport;
 import org.jetlinks.core.message.codec.FromDeviceMessageContext;
 import org.jetlinks.core.message.codec.Transport;
@@ -80,6 +81,9 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
     //连接检查超时时间,超过时间连接没有被正确处理返回会话,将被自动断开连接
     @Setter
     private Duration connectCheckTimeout = TimeUtils.parse(System.getProperty("gateway.tcp.network.connect-check-timeout", "10s"));
+
+    @Setter
+    private String bindDeviceId;
 
     public TcpServerDeviceGateway(String id,
                                   Mono<ProtocolSupport> protocol,
@@ -150,8 +154,9 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
         }
 
         Mono<Void> accept() {
-            return getProtocol()
-                .flatMap(protocol -> protocol.onClientConnect(DefaultTransport.TCP, client, this))
+            return bindConfiguredDevice()
+                .then(getProtocol()
+                          .flatMap(protocol -> protocol.onClientConnect(DefaultTransport.TCP, client, this)))
                 .then(
                     client
                         .subscribe()
@@ -165,6 +170,19 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
                         .then()
                 )
                 .doOnCancel(client::shutdown);
+        }
+
+        private Mono<Void> bindConfiguredDevice() {
+            String deviceId = bindDeviceId;
+            if (deviceId == null || deviceId.trim().isEmpty()) {
+                return Mono.empty();
+            }
+            DeviceOnlineMessage online = new DeviceOnlineMessage();
+            online.setDeviceId(deviceId.trim());
+            return handleDeviceMessage(online)
+                .doOnNext(ignore -> log.debug("tcp [{}] bind connection to configured device [{}]",
+                                              address, online.getDeviceId()))
+                .then();
         }
 
         Mono<Void> handleTcpMessage(TcpMessage message) {
@@ -190,11 +208,6 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
         }
 
         Mono<DeviceMessage> handleDeviceMessage(DeviceMessage message) {
-            Disposable checker = legalityChecker;
-            if (checker != null) {
-                checker.dispose();
-                legalityChecker = null;
-            }
             monitor.receivedMessage();
             return helper
                 .handleDeviceMessage(
@@ -204,10 +217,19 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
                         TcpDeviceSession deviceSession = session.unwrap(TcpDeviceSession.class);
                         deviceSession.setClient(client);
                         sessionRef.set(deviceSession);
+                        disposeLegalityChecker();
                     },
                     () -> log.warn("TCP{}: The device[{}] in the message body does not exist:{}", address, message.getDeviceId(), message)
                 )
-                .thenReturn(message);
+                .map(ignore -> message);
+        }
+
+        private void disposeLegalityChecker() {
+            Disposable checker = legalityChecker;
+            if (checker != null) {
+                checker.dispose();
+                legalityChecker = null;
+            }
         }
 
         @Override

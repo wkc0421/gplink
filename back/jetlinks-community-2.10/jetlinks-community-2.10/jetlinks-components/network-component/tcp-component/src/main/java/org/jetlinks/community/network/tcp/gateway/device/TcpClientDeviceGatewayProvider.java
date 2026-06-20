@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
 import java.util.Objects;
 
 @Component
@@ -85,7 +86,7 @@ public class TcpClientDeviceGatewayProvider implements DeviceGatewayProvider {
                 .map(client -> {
                     String protocol = properties.getProtocol();
                     Assert.hasText(protocol, "protocol can not be empty");
-                    return new TcpClientDeviceGateway(
+                    TcpClientDeviceGateway gateway = new TcpClientDeviceGateway(
                             properties.getId(),
                             Mono.defer(() -> protocolSupports.getProtocol(protocol)),
                             registry,
@@ -93,6 +94,8 @@ public class TcpClientDeviceGatewayProvider implements DeviceGatewayProvider {
                             sessionManager,
                             client
                     );
+                    gateway.setBindDeviceId(readBindDeviceId(properties));
+                    return gateway;
                 });
     }
 
@@ -108,6 +111,17 @@ public class TcpClientDeviceGatewayProvider implements DeviceGatewayProvider {
         }
         String protocol = properties.getProtocol();
         current.protocol = Mono.defer(() -> protocolSupports.getProtocol(protocol));
+        current.setBindDeviceId(readBindDeviceId(properties));
         return Mono.just(gateway);
+    }
+
+    private String readBindDeviceId(DeviceGatewayProperties properties) {
+        Map<String, Object> configuration = properties.getConfiguration();
+        Object value = configuration == null ? null : configuration.get("bindDeviceId");
+        if (value == null) {
+            return null;
+        }
+        String deviceId = String.valueOf(value).trim();
+        return deviceId.isEmpty() ? null : deviceId;
     }
 }

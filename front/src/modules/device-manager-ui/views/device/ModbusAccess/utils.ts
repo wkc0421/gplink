@@ -1,4 +1,4 @@
-import type { ByteOrder, DeviceMetadata, ImportResult, RegisterDataType, RegisterMappingRow, SlaveRow } from './types'
+﻿import type { ByteOrder, DeviceMetadata, ImportResult, RegisterDataType, RegisterMappingRow, SlaveRow } from './types'
 
 export const MODBUS_PROTOCOL_ID = 'modbus-rtu.v1'
 export const READ_FUNCTION_CODES = [1, 2, 3, 4]
@@ -24,6 +24,14 @@ export const DEFAULT_COMMUNICATION_CONFIG = {
     keepOnlineTimeout: 120,
 }
 
+export const DEFAULT_COLLECTION_POLICY = {
+    collectEnabled: true,
+    scanIntervalMs: 5000,
+    dispatchIntervalMs: 50,
+    storageIntervalMs: 60000,
+    responseTimeoutMs: 3000,
+}
+
 const DATA_TYPE_MIN_QUANTITY: Record<RegisterDataType, number> = {
     BIT: 1,
     INT16: 1,
@@ -34,6 +42,19 @@ const DATA_TYPE_MIN_QUANTITY: Record<RegisterDataType, number> = {
     INT64: 4,
     FLOAT64: 4,
 }
+
+const fcLimit = (functionCode: number) => {
+    if (functionCode === 1 || functionCode === 2) return 2000
+    if (functionCode === 3 || functionCode === 4) return 125
+    if (functionCode === 15) return 1968
+    if (functionCode === 16) return 123
+    return 1
+}
+
+const isBitType = (dataType: RegisterDataType) => dataType === 'BIT'
+
+const isReadableWritableFc = (functionCode: number, dataType: RegisterDataType) =>
+    (functionCode === 1 && isBitType(dataType)) || (functionCode === 3 && !isBitType(dataType))
 
 const VALUE_TYPE_MAP: Record<RegisterDataType, string> = {
     BIT: 'boolean',
@@ -94,7 +115,7 @@ const toNumber = (value: unknown, fallback: number) => {
 const toBoolean = (value: unknown) => {
     if (typeof value === 'boolean') return value
     const text = String(value ?? '').trim().toLowerCase()
-    return ['true', '1', 'yes', 'y', '是', '可写'].includes(text)
+    return ['true', '1', 'yes', 'y', '\u662f', '\u53ef\u5199'].includes(text)
 }
 
 export const createRegisterRow = (partial: Partial<RegisterMappingRow> = {}): RegisterMappingRow => ({
@@ -118,7 +139,7 @@ export const createSlaveRow = (slaveId?: number, gatewayDeviceId = ''): SlaveRow
         key: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
         slaveId,
         deviceId: suffix ? buildSlaveDeviceId(gatewayDeviceId, suffix) : '',
-        deviceName: suffix ? `从机${suffix}` : '',
+        deviceName: suffix ? `浠庢満${suffix}` : '',
         description: '',
         autoDeviceId: true,
         autoDeviceName: true,
@@ -186,12 +207,12 @@ const mapRows = <T extends Record<string, any>>(
 ): { records: Partial<T>[]; errors: string[] } => {
     const table = parseTableRows(text)
     if (!table.length) {
-        return { records: [], errors: ['导入内容为空'] }
+        return { records: [], errors: ['Import content is empty'] }
     }
 
     const headers = table[0].map(item => aliases[normalizeHeader(item)])
     if (!headers.some(Boolean)) {
-        return { records: [], errors: ['未识别到表头，请确认第一行为字段名'] }
+        return { records: [], errors: ['No valid header row found'] }
     }
 
     const records = table.slice(1).map((line) => {
@@ -306,43 +327,76 @@ export const validateRegisterRows = (rows: RegisterMappingRow[]) => {
     const errors: string[] = []
     const propertyIds = new Set<string>()
     if (!rows.length || !rows.some(row => row.propertyId)) {
-        errors.push('registerMap 至少需要配置一行点位')
+        errors.push('registerMap requires at least one property row')
     }
 
     rows.forEach((row, index) => {
-        const prefix = `registerMap 第 ${index + 1} 行`
+        const prefix = `registerMap row ${index + 1}`
         if (!row.propertyId) {
-            errors.push(`${prefix}: propertyId 不能为空`)
+            errors.push(`${prefix}: propertyId is required`)
         } else if (propertyIds.has(row.propertyId)) {
-            errors.push(`${prefix}: propertyId ${row.propertyId} 重复`)
+            errors.push(`${prefix}: propertyId ${row.propertyId} is duplicated`)
         } else {
             propertyIds.add(row.propertyId)
         }
 
         if (!ALL_FUNCTION_CODES.includes(Number(row.functionCode))) {
-            errors.push(`${prefix}: functionCode 只支持 1/2/3/4/5/6/15/16`)
+            errors.push(`${prefix}: functionCode only supports 1/2/3/4/5/6/15/16`)
         }
 
         if (!DATA_TYPE_OPTIONS.includes(row.dataType)) {
-            errors.push(`${prefix}: dataType 只支持 ${DATA_TYPE_OPTIONS.join('/')}`)
+            errors.push(`${prefix}: dataType only supports ${DATA_TYPE_OPTIONS.join('/')}`)
         }
 
         if (!BYTE_ORDER_OPTIONS.includes(row.byteOrder)) {
-            errors.push(`${prefix}: byteOrder 只支持 ${BYTE_ORDER_OPTIONS.join('/')}`)
+            errors.push(`${prefix}: byteOrder only supports ${BYTE_ORDER_OPTIONS.join('/')}`)
         }
 
         if (!Number.isInteger(Number(row.address)) || Number(row.address) < 0 || Number(row.address) > 65535) {
-            errors.push(`${prefix}: address 范围应为 0-65535`)
+            errors.push(`${prefix}: address must be between 0 and 65535`)
         }
 
         const minQuantity = DATA_TYPE_MIN_QUANTITY[row.dataType] || 1
         if (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) < minQuantity) {
-            errors.push(`${prefix}: ${row.dataType} 的 quantity 至少为 ${minQuantity}`)
+            errors.push(`${prefix}: ${row.dataType} quantity must be at least ${minQuantity}`)
         }
 
-        if (row.writable && !WRITE_FUNCTION_CODES.includes(Number(row.functionCode))) {
-            errors.push(`${prefix}: writable=true 时功能码必须是 5/6/15/16`)
+        const quantity = Number(row.quantity)
+        const functionCode = Number(row.functionCode)
+        if (Number.isInteger(Number(row.address)) && Number.isInteger(quantity)
+            && Number(row.address) + quantity - 1 > 65535) {
+            errors.push(`${prefix}: address + quantity must not exceed 65535`)
         }
+
+        if (READ_FUNCTION_CODES.includes(functionCode)) {
+            if ((functionCode === 1 || functionCode === 2) && !isBitType(row.dataType)) {
+                errors.push(`${prefix}: FC1/FC2 only support BIT`)
+            }
+            if ((functionCode === 3 || functionCode === 4) && isBitType(row.dataType)) {
+                errors.push(`${prefix}: FC3/FC4 only support word data types`)
+            }
+        }
+
+        if (WRITE_FUNCTION_CODES.includes(functionCode)) {
+            if ((functionCode === 5 || functionCode === 15) && !isBitType(row.dataType)) {
+                errors.push(`${prefix}: FC5/FC15 only support BIT`)
+            }
+            if ((functionCode === 6 || functionCode === 16) && isBitType(row.dataType)) {
+                errors.push(`${prefix}: FC6/FC16 only support word data types`)
+            }
+            if ((functionCode === 5 || functionCode === 6) && quantity !== 1) {
+                errors.push(`${prefix}: FC${functionCode} requires quantity=1`)
+            }
+        }
+
+        if (Number.isInteger(quantity) && quantity > fcLimit(functionCode)) {
+            errors.push(`${prefix}: quantity exceeds FC${functionCode} limit ${fcLimit(functionCode)}`)
+        }
+
+        if (row.writable && !WRITE_FUNCTION_CODES.includes(functionCode) && !isReadableWritableFc(functionCode, row.dataType)) {
+            errors.push(`${prefix}: writable=true requires FC1/FC3 derived write support or write FC 5/6/15/16`)
+        }
+
     })
 
     return errors
@@ -353,26 +407,26 @@ export const validateSlaveRows = (rows: SlaveRow[]) => {
     const slaveIds = new Set<number>()
     const deviceIds = new Set<string>()
     if (!rows.length) {
-        errors.push('从机列表至少需要配置一行从机')
+        errors.push('slave list requires at least one slave')
     }
 
     rows.forEach((row, index) => {
-        const prefix = `从机列表第 ${index + 1} 行`
+        const prefix = `slave row ${index + 1}`
         const slaveId = Number(row.slaveId)
         if (!Number.isInteger(slaveId) || slaveId < 1 || slaveId > 247) {
-            errors.push(`${prefix}: slaveId 范围应为 1-247`)
+            errors.push(`${prefix}: slaveId must be between 1 and 247`)
         } else if (slaveIds.has(slaveId)) {
-            errors.push(`${prefix}: slaveId ${slaveId} 重复`)
+            errors.push(`${prefix}: slaveId ${slaveId} is duplicated`)
         } else {
             slaveIds.add(slaveId)
         }
 
         if (!row.deviceId) {
-            errors.push(`${prefix}: deviceId 不能为空`)
+            errors.push(`${prefix}: deviceId is required`)
         } else if (!/^[a-zA-Z0-9_-]+$/.test(row.deviceId)) {
-            errors.push(`${prefix}: deviceId 只能包含字母、数字、下划线和中划线`)
+            errors.push(`${prefix}: deviceId only supports letters, numbers, underscore and hyphen`)
         } else if (deviceIds.has(row.deviceId)) {
-            errors.push(`${prefix}: deviceId ${row.deviceId} 重复`)
+            errors.push(`${prefix}: deviceId ${row.deviceId} is duplicated`)
         } else {
             deviceIds.add(row.deviceId)
         }

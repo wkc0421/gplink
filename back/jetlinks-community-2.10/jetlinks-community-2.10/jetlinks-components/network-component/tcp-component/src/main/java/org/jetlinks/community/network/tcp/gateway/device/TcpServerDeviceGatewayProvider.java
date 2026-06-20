@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
 import java.util.Objects;
 
 @Component
@@ -87,7 +88,7 @@ public class TcpServerDeviceGatewayProvider implements DeviceGatewayProvider {
 
                 Assert.hasText(protocol, "protocol can not be empty");
 
-                return new TcpServerDeviceGateway(
+                TcpServerDeviceGateway gateway = new TcpServerDeviceGateway(
                     properties.getId(),
                     Mono.defer(() -> protocolSupports.getProtocol(protocol)),
                     registry,
@@ -95,6 +96,8 @@ public class TcpServerDeviceGatewayProvider implements DeviceGatewayProvider {
                     sessionManager,
                     mqttServer
                 );
+                gateway.setBindDeviceId(readBindDeviceId(properties));
+                return gateway;
             });
     }
 
@@ -112,7 +115,18 @@ public class TcpServerDeviceGatewayProvider implements DeviceGatewayProvider {
         //更新协议
         String protocol = properties.getProtocol();
         deviceGateway.protocol = Mono.defer(() -> protocolSupports.getProtocol(protocol));
+        deviceGateway.setBindDeviceId(readBindDeviceId(properties));
 
         return Mono.just(gateway);
+    }
+
+    private String readBindDeviceId(DeviceGatewayProperties properties) {
+        Map<String, Object> configuration = properties.getConfiguration();
+        Object value = configuration == null ? null : configuration.get("bindDeviceId");
+        if (value == null) {
+            return null;
+        }
+        String deviceId = String.valueOf(value).trim();
+        return deviceId.isEmpty() ? null : deviceId;
     }
 }

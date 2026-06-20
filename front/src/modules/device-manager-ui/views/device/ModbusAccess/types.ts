@@ -28,11 +28,20 @@ export interface RegisterMappingRow {
 export interface SlaveRow {
     key: string
     slaveId?: number
+    typeId?: string
     deviceId?: string
     deviceName?: string
     description?: string
     autoDeviceId?: boolean
     autoDeviceName?: boolean
+}
+
+export interface CollectionPolicy {
+    collectEnabled: boolean
+    scanIntervalMs: number
+    dispatchIntervalMs: number
+    storageIntervalMs: number
+    responseTimeoutMs: number
 }
 
 export interface ImportResult<T> {
