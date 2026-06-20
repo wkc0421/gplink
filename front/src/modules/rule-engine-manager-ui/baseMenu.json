@@ -320,6 +320,129 @@
             "assetType": "alarmConfig"
           },
           {
+            "code": "rule-engine/Alarm/NumericRule",
+            "name": "数值告警规则",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "数值告警规则",
+                "en_US": "Numeric Alarm Rules",
+                "en": "Numeric Alarm Rules"
+              }
+            },
+            "owner": "iot",
+            "id": "6ed1aa86d7b2474f9dc2a4d0d828f1a8",
+            "sortIndex": 4,
+            "url": "/iot/Alarm/NumericRule",
+            "icon": "icon-warning_amber",
+            "showPage": [
+              "alarm-config"
+            ],
+            "permissions": [
+              {
+                "permission": "alarm-config",
+                "actions": [
+                  "query"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": [
+                  {
+                    "permission": "alarm-config",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "add",
+                "name": "新增",
+                "i18nMessages": {
+                  "zh_CN": "新增",
+                  "en_US": "Add",
+                  "en": "Add"
+                },
+                "permissions": [
+                  {
+                    "permission": "alarm-config",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "update",
+                "name": "编辑",
+                "i18nMessages": {
+                  "zh_CN": "编辑",
+                  "en_US": "Edit",
+                  "en": "Edit"
+                },
+                "permissions": [
+                  {
+                    "permission": "alarm-config",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "action",
+                "name": "启用/禁用",
+                "i18nMessages": {
+                  "zh_CN": "启用/禁用",
+                  "en_US": "Enable/Disable",
+                  "en": "Enable/Disable"
+                },
+                "permissions": [
+                  {
+                    "permission": "alarm-config",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "delete",
+                "name": "删除",
+                "i18nMessages": {
+                  "zh_CN": "删除",
+                  "en_US": "Delete",
+                  "en": "Delete"
+                },
+                "permissions": [
+                  {
+                    "permission": "alarm-config",
+                    "actions": [
+                      "query",
+                      "delete"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accessSupport": {
+              "text": "不支持",
+              "value": "unsupported"
+            },
+            "supportDataAccess": false
+          },
+          {
             "code": "rule-engine/Alarm/Log",
             "name": "告警记录",
             "i18nMessages": {
@@ -331,7 +454,7 @@
             },
             "owner": "iot",
             "id": "fca24d8d3276a410f7031a9b721017fd",
-            "sortIndex": 4,
+            "sortIndex": 5,
             "url": "/iot/Alarm/Log",
             "icon": "icon-changjingliandong",
             "showPage": [
