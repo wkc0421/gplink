@@ -6,6 +6,7 @@ import org.hswebframework.web.crud.events.EntityModifyEvent;
 import org.hswebframework.web.crud.events.EntitySavedEvent;
 import org.jetlinks.community.device.entity.ScheduledTaskEntity;
 import org.jetlinks.community.device.entity.ScheduledTaskLogEntity;
+import org.jetlinks.community.device.modbus.ModbusPollReportPublisher;
 import org.jetlinks.community.device.enums.ExecutionMode;
 import org.jetlinks.community.device.enums.LogStatus;
 import org.jetlinks.community.device.enums.ScheduledTaskState;
@@ -20,8 +21,11 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -31,15 +35,18 @@ public class ScheduledTaskRunner implements CommandLineRunner {
     private final ScheduledTaskService taskService;
     private final ScheduledTaskLogService logService;
     private final LocalDeviceInstanceService deviceService;
+    private final ModbusPollReportPublisher pollReportPublisher;
 
     private final Map<String, Disposable> runningTasks = new ConcurrentHashMap<>();
 
     public ScheduledTaskRunner(ScheduledTaskService taskService,
                                ScheduledTaskLogService logService,
-                               LocalDeviceInstanceService deviceService) {
+                               LocalDeviceInstanceService deviceService,
+                               ModbusPollReportPublisher pollReportPublisher) {
         this.taskService = taskService;
         this.logService = logService;
         this.deviceService = deviceService;
+        this.pollReportPublisher = pollReportPublisher;
     }
 
     @Override
@@ -99,7 +106,7 @@ public class ScheduledTaskRunner implements CommandLineRunner {
                 .getTimerSpec()
                 .flux(Schedulers.parallel())
                 .onBackpressureDrop()
-                .concatMap(tick -> executeTask(task)
+                .concatMap(tick -> executeTask(task, System.currentTimeMillis())
                     .onErrorResume(err -> {
                         log.warn("Task [{}] tick {} error", task.getId(), tick, err);
                         return Mono.empty();
@@ -121,7 +128,7 @@ public class ScheduledTaskRunner implements CommandLineRunner {
         }
     }
 
-    private Mono<Void> executeTask(ScheduledTaskEntity task) {
+    private Mono<Void> executeTask(ScheduledTaskEntity task, long plannedFireTime) {
         return resolveDeviceIds(task)
             .collectList()
             .flatMap(deviceIds -> {
@@ -133,13 +140,13 @@ public class ScheduledTaskRunner implements CommandLineRunner {
 
                 if (mode == ExecutionMode.PARALLEL) {
                     return Flux.fromIterable(deviceIds)
-                        .flatMap(deviceId -> executeForDevice(task, deviceId))
+                        .flatMap(deviceId -> executeForDevice(task, deviceId, plannedFireTime))
                         .then();
                 } else {
                     long interval = task.getSerialIntervalMs() != null ? task.getSerialIntervalMs() : 0L;
                     return Flux.fromIterable(deviceIds)
                         .concatMap(deviceId -> {
-                            Mono<Void> exec = executeForDevice(task, deviceId);
+                            Mono<Void> exec = executeForDevice(task, deviceId, plannedFireTime);
                             if (interval > 0) {
                                 return exec.then(Mono.delay(Duration.ofMillis(interval))).then();
                             }
@@ -162,20 +169,85 @@ public class ScheduledTaskRunner implements CommandLineRunner {
             .map(org.jetlinks.community.device.entity.DeviceInstanceEntity::getId);
     }
 
-    private Mono<Void> executeForDevice(ScheduledTaskEntity task, String deviceId) {
+    private Mono<Void> executeForDevice(ScheduledTaskEntity task,
+                                        String deviceId,
+                                        long plannedFireTime) {
         if (task.getTaskType() == ScheduledTaskType.READ_PROPERTY) {
-            return executeReadProperty(task, deviceId);
+            return executeReadProperty(task, deviceId, plannedFireTime);
         } else {
             return executeInvokeFunction(task, deviceId);
         }
     }
 
-    private Mono<Void> executeReadProperty(ScheduledTaskEntity task, String deviceId) {
+    private Mono<Void> executeReadProperty(ScheduledTaskEntity task,
+                                           String deviceId,
+                                           long plannedFireTime) {
         List<String> props = task.getProperties();
         if (props == null || props.isEmpty()) {
             return Mono.empty();
         }
         long delay = task.getPropertyIntervalMs() != null ? task.getPropertyIntervalMs() : 500L;
+        if (!Boolean.TRUE.equals(task.getReportReadResult())) {
+            return executeReadWithoutReport(task, deviceId, props, delay);
+        }
+        long startedAt = System.currentTimeMillis();
+        Map<String, Object> values = new LinkedHashMap<>();
+        Map<String, Long> sourceTimes = new LinkedHashMap<>();
+        return Flux.fromIterable(props)
+            .concatMap(prop -> {
+                Mono<Void> readOp = deviceService
+                    .readProperty(deviceId, prop)
+                    .doOnNext(result -> {
+                        long responseTime = System.currentTimeMillis();
+                        result.forEach((key, value) -> {
+                            values.put(key, value);
+                            sourceTimes.put(key, responseTime);
+                        });
+                    })
+                    .then();
+                if (delay > 0) {
+                    readOp = readOp.then(Mono.delay(Duration.ofMillis(delay))).then();
+                }
+                return readOp.onErrorResume(err -> {
+                    writeLog(task, deviceId, LogStatus.FAILED, err.getMessage());
+                    return Mono.empty();
+                });
+            })
+            .then(Mono.defer(() -> {
+                if (values.isEmpty()) {
+                    return Mono.empty();
+                }
+                long completedAt = System.currentTimeMillis();
+                long lastSuccess = sourceTimes.values().stream().mapToLong(Long::longValue).max().orElse(completedAt);
+                String messageId = UUID.nameUUIDFromBytes(
+                    ("scheduled:" + task.getId() + "|" + plannedFireTime + "|" + deviceId)
+                        .getBytes(StandardCharsets.UTF_8)).toString();
+                return deviceService
+                    .findById(deviceId)
+                    .map(device -> device.getParentId() == null ? deviceId : device.getParentId())
+                    .defaultIfEmpty(deviceId)
+                    .flatMap(gatewayId -> pollReportPublisher.publish(
+                        new ModbusPollReportPublisher.PollCycleResult(
+                            gatewayId,
+                            deviceId,
+                            "scheduled:" + task.getId(),
+                            messageId,
+                            messageId,
+                            startedAt,
+                            completedAt,
+                            lastSuccess,
+                            Math.max(0, props.size() - values.size()),
+                            values,
+                            sourceTimes),
+                        () -> true))
+                    .then();
+            }));
+    }
+
+    private Mono<Void> executeReadWithoutReport(ScheduledTaskEntity task,
+                                                String deviceId,
+                                                List<String> props,
+                                                long delay) {
         return Flux.fromIterable(props)
             .concatMap(prop -> {
                 Mono<Void> readOp = deviceService.readProperty(deviceId, prop).then();

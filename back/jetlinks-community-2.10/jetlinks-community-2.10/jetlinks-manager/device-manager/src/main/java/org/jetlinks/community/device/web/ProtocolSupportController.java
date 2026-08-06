@@ -34,6 +34,8 @@ import org.hswebframework.web.crud.web.reactive.ReactiveServiceCrudController;
 import org.hswebframework.web.exception.BusinessException;
 import org.jetlinks.community.device.web.request.ProtocolDecodeRequest;
 import org.jetlinks.community.device.web.request.ProtocolEncodeRequest;
+import org.jetlinks.community.device.web.request.ProtocolJarDownloadRequest;
+import org.jetlinks.community.io.file.FileInfo;
 import org.jetlinks.community.io.file.FileManager;
 import org.jetlinks.community.protocol.ProtocolDetail;
 import org.jetlinks.community.protocol.ProtocolInfo;
@@ -50,8 +52,15 @@ import org.jetlinks.supports.protocol.management.ProtocolSupportLoader;
 import org.jetlinks.supports.protocol.management.ProtocolSupportLoaderProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -61,7 +70,12 @@ import reactor.util.function.Tuples;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/protocol")
@@ -88,6 +102,13 @@ public class ProtocolSupportController
     @Autowired
     private FileManager fileManager;
 
+    @Autowired
+    private WebClient.Builder webClientBuilder;
+
+    private static final Pattern INTERNAL_FILE_PATH = Pattern.compile("/file/([^/?#]+)");
+
+    private static final String JAR_DOWNLOAD_PASSWORD = "yada88";
+
     @PostMapping("/{id}/_deploy")
     @SaveAction
     @Operation(summary = "发布协议")
@@ -112,6 +133,195 @@ public class ProtocolSupportController
                           protocolSupports.getProtocols()
                                           .filter(protocol -> protocol.getId().equals(id)))
                    .hasElements();
+    }
+
+    @PostMapping("/{id:.+}/jar")
+    @QueryAction
+    @Operation(summary = "下载协议JAR包")
+    public Mono<Void> downloadJar(@PathVariable @Parameter(description = "协议ID") String id,
+                                  @RequestBody Mono<ProtocolJarDownloadRequest> request,
+                                  ServerWebExchange exchange) {
+        return request
+            .switchIfEmpty(Mono.error(new BusinessException("error.protocol_jar_password_required", 400, id)))
+            .flatMap(body -> {
+                if (!JAR_DOWNLOAD_PASSWORD.equals(body.getPassword())) {
+                    return Mono.error(new BusinessException("error.protocol_jar_password_invalid", 403, id));
+                }
+                return service
+                    .findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.protocol_not_found", 404, id)))
+            .flatMap(protocol -> {
+                if (!"jar".equalsIgnoreCase(protocol.getType())) {
+                    return Mono.error(new BusinessException("error.protocol_jar_only", 400, id));
+                }
+
+                Map<String, Object> configuration = protocol.getConfiguration();
+                String location = valueOf(configuration, "location");
+                String configuredFileId = valueOf(configuration, "fileId");
+                String configuredFileName = valueOf(configuration, "fileName");
+
+                if (!hasText(location) && !hasText(configuredFileId)) {
+                    return Mono.error(new BusinessException("error.protocol_jar_source_empty", 400, id));
+                }
+
+                Mono<FileInfo> fileInfo = resolveFileInfo(configuredFileId, location).cache();
+                return fileInfo.hasElement().flatMap(hasInternalFile -> {
+                    if (hasInternalFile) {
+                        return fileInfo.flatMap(info -> writeFileResponse(info,
+                                                                          configuredFileName,
+                                                                          protocol.getName(),
+                                                                          exchange.getResponse()));
+                    }
+                    if (!isHttpUrl(location)) {
+                        return Mono.error(new BusinessException("error.protocol_jar_source_invalid", 400, id));
+                    }
+                    return proxyRemoteFile(location,
+                                           configuredFileName,
+                                           protocol.getName(),
+                                           exchange.getResponse());
+                });
+                    });
+            });
+    }
+
+    private Mono<FileInfo> resolveFileInfo(String configuredFileId, String location) {
+        Set<String> fileIds = new LinkedHashSet<>();
+        if (hasText(configuredFileId)) {
+            fileIds.add(configuredFileId);
+        }
+        String locationFileId = extractFileId(location);
+        if (hasText(locationFileId)) {
+            fileIds.add(locationFileId);
+        }
+        return Flux.fromIterable(fileIds)
+                   .concatMap(fileManager::getFile)
+                   .next();
+    }
+
+    private Mono<Void> writeFileResponse(FileInfo info,
+                                         String configuredFileName,
+                                         String protocolName,
+                                         ServerHttpResponse response) {
+        String fileName = firstText(configuredFileName, info.getName(), protocolName + ".jar");
+        setDownloadHeaders(response, fileName, info.getLength());
+        return response.writeWith(fileManager.read(info.getId()));
+    }
+
+    private Mono<Void> proxyRemoteFile(String location,
+                                       String configuredFileName,
+                                       String protocolName,
+                                       ServerHttpResponse response) {
+        return webClientBuilder
+            .build()
+            .get()
+            .uri(URI.create(location))
+            .accept(MediaType.APPLICATION_OCTET_STREAM)
+            .exchangeToMono(remote -> {
+                if (!remote.statusCode().is2xxSuccessful()) {
+                    return remote.releaseBody()
+                                 .then(Mono.error(new BusinessException("error.protocol_jar_remote_failed", 502, location)));
+                }
+
+                String remoteFileName = remote.headers()
+                                              .header(HttpHeaders.CONTENT_DISPOSITION)
+                                              .stream()
+                                              .findFirst()
+                                              .map(this::filenameFromContentDisposition)
+                                              .orElse(null);
+                String fileName = firstText(configuredFileName,
+                                            remoteFileName,
+                                            filenameFromLocation(location),
+                                            protocolName + ".jar");
+                long contentLength = remote.headers().contentLength().orElse(-1L);
+                setDownloadHeaders(response, fileName, contentLength >= 0 ? contentLength : null);
+                Flux<DataBuffer> body = remote.bodyToFlux(DataBuffer.class);
+                return response.writeWith(body);
+            });
+    }
+
+    private void setDownloadHeaders(ServerHttpResponse response, String fileName, Long contentLength) {
+        response.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        response.getHeaders().setContentDisposition(ContentDisposition
+                                                         .attachment()
+                                                         .filename(sanitizeFileName(fileName), StandardCharsets.UTF_8)
+                                                         .build());
+        if (contentLength != null) {
+            response.getHeaders().setContentLength(contentLength);
+        }
+    }
+
+    private String filenameFromContentDisposition(String value) {
+        try {
+            return ContentDisposition.parse(value).getFilename();
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String filenameFromLocation(String location) {
+        if (!hasText(location)) {
+            return null;
+        }
+        String path = URI.create(location).getPath();
+        if (!hasText(path)) {
+            return null;
+        }
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
+    }
+
+    private String extractFileId(String location) {
+        if (!hasText(location)) {
+            return null;
+        }
+        var matcher = INTERNAL_FILE_PATH.matcher(location);
+        if (!matcher.find()) {
+            return null;
+        }
+        String fileId = matcher.group(1);
+        int dot = fileId.indexOf('.');
+        return dot > 0 ? fileId.substring(0, dot) : fileId;
+    }
+
+    private boolean isHttpUrl(String location) {
+        if (!hasText(location)) {
+            return false;
+        }
+        try {
+            String scheme = URI.create(location).getScheme();
+            return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String sanitizeFileName(String fileName) {
+        String safeName = firstText(fileName, "protocol.jar")
+            .replace('\\', '/')
+            .replaceAll("[\\r\\n\\u0000-\\u001F]", "");
+        int slash = safeName.lastIndexOf('/');
+        return slash >= 0 ? safeName.substring(slash + 1) : safeName;
+    }
+
+    private String valueOf(Map<String, Object> configuration, String key) {
+        if (configuration == null) {
+            return null;
+        }
+        Object value = configuration.get(key);
+        return value == null ? null : String.valueOf(value).trim();
+    }
+
+    private String firstText(String... values) {
+        for (String value : values) {
+            if (hasText(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     //获取支持的协议类型

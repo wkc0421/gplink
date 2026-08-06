@@ -320,6 +320,33 @@
             "assetType": "alarmConfig"
           },
           {
+            "code": "rule-engine/Alarm/NumericRule",
+            "name": "数值告警规则",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "数值告警规则",
+                "en_US": "Numeric Alarm Rules",
+                "en": "Numeric Alarm Rules"
+              }
+            },
+            "owner": "iot",
+            "id": "rule-engine-alarm-numeric-rule",
+            "sortIndex": 4,
+            "url": "/iot/Alarm/NumericRule",
+            "icon": "icon-warning_amber",
+            "showPage": [
+              "rule-scene",
+              "alarm-config"
+            ],
+            "permissions": [],
+            "buttons": [],
+            "accessSupport": {
+              "text": "支持",
+              "value": "support"
+            },
+            "supportDataAccess": true
+          },
+          {
             "code": "rule-engine/Alarm/Log",
             "name": "告警记录",
             "i18nMessages": {

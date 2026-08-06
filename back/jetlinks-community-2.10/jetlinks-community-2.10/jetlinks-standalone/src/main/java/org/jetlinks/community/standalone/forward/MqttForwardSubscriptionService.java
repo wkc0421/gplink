@@ -14,6 +14,7 @@ import org.jetlinks.core.message.DeviceMessage;
 import org.jetlinks.core.message.codec.SimpleMqttMessage;
 import org.jetlinks.core.message.property.ReadPropertyMessageReply;
 import org.jetlinks.core.message.property.ReportPropertyMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,6 +50,11 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
     private static final String WILDCARD_PROPERTY = "*";
     private static final Duration LEASE_TTL = Duration.ofSeconds(180);
     private static final Duration LEASE_CLEANUP_INTERVAL = Duration.ofSeconds(30);
+    private static final String SOURCE_TEMPORARY = "temporary";
+    private static final String SOURCE_LEGACY = "legacy";
+    private static final int MAX_IDENTIFIER_LENGTH = 256;
+    private static final int MAX_TOPIC_LENGTH = 1024;
+    private static final int MAX_PROPERTIES_TEXT_LENGTH = 65_535;
 
     private final EventBus eventBus;
     private final NetworkManager networkManager;
@@ -60,18 +67,50 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, Set<String>>> propertyLeaseIndex =
         new ConcurrentHashMap<>();
 
+    @Value("${gplink.mqtt-forward.max-active-leases:10000}")
+    private int maxActiveLeases = 10_000;
+
+    @Value("${gplink.mqtt-forward.max-devices-per-lease:1000}")
+    private int maxDevicesPerLease = 1_000;
+
+    @Value("${gplink.mqtt-forward.max-properties-per-lease:1000}")
+    private int maxPropertiesPerLease = 1_000;
+
     private Disposable leaseCleanupTask;
 
     @Override
     public void run(String... args) {
+        if (leaseCleanupTask != null) {
+            leaseCleanupTask.dispose();
+        }
         leaseCleanupTask = Flux.interval(LEASE_CLEANUP_INTERVAL)
-            .subscribe(tick -> cleanupExpiredLeases());
+            .subscribe(
+                tick -> cleanupExpiredLeasesSafely(),
+                error -> log.error("mqtt-forward lease cleanup task terminated", error)
+            );
     }
 
     public Mono<MqttForwardLeaseResponse> createByDevices(DeviceSubscribeRequest request) {
+        return createByDevices(request, SOURCE_TEMPORARY);
+    }
+
+    public Mono<MqttForwardLeaseResponse> createLegacyByDevices(DeviceSubscribeRequest request) {
+        return createByDevices(request, SOURCE_LEGACY);
+    }
+
+    private Mono<MqttForwardLeaseResponse> createByDevices(DeviceSubscribeRequest request, String source) {
         return Mono.fromSupplier(() -> {
-            Lease lease = toLease(request);
+            Lease lease = toLease(request, source);
+            if (leases.size() >= maxActiveLeases) {
+                cleanupExpiredLeases();
+            }
             synchronized (this) {
+                if (leases.size() >= maxActiveLeases) {
+                    throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "Too many active MQTT forward leases"
+                    );
+                }
                 leases.put(lease.leaseId, lease);
                 try {
                     addLeaseToIndex(lease);
@@ -84,6 +123,24 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                 }
             }
             return toResponse(lease);
+        });
+    }
+
+    public Mono<List<String>> cancelLegacyByDevice(String productId, String deviceId, String topicName) {
+        return Mono.fromSupplier(() -> {
+            synchronized (this) {
+                List<String> leaseIds = leases
+                    .values()
+                    .stream()
+                    .filter(lease -> SOURCE_LEGACY.equals(lease.source))
+                    .filter(lease -> textEquals(lease.productId, productId))
+                    .filter(lease -> lease.deviceIds.contains(deviceId))
+                    .filter(lease -> isBlank(topicName) || textEquals(lease.mqttTopicName, topicName))
+                    .map(lease -> lease.leaseId)
+                    .collect(Collectors.toList());
+                leaseIds.forEach(this::removeLeaseInternal);
+                return leaseIds;
+            }
         });
     }
 
@@ -155,7 +212,7 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         return result;
     }
 
-    private Lease toLease(DeviceSubscribeRequest request) {
+    private Lease toLease(DeviceSubscribeRequest request, String source) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
         }
@@ -164,6 +221,13 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         }
         if (isBlank(request.getMqttNetworkId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mqttNetworkId is required");
+        }
+        validateLength(request.getProductId(), "productId", MAX_IDENTIFIER_LENGTH);
+        validateLength(request.getMqttNetworkId(), "mqttNetworkId", MAX_IDENTIFIER_LENGTH);
+        validateOptionalLength(request.getMqttTopicPrefix(), "mqttTopicPrefix", MAX_TOPIC_LENGTH);
+        validateOptionalLength(request.getMqttTopicName(), "mqttTopicName", MAX_TOPIC_LENGTH);
+        if (request.getMqttQos() < 0 || request.getMqttQos() > 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mqttQos must be between 0 and 2");
         }
 
         Set<String> deviceIds = parseDeviceIds(request.getDeviceIds());
@@ -176,9 +240,11 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
             watchedProperties,
             request.getMqttNetworkId().trim(),
             request.getMqttTopicPrefix(),
+            request.getMqttTopicName(),
             request.getMqttQos(),
             now,
-            now + LEASE_TTL.toMillis()
+            now + LEASE_TTL.toMillis(),
+            source
         );
     }
 
@@ -186,9 +252,16 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         if (deviceIds == null || deviceIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "deviceIds is required");
         }
+        if (deviceIds.size() > maxDevicesPerLease) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "deviceIds exceeds maximum size " + maxDevicesPerLease
+            );
+        }
         Set<String> result = deviceIds.stream()
             .filter(id -> !isBlank(id))
             .map(String::trim)
+            .peek(id -> validateLength(id, "deviceId", MAX_IDENTIFIER_LENGTH))
             .collect(Collectors.toCollection(LinkedHashSet::new));
         if (result.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "deviceIds is required");
@@ -200,10 +273,26 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         if (isBlank(watchedProperties)) {
             return Set.of();
         }
-        return Arrays.stream(watchedProperties.split(","))
+        validateLength(watchedProperties, "watchedProperties", MAX_PROPERTIES_TEXT_LENGTH);
+        String[] propertyValues = watchedProperties.split("[,;]", maxPropertiesPerLease + 2);
+        if (propertyValues.length > maxPropertiesPerLease) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "watchedProperties exceeds maximum size " + maxPropertiesPerLease
+            );
+        }
+        Set<String> result = Arrays.stream(propertyValues)
             .filter(property -> !isBlank(property))
             .map(String::trim)
+            .peek(property -> validateLength(property, "propertyId", MAX_IDENTIFIER_LENGTH))
             .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (result.size() > maxPropertiesPerLease) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "watchedProperties exceeds maximum size " + maxPropertiesPerLease
+            );
+        }
+        return result;
     }
 
     private void addLeaseToIndex(Lease lease) {
@@ -240,6 +329,7 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                 Subscription.Feature.broker
             );
 
+            AtomicReference<DeviceEventSubscription> subscriptionRef = new AtomicReference<>();
             Disposable disposable = eventBus
                 .subscribe(subscription, DeviceMessage.class)
                 .onBackpressureDrop(msg -> log.warn(
@@ -255,10 +345,15 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                     null,
                     err -> {
                         log.error("mqtt-forward device subscription [{}] terminated with error", deviceId, err);
-                        deviceSubscriptions.remove(deviceId);
+                        DeviceEventSubscription failed = subscriptionRef.get();
+                        if (failed != null) {
+                            deviceSubscriptions.remove(deviceId, failed);
+                        }
                     }
                 );
-            return new DeviceEventSubscription(productId, disposable);
+            DeviceEventSubscription created = new DeviceEventSubscription(productId, disposable);
+            subscriptionRef.set(created);
+            return created;
         });
     }
 
@@ -368,6 +463,9 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
     }
 
     private String buildMqttTopic(Lease lease, DeviceMessage msg) {
+        if (!isBlank(lease.mqttTopicName)) {
+            return lease.mqttTopicName;
+        }
         String prefix = isBlank(lease.mqttTopicPrefix) ? "IOT/Business" : lease.mqttTopicPrefix;
         return prefix + "/" + lease.productId + "/" + msg.getDeviceId() + "/Data/Report";
     }
@@ -413,6 +511,14 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                     removeLeaseInternal(leaseId);
                 }
             }
+        }
+    }
+
+    private void cleanupExpiredLeasesSafely() {
+        try {
+            cleanupExpiredLeases();
+        } catch (RuntimeException error) {
+            log.error("mqtt-forward lease cleanup failed", error);
         }
     }
 
@@ -468,6 +574,7 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         response.setProductId(lease.productId);
         response.setMqttNetworkId(lease.mqttNetworkId);
         response.setMqttTopicPrefix(lease.mqttTopicPrefix);
+        response.setMqttTopicName(lease.mqttTopicName);
         response.setMqttQos(lease.mqttQos);
         response.setCreatedAt(lease.createdAt);
         response.setExpiresAt(lease.expiresAt);
@@ -485,6 +592,28 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private void validateLength(String value, String name, int maxLength) {
+        if (value != null && value.length() > maxLength) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                name + " exceeds maximum length " + maxLength
+            );
+        }
+    }
+
+    private void validateOptionalLength(String value, String name, int maxLength) {
+        if (!isBlank(value)) {
+            validateLength(value, name, maxLength);
+        }
+    }
+
+    private boolean textEquals(String left, String right) {
+        if (left == null) {
+            return right == null;
+        }
+        return left.equals(right);
     }
 
     @PreDestroy
@@ -505,8 +634,10 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
         final Set<String> watchedProperties;
         final String mqttNetworkId;
         final String mqttTopicPrefix;
+        final String mqttTopicName;
         final int mqttQos;
         final long createdAt;
+        final String source;
         final AtomicLong forwardCount = new AtomicLong();
         volatile long expiresAt;
         volatile long lastForwardTime;
@@ -519,18 +650,22 @@ public class MqttForwardSubscriptionService implements CommandLineRunner {
                       Set<String> watchedProperties,
                       String mqttNetworkId,
                       String mqttTopicPrefix,
+                      String mqttTopicName,
                       int mqttQos,
                       long createdAt,
-                      long expiresAt) {
+                      long expiresAt,
+                      String source) {
             this.leaseId = leaseId;
             this.productId = productId;
             this.deviceIds = Set.copyOf(deviceIds);
             this.watchedProperties = Set.copyOf(watchedProperties);
             this.mqttNetworkId = mqttNetworkId;
             this.mqttTopicPrefix = mqttTopicPrefix;
+            this.mqttTopicName = mqttTopicName;
             this.mqttQos = mqttQos;
             this.createdAt = createdAt;
             this.expiresAt = expiresAt;
+            this.source = source;
         }
 
         boolean isExpired(long now) {

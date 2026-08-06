@@ -53,8 +53,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 @RestController
-@RequestMapping("/api/v1/device-data")
-@Authorize(ignore = true)
+@RequestMapping({
+    "/v1/device-data",
+    "/api/v1/device-data"
+})
+@Authorize
 public class LegacyDeviceDataController {
 
     private static final long THREE_DAYS_MS = 3L * 24 * 60 * 60 * 1000;

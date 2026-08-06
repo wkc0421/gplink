@@ -61,6 +61,17 @@
         />
       </a-form-item>
 
+      <a-form-item
+        v-if="formState.taskType === 'READ_PROPERTY'"
+        label="读取结果上报"
+        name="reportReadResult"
+      >
+        <a-switch v-model:checked="formState.reportReadResult" />
+        <span style="margin-left: 8px; color: #999">
+          默认关闭；开启后按部分成功语义通过标准设备消息入口上报
+        </span>
+      </a-form-item>
+
       <template v-if="formState.taskType === 'INVOKE_FUNCTION'">
         <a-form-item label="功能" name="functionId">
           <a-select
@@ -198,6 +209,7 @@ const formState = ref<any>({
   executionMode: 'PARALLEL',
   serialIntervalMs: 0,
   propertyIntervalMs: 500,
+  reportReadResult: false,
 })
 
 const rules = {
@@ -336,6 +348,7 @@ onMounted(async () => {
       executionMode: rec.executionMode || 'PARALLEL',
       serialIntervalMs: rec.serialIntervalMs ?? 0,
       propertyIntervalMs: rec.propertyIntervalMs ?? 500,
+      reportReadResult: rec.reportReadResult ?? false,
     }
 
     if (rec.productId) {

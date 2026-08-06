@@ -30,6 +30,7 @@ import org.jetlinks.core.device.DeviceProductOperator;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.DeviceOnlineMessage;
 import org.jetlinks.core.message.codec.DefaultTransport;
 import org.jetlinks.core.message.codec.FromDeviceMessageContext;
 import org.jetlinks.core.server.DeviceGatewayContext;
@@ -68,25 +69,34 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
 
     private final DeviceGatewayHelper helper;
 
+    /**
+     * Optional pre-configured gateway device id. Modbus RTU has no identity
+     * handshake, so TCP client mode needs an explicit id to bind the logical
+     * gateway session before child-device reads can be sent.
+     */
+    private final String gatewayDeviceId;
+
     private final LongAdder counter = new LongAdder();
 
     private final AtomicBoolean started = new AtomicBoolean();
 
     private final AtomicReference<DeviceSession> sessionRef = new AtomicReference<>();
 
-    private final Disposable.Composite subscriptions = Disposables.composite();
+    private final AtomicReference<Disposable.Composite> subscriptions = new AtomicReference<>();
 
     TcpClientDeviceGateway(String id,
                            Mono<ProtocolSupport> protocol,
                            DeviceRegistry registry,
                            DecodedClientMessageHandler clientMessageHandler,
                            DeviceSessionManager sessionManager,
-                           TcpClient tcpClient) {
+                           TcpClient tcpClient,
+                           String gatewayDeviceId) {
         super(id);
         this.protocol = protocol;
         this.registry = registry;
         this.sessionManager = sessionManager;
         this.tcpClient = tcpClient;
+        this.gatewayDeviceId = gatewayDeviceId;
         this.helper = new DeviceGatewayHelper(registry, sessionManager, clientMessageHandler);
     }
 
@@ -104,11 +114,15 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
     protected Mono<Void> doShutdown() {
         return Mono.fromRunnable(() -> {
             started.set(false);
-            subscriptions.dispose();
+            Disposable.Composite lifecycle = subscriptions.getAndSet(null);
+            if (lifecycle != null) {
+                lifecycle.dispose();
+            }
             DeviceSession session = sessionRef.getAndSet(null);
             if (session != null) {
                 session.close();
             }
+            tcpClient.shutdown();
         });
     }
 
@@ -116,9 +130,26 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
         if (started.getAndSet(true)) {
             return;
         }
+        Disposable.Composite lifecycle = Disposables.composite();
+        Disposable.Composite previous = subscriptions.getAndSet(lifecycle);
+        if (previous != null) {
+            previous.dispose();
+        }
         sessionRef.set(new UnknownTcpDeviceSession(tcpClient.getId(), tcpClient, DefaultTransport.TCP, monitor));
         counter.increment();
         monitor.connected();
+
+        // A Modbus RTU/TCP bus has no login or device-id frame. When the
+        // gateway configuration supplies the pre-created gateway device id,
+        // establish its session immediately so child devices can be queried.
+        if (gatewayDeviceId != null && !gatewayDeviceId.isEmpty()) {
+            DeviceOnlineMessage online = new DeviceOnlineMessage();
+            online.setDeviceId(gatewayDeviceId);
+            online.timestamp(System.currentTimeMillis());
+            Disposable binding = handleDeviceMessage(online)
+                .subscribe(null, err -> log.warn("bind configured gateway device [{}] failed", gatewayDeviceId, err));
+            lifecycle.add(binding);
+        }
         monitor.totalConnection(counter.sum());
 
         tcpClient.onDisconnect(() -> {
@@ -144,7 +175,7 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
                 .contextWrite(ReactiveLogger.start("network", tcpClient.getId()))
                 .subscribeOn(Schedulers.parallel())
                 .subscribe();
-        subscriptions.add(recv);
+        lifecycle.add(recv);
 
         Disposable connectHook = getProtocol()
                 .flatMap(pt -> pt.onClientConnect(DefaultTransport.TCP, tcpClient, this))
@@ -153,7 +184,7 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
                     return Mono.empty();
                 })
                 .subscribe();
-        subscriptions.add(connectHook);
+        lifecycle.add(connectHook);
     }
 
     private Mono<Void> handleTcpMessage(TcpMessage message) {
@@ -179,10 +210,11 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
         return helper
                 .handleDeviceMessage(
                         message,
-                        device -> new TcpDeviceSession(device, tcpClient, DefaultTransport.TCP, monitor),
+                        device -> new TcpDeviceSession(device, tcpClient, DefaultTransport.TCP, monitor, false),
                         session -> {
                             TcpDeviceSession deviceSession = session.unwrap(TcpDeviceSession.class);
                             deviceSession.setClient(tcpClient);
+                            deviceSession.setShutdownClientOnClose(false);
                             sessionRef.set(deviceSession);
                         },
                         () -> log.warn("TCP client gateway[{}]: device[{}] not found: {}",

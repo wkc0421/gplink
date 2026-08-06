@@ -27,7 +27,7 @@ import java.util.Map;
 public class LegacyAlarmSubscribeService {
 
     private static final String SYSTEM_ALARM_PUSH_DEDUP_PREFIX = "gplink:saas:system-alarm:push:";
-    private static final Duration SYSTEM_ALARM_PUSH_DEDUP_TTL = Duration.ofDays(7);
+    private static final Duration SYSTEM_ALARM_PUSH_DEDUP_TTL = Duration.ofDays(90);
     private static final Duration SYSTEM_ALARM_PUSH_PENDING_TTL = Duration.ofMinutes(5);
     private static final String SYSTEM_ALARM_TRIGGER = "trigger";
     private static final String SYSTEM_ALARM_RELIEVE = "relieve";

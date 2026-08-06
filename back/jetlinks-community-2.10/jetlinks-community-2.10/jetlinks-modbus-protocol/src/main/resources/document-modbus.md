@@ -1,91 +1,447 @@
-# Modbus RTU (TCP 透传) 协议
+# Modbus 设备配置与轮询使用指南
 
-## 协议特性
+## 1. 文档范围
 
-- 传输层: TCP（网关 = TCP 客户端/服务端,由平台侧的 `tcp-server-gateway` 或 `tcp-client-gateway` 选择）。
-- 数据单元: Modbus RTU ADU `[slaveId][FC][data][CRC16]`,CRC16-IBM 多项式 `0xA001`。
-- 主从模型: 平台作为 Master,发起请求；从机被动应答。
-- 在线保活: 无心跳帧。连接存活即视为网关在线；从机在线由周期性探测 + 最近响应时间判定。
+本文用于指导用户通过接入向导、产品详情和设备详情配置 Modbus RTU over TCP 设备，并启用平台轮询采集。
 
-## 支持的功能码
+适用场景：
 
-| FC | 作用 | 对应平台消息 |
+- 在当前 Modbus 协议实现中，平台在 Modbus 层作为 Master（请求方），向从机发起读写请求；从机负责返回响应。
+- TCP 连接角色与 Modbus 主从角色相互独立：平台既可以作为 TCP 服务端监听端口，也可以作为 TCP 客户端连接现场地址。
+- 现场网关、串口服务器或模拟设备通过 TCP 连接承载 Modbus RTU ADU；TCP 服务端/客户端只表示连接的建立方向，不表示 Modbus 主从身份。
+- 一个父网关下挂多个 Modbus 从机子设备。
+- 需要按固定间隔或 Cron 计划自动读取从机属性，并进入平台标准消息、历史数据和规则链路。
+
+## 页面操作指南
+
+进入“设备接入 → Modbus 接入向导”，按页面顶部的 5 个步骤填写。页面中的“页面操作指南”会跟随当前步骤变化，只显示当前需要完成的事项。
+
+| 页面步骤 | 主要操作 | 完成标准 |
 | --- | --- | --- |
-| 0x01 | Read Coils | ReadPropertyMessage(bit) |
-| 0x02 | Read Discrete Inputs | ReadPropertyMessage(bit, read-only) |
-| 0x03 | Read Holding Registers | ReadPropertyMessage(word) |
-| 0x04 | Read Input Registers | ReadPropertyMessage(word, read-only) |
-| 0x05 | Write Single Coil | WritePropertyMessage(bit) |
-| 0x06 | Write Single Register | WritePropertyMessage(word) |
-| 0x0F | Write Multiple Coils | WritePropertyMessage(bit[]) / FunctionInvokeMessage |
-| 0x10 | Write Multiple Registers | WritePropertyMessage(word[]) / FunctionInvokeMessage |
+| 1. 接入网关 | 在网络接入配置中准备 TCP 网络组件；回到向导选择已有 Modbus 接入网关 | 协议显示为 Modbus RTU，网络组件已保存并启动 |
+| 2. 网关设备 | 选择或新建网关产品、网关设备；填写响应超时、探测周期和保活超时 | 网关设备为父设备，不填写 `parentId` |
+| 3. 点位映射 | 选择或新建从机产品；填写属性、功能码、地址、数量和数据类型 | 至少有一个可读点位，读点位未勾选“可写” |
+| 4. 从机列表 | 逐台填写 `slaveId`、设备 ID 和设备名称；需要时覆盖产品轮询配置 | 同一网关下 `slaveId` 唯一且在 `1~247` |
+| 5. 保存测试 | 选择测试从机和属性，点击“保存并测试” | 测试结果返回成功，并核对属性值和数据类型 |
 
-异常响应 `FC | 0x80` + exception code (0x01~0x0B) 会被解码为 `*MessageReply.setSuccess(false)` 并填入 `code = modbus-<name>`。
+<details>
+<summary>第一次配置时只需要记住这 6 件事</summary>
 
-## 设备模型
+1. 从机主动连接平台：TCP 网络组件选服务端；平台主动连接现场网关：选客户端。
+2. Modbus RTU over TCP 的 TCP 解析器默认使用 `DIRECT`。
+3. 当前平台在 Modbus 层是 Master，但 TCP 层既可以是服务端也可以是客户端。
+4. 网关是父设备，从机是子设备；从机必须绑定网关。
+5. 每台从机的 `slaveId` 必须唯一，点位地址按现场设备协议填写。
+6. 先完成一次人工读取测试，再启用高频轮询。
 
+</details>
+
+页面上的“保存并测试”会先保存配置，再执行标准属性读取。人工读取始终返回 `ReadPropertyMessageReply`；轮询是否上报由产品或设备的轮询配置决定。
+
+## 2. 先理解设备层级
+
+Modbus 接入使用“网关设备 + 从机子设备”两级模型：
+
+```text
+Modbus 网关产品
+└─ 网关设备（父设备，parentId 为空）
+   ├─ 从机产品
+   │  ├─ 从机设备 1（parentId = 网关设备，slaveId = 1）
+   │  ├─ 从机设备 2（parentId = 网关设备，slaveId = 2）
+   │  └─ ...
 ```
-Modbus 网关产品 (TCP 协议)
-  └─ 网关设备   mb_<port>        parentId 为空
-       └─ Modbus 从机产品
-           └─ 从机子设备 mb_<port>_<slaveId>    parentId = mb_<port>, slaveId = <1..247>
-```
 
-## 产品/设备配置项
+配置时必须同时满足：
 
-### 网关产品 (scope = product)
+1. 网关设备拥有有效的 TCP 会话。
+2. 每个从机设备绑定到正确的父网关。
+3. 每个从机设备配置唯一的 `slaveId`，范围为 `1~247`。
+4. 从机产品的 `registerMap` 中的 `propertyId` 与物模型属性 ID 一致。
 
-| key | 含义 | 默认 |
+设备 ID 名称不会自动解析为 Modbus 地址，真正决定从机地址的是设备配置中的 `slaveId`。
+
+## 3. 选择 TCP 接入方式
+
+在接入向导中选择 Modbus RTU（TCP 透传）协议后，根据现场连接方向选择 TCP 网关：
+
+| 现场连接方式 | 平台侧选择 | 说明 |
 | --- | --- | --- |
-| `responseTimeoutMs` | 单次请求最长等待(ms) | 3000 |
-| `probeIntervalMs` | 平台探测周期(ms) | 30000 |
-| `keepOnlineTimeout` | 会话保活时长(s) | 120 |
-| `secureKey` | 可选软校验密钥(首帧比对) | - |
+| 从机模拟器、现场网关主动连接平台 | TCP 服务端网关 | 平台监听端口，设备主动连接平台 |
+| 平台主动连接现场 TCP 网关 | TCP 客户端网关 | 平台连接远端地址和端口 |
 
-### 从机产品 (scope = product)
+一个 TCP 连接对应一个 Modbus 网关执行上下文。Modbus 总线是半双工的，同一网关同一时刻只发送一个实际请求。
 
-| key | 含义 | 默认 |
+## 4. 推荐配置流程
+
+### 4.1 配置 TCP 网络组件
+
+网络组件必须先创建并启动，接入向导中的网关设备只引用网络通道 ID。请先进入网络接入配置，创建 TCP 网络组件。
+
+#### 4.1.1 从机主动连接平台：TCP 服务端
+
+当现场网关、串口服务器或模拟从机主动连接平台时，选择 `TCP_SERVER`：
+
+| 配置项 | 是否必填 | 说明 |
 | --- | --- | --- |
-| `probeFunctionCode` | 探测功能码 | 3 |
-| `probeStartAddress` | 探测起始地址 | 0 |
-| `probeQuantity` | 探测寄存器数 | 1 |
-| `registerMap` | 寄存器映射(见下) | - |
+| `host` | 是 | 平台本地监听地址；多网卡时填写实际监听网卡，通常使用 `0.0.0.0` 或指定内网地址 |
+| `port` | 是 | 平台本地监听端口，必须未被其他服务占用 |
+| `publicHost` | 否 | 对外公布的主机名或公网 IP，仅用于展示/外部访问信息 |
+| `publicPort` | 否 | 对外公布的端口；存在 NAT 或端口映射时填写映射后的端口 |
+| `secure` | 否 | 是否启用 TLS；启用时还需配置证书 |
+| `certId` | 启用 TLS 时必填 | 服务端证书或 CA 证书 ID |
+| `parserType` | 建议填写 | TCP 负载解析方式，Modbus RTU over TCP 推荐 `DIRECT` |
+| `parserConfiguration` | 视解析方式而定 | 解析器的附加参数 |
 
-### 从机设备 (scope = device)
+保存后检查：
 
-| key | 含义 |
-| --- | --- |
-| `slaveId` | Modbus 从机地址 1~247 |
+1. 平台监听端口成功启动。
+2. 现场设备的目标地址、目标端口和 TLS 设置与平台一致。
+3. 防火墙、安全组和 NAT 已放行该端口。
+4. 设备主动连接后，网络组件状态显示在线或可用。
 
-## registerMap 示例
+#### 4.1.2 平台主动连接现场：TCP 客户端
+
+当平台需要主动连接现场 TCP 网关时，选择 `TCP_CLIENT`：
+
+| 配置项 | 是否必填 | 说明 |
+| --- | --- | --- |
+| `host`（界面可能显示为远端地址） | 是 | 现场 TCP 网关的 IP 或域名 |
+| `port`（界面可能显示为远端端口） | 是 | 现场 TCP 网关监听端口 |
+| `ssl` | 否 | 是否启用 TLS；以 TCP 客户端页面实际字段为准 |
+| `certId` | 启用 TLS 时必填 | 客户端证书或信任证书 ID |
+| `parserType` | 建议填写 | Modbus RTU over TCP 推荐 `DIRECT` |
+| `parserConfiguration` | 视解析方式而定 | 解析器的附加参数 |
+
+保存并启动后检查：
+
+1. 平台能访问现场地址和端口。
+2. 现场网关允许平台来源地址连接。
+3. TCP 客户端状态为已连接。
+4. 现场网关没有要求额外的登录帧或自定义握手；如有，需要使用协议支持的自定义脚本或现场网关侧关闭该要求。
+
+#### 4.1.3 TCP 粘包/拆包解析器
+
+TCP 是字节流，一次网络读取不一定等于一个 Modbus RTU 帧。`parserType` 决定网络组件如何把字节流交给 Modbus 协议解码器：
+
+| 解析器 | 作用 | Modbus RTU over TCP 建议 |
+| --- | --- | --- |
+| `DIRECT` | 不额外按分隔符切包，直接交给协议解码器 | **默认推荐**；当前 Modbus 解码器按 RTU 帧格式检查 CRC 并拆分完整 ADU |
+| `DELIMITED` | 按文本或十六进制分隔符切包，参数为 `delimited` | 标准 Modbus 没有结束分隔符，通常不要使用 |
+| `FIXED_LENGTH` | 每次读取固定字节数，参数为 `size` | Modbus 响应长度随功能码和数量变化，通常不要使用 |
+| `LENGTH_FIELD` | 根据指定偏移和长度字段读取后续数据 | 标准 Modbus 的字节数位于响应中间，不能直接按通用长度字段使用 |
+| `SCRIPT` | 通过脚本自定义动态拆包 | 只有现场增加了自定义帧头、尾或握手时使用 |
+
+使用 `DIRECT` 时，不要填写无关的 `parserConfiguration`。如果现场协议在 Modbus ADU 外层增加了固定帧头、尾或自定义长度字段，必须先确认自定义脚本能够输出完整的 Modbus ADU，再将数据交给协议解码器。
+
+不要把 Modbus CRC 当作 TCP 分隔符配置。CRC 是帧校验字段，不是网络组件的通用分隔符。
+
+#### 4.1.4 网络层与协议层的边界
+
+- TCP 网络组件负责建立连接、TLS、字节流接收和基础拆包。
+- Modbus 协议负责解析 `slaveId`、功能码、地址、数量和 CRC16。
+- Modbus 读写配置不填写在 TCP 网络组件中，而填写在网关产品、从机产品和从机设备中。
+- 网络通道保存或重启后，再在设备接入中选择该通道和 Modbus 协议。
+
+#### 4.1.5 连接参数、保活与超时
+
+以下参数属于网络或连接生命周期配置，不要与轮询间隔、帧间隔和 Modbus 请求超时混用：
+
+| 参数 | 配置位置 | 说明 |
+| --- | --- | --- |
+| 服务端 `host` / `port` | TCP 服务端网络组件 | 平台绑定的本地地址和监听端口；端口冲突、监听网卡错误会导致服务端无法启动 |
+| 客户端 `host` / `port` | TCP 客户端网络组件 | 平台要连接的远端地址和端口；网络不可达或对端未监听时不会建立会话 |
+| `secure` / `ssl`、`certId` | TCP 网络组件 | 两端 TLS 开关、证书用途和信任关系必须匹配；普通 Modbus TCP 不要无故开启 TLS |
+| `keepAliveTimeout` | TCP 服务端连接配置（可选） | 无新流量时连接保持在线的时长，默认 10 分钟；过小会在轮询间隔较大时误断连接 |
+| `gateway.tcp.network.connect-check-timeout` | 服务部署参数 | TCP 服务端设备接入后的首次连接检查超时，默认 10 秒；它不是 Modbus 单次读请求超时 |
+| `responseTimeoutMs` | Modbus 协议读取配置 | 单次 Modbus 请求等待响应的时间；轮询周期应大于请求、设备和帧间隔的总耗时 |
+
+首次连接不使用 Modbus 应用层认证。TCP 服务端场景下，设备连接后还必须在连接检查超时内完成有效的协议会话处理；如果现场设备需要自定义登录帧或握手，应先在网络/协议接入方案中确认，不要把登录帧误写成普通 Modbus 采集项。
+
+### 4.2 创建网关产品和网关设备
+
+在接入向导的网关步骤中：
+
+1. 选择已有网关产品，或创建网关产品。
+2. 选择已有网关设备，或创建网关设备。
+3. 确认网关产品使用 Modbus 接入方式。
+4. 确认网关设备是父设备，不能填写 `parentId`。
+
+网关产品的通信配置如下：
+
+| 配置项 | 作用 | 默认值 |
+| --- | --- | ---: |
+| `responseTimeoutMs` | 单次 Modbus 请求等待响应的最长时间，单位 ms | `3000` |
+| `probeIntervalMs` | 兼容旧探测周期；未配置新轮询周期时可作为 `pollIntervalMs` 的初始化值 | `30000` |
+| `keepOnlineTimeout` | 无新流量时保持在线的时间，单位 s | `120` |
+| `secureKey` | 可选的首帧软校验密钥 | 空 |
+
+### 4.3 配置从机产品和 registerMap
+
+在接入向导的从机产品步骤中：
+
+1. 选择已有从机产品，或创建从机产品。
+2. 配置物模型属性。
+3. 为每个属性配置 Modbus 寄存器映射。
+4. 确认每个 `propertyId` 在物模型中存在且不重复。
+
+`registerMap` 是从机产品配置，描述“平台属性如何映射到 Modbus 地址”。示例：
 
 ```json
 [
-  {"propertyId": "temp",   "fc": 3, "address": 0, "quantity": 1,
-   "dataType": "int16",   "scale": 0.1, "offset": 0},
-  {"propertyId": "power",  "fc": 3, "address": 2, "quantity": 2,
-   "dataType": "uint32",  "byteOrder": "CDAB"},
-  {"propertyId": "run",    "fc": 1, "address": 8,
-   "dataType": "bit",     "writable": true}
+  {
+    "propertyId": "temperature",
+    "propertyName": "温度",
+    "functionCode": 3,
+    "address": 0,
+    "quantity": 1,
+    "dataType": "INT16",
+    "byteOrder": "ABCD",
+    "scale": 0.1,
+    "offset": 0,
+    "writable": false,
+    "unit": "℃"
+  },
+  {
+    "propertyId": "power",
+    "propertyName": "功率",
+    "functionCode": 3,
+    "address": 2,
+    "quantity": 2,
+    "dataType": "FLOAT32",
+    "byteOrder": "CDAB",
+    "scale": 1,
+    "offset": 0,
+    "writable": false,
+    "unit": "kW"
+  },
+  {
+    "propertyId": "running",
+    "propertyName": "运行状态",
+    "functionCode": 1,
+    "address": 8,
+    "quantity": 1,
+    "dataType": "BIT",
+    "writable": false
+  }
 ]
 ```
 
-字段别名:
-- `functionCode` / `fc`
-- `address` / `addr`
-- `quantity` / `qty`
-- `dataType` / `type` (支持 `bit`/`int16`/`uint16`/`int32`/`uint32`/`float32`/`int64`/`float64`)
-- `byteOrder` / `order` (`ABCD`(默认)/`CDAB`/`BADC`/`DCBA`)
+字段说明：
 
-## 限制与约定
+| 字段 | 说明 | 校验规则 |
+| --- | --- | --- |
+| `propertyId` | 物模型属性 ID | 必填、同一产品内唯一 |
+| `propertyName` | 属性显示名称 | 可选 |
+| `functionCode` / `fc` | Modbus 功能码 | 支持 `1/2/3/4/5/6/15/16` |
+| `address` / `addr` | 起始地址 | `0~65535` |
+| `quantity` / `qty` | 读取或写入数量 | 不得小于数据类型所需长度 |
+| `dataType` / `type` | 数据类型 | `BIT`、`INT16`、`UINT16`、`INT32`、`UINT32`、`FLOAT32`、`INT64`、`FLOAT64` |
+| `byteOrder` / `order` | 多寄存器字节序 | `ABCD`、`CDAB`、`BADC`、`DCBA`，默认 `ABCD` |
+| `scale` | 缩放系数 | 默认 `1` |
+| `offset` | 偏移量 | 默认 `0` |
+| `writable` | 是否允许写入 | 只有 FC5/6/15/16 可以为 `true` |
+| `unit` | 属性单位 | 可选 |
 
-1. **单网关串行**: 同一 TCP 连接下最多一个 in-flight 请求。由 `PendingRequestQueue` 保证,符合物理总线半双工特性。
-2. **连接首次握手**: V1 不做首帧认证。TCP 连上之后必须在 `gateway.tcp.network.connect-check-timeout` 之内看到首个探测应答(默认 10s,可通过系统属性调大)。
-3. **子设备定位**: V1 依赖用户手动建立 `parentId` + `slaveId` 映射,不会从字符串 `mb_<port>_<slaveId>` 自动解析。
-4. **CRC**: 低字节在前,ADU 末尾 2 字节。错误 CRC 的帧会被直接丢弃。
+功能码 1、2、3、4 是可读点位；功能码 5、6、15、16 是写入点位。写入点位不能加入轮询采集项，FC1/2/3/4 不得配置为可写。
 
-## 平台对接要点
+数量的最小值：
 
-- TCP 网络组件的粘拆包配置建议使用 `SCRIPT` 或 `DELIMITED`,配合 `ModbusRequest.expectedResponseLength()` 决定帧边界。
-- 探测帧由平台侧的定时任务发出(周期 = `probeIntervalMs`);响应到达后通过 codec.decode → `DeviceOnlineMessage` 将网关 / 从机置为在线。
-- 断连后 `keepOnlineTimeout` 内无新流量将自动下线。
+| 数据类型 | 最少数量 |
+| --- | ---: |
+| `BIT`、`INT16`、`UINT16` | `1` |
+| `INT32`、`UINT32`、`FLOAT32` | `2` |
+| `INT64`、`FLOAT64` | `4` |
+
+### 4.4 配置产品级轮询计划
+
+在从机产品详情的“Modbus 轮询计划”中配置默认计划。默认情况下轮询关闭，不会因为保存 Modbus 产品而自动开始采集。
+
+| 配置项 | 说明 | 默认值 | 合法范围 |
+| --- | --- | ---: | --- |
+| `pollEnabled` | 是否启用轮询 | `false` | `true/false` |
+| `pollScheduleType` | 调度方式 | `FIXED_DELAY` | `FIXED_DELAY`、`CRON` |
+| `pollIntervalMs` | 固定延迟，单位 ms | `30000` | `1000~86400000` |
+| `pollCron` | Cron 表达式 | `0/30 * * * * ?` | Spring 六字段 Cron |
+| `pollDeviceIntervalMs` | 同一计划设备之间的间隔，单位 ms | `100` | `0~60000` |
+| `pollFrameIntervalMs` | 同一设备窗口帧之间的间隔，单位 ms | `100` | `0~60000` |
+| `pollPropertyIds` | 指定轮询属性 ID | 空 | 空表示全部可读点位 |
+| `pollRetryCount` | 失败窗口重试次数 | `0` | `0~10` |
+
+调度规则：
+
+- `FIXED_DELAY` 从本计划上一轮完整执行完成后重新计时，不是从开始发送时计时。
+- `CRON` 使用 Spring 六字段表达式，例如 `0/5 * * * * ?` 表示每 5 秒触发。
+- 计划执行期间再次到达的 Cron 触发只保留一次待执行标记，不会无限积压。
+- 同一网关的多个计划串行执行；不同网关可以并行执行。
+- 人工读取不经过计划调度，但会进入同一个网关 FIFO，并按到达顺序执行。
+
+### 4.5 配置协议读取窗口
+
+产品或设备配置中可以设置读取窗口：
+
+| 配置项 | 默认值 | 最大值 |
+| --- | ---: | ---: |
+| `maxReadRegistersPerRequest` | `60` | `125` |
+| `maxReadBitsPerRequest` | `512` | `2000` |
+| `maxReadAddressGap` | `2` | `2` |
+
+窗口拆分规则：
+
+1. 按功能码分别分组，FC1/2 与 FC3/4 不能混合读取。
+2. 同一功能码内按地址排序。
+3. 地址间空洞超过 `maxReadAddressGap` 时拆窗。
+4. 总读取长度超过窗口上限时，在采集项边界拆窗。
+5. 单个采集项本身超过窗口上限时，该采集项读取失败，不会强行截断。
+
+设备配置中的窗口值优先于产品值；设备未配置时继承产品窗口值。
+
+### 4.6 创建从机设备并绑定网关
+
+在接入向导的从机列表中逐台配置：
+
+| 字段 | 说明 |
+| --- | --- |
+| `slaveId` | 从机 Modbus 地址，`1~247`，同一网关下不能重复 |
+| `deviceId` | 平台设备 ID，只能包含字母、数字、下划线和中划线 |
+| `deviceName` | 平台设备名称 |
+| `pollOverrideEnabled` | 是否覆盖产品轮询配置 |
+
+保存后平台会：
+
+1. 创建或更新从机设备。
+2. 写入 `slaveId` 和父网关 `parentId`。
+3. 将从机设备绑定到网关设备。
+4. 重新加载在线网关的轮询计划。
+
+### 4.7 选择设备级继承或覆盖
+
+默认情况下 `pollOverrideEnabled=false`，设备完整继承产品轮询配置。
+
+打开覆盖后，设备可以独立配置：
+
+- 是否启用轮询。
+- 固定延迟或 Cron。
+- 设备间隔、帧间隔和重试次数。
+- 指定采集项。
+- 读取窗口参数。
+
+设备覆盖配置为空的 `pollPropertyIds` 仍表示该设备产品中的全部可读点位。关闭覆盖开关后，设备保存的覆盖字段不会参与计划解析。
+
+## 5. 保存、应用和测试
+
+### 5.1 保存后的生效过程
+
+配置保存成功后，在线网关会异步刷新轮询计划。系统会合并短时间内的连续产品/设备保存，并串行完成刷新。
+
+前端显示“配置已生效”时，表示轮询刷新已经完成；如果显示“运行时刷新仍在进行中”，可以稍后再次查看或执行一次人工读取。
+
+也可以查询刷新状态：
+
+```http
+GET /modbus/polling/status
+```
+
+返回字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `requestedRevision` | 最近一次配置刷新请求版本 |
+| `appliedRevision` | 已完成刷新版本 |
+| `reloading` | 是否正在刷新 |
+| `activeGatewayCount` | 当前持有本地会话的网关数量 |
+
+网关当前离线时不会执行轮询；网关重新建立会话后会加载数据库中的最新配置。
+
+### 5.2 保存后人工读取测试
+
+在接入向导选择测试设备和测试属性，执行读取测试。人工读取始终返回 `ReadPropertyMessageReply`，不会因为启用了轮询而变成上报消息。
+
+测试成功至少应确认：
+
+- 请求中的 `slaveId` 正确。
+- 功能码和起始地址与 `registerMap` 一致。
+- 多寄存器数据的字节序、缩放和偏移正确。
+- 设备详情中的属性值发生更新。
+- 超时或异常响应不会阻塞后续设备请求。
+
+### 5.3 轮询结果确认
+
+轮询读取成功后通过标准 `DeviceMessageConnector` 进入平台消息链路，可被历史数据、规则链和告警处理。
+
+轮询上报规则：
+
+- 至少一个属性成功时生成一条设备级上报。
+- 全部窗口成功时，Header `pollResult=success`。
+- 部分窗口成功时，Header `pollResult=partial`，成功属性不会丢弃。
+- 全部窗口失败时不生成空上报。
+- API 和人工读取仍返回 `ReadPropertyMessageReply`。
+
+上报包含以下字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `pollSource` | 固定为 `MODBUS` |
+| `gatewayId` | 父网关设备 ID |
+| `pollPlanId` | 产品计划或设备覆盖计划 ID |
+| `pollCycleId` | 本轮轮询 ID |
+| `pollResult` | `success` 或 `partial` |
+| `pollCycleStartTime` | 本轮开始时间 |
+| `pollCycleCompleteTime` | 本轮完成时间 |
+| `pollSuccessCount` | 成功属性数量 |
+| `pollFailedCount` | 失败数量 |
+
+消息主时间戳取本轮最后一个成功属性的响应时间；每个属性的实际响应时间保存在 `propertySourceTimes`。
+
+同一计划在同一计划触发时间、同一设备生成确定性消息 ID。发布前使用 Redis 去重，成功消息保留 24 小时；发布失败会释放发布权，允许后续重试。
+
+## 6. 请求可靠性和多节点行为
+
+- 每个父网关只有一个实际请求执行器、一个在途请求和一个 FIFO 等待队列。
+- 人工读取和轮询请求同级排队，不复制协议 Pending 队列。
+- 请求真正写入 TCP 后立即启动主动超时任务。
+- 超时会完成失败 Reply、释放队列状态并继续发送下一帧。
+- 网关断连时会清理在途和等待请求，并以连接中断错误完成调用方。
+- 尚未发送的请求可以取消；已经发送的请求不能撤回，响应到达后只释放总线状态。
+- 轮询 Worker 只有持有父网关活跃会话和 Redis 租约时才运行。
+- 租约使用不可复用 owner token；续租和释放会比较 token，旧节点不能释放新节点的租约。
+- 租约失效后禁止发送下一帧，也不会继续发布未完成轮次的上报。
+
+## 7. 常见问题排查
+
+| 现象 | 重点检查 |
+| --- | --- |
+| 网关在线但从机无数据 | TCP 连接方向、父网关会话、从机 `parentId`、`slaveId` |
+| TCP 网络组件无法启动 | 检查服务端 `host/port` 是否被占用、客户端远端 `host/port` 是否可达、TLS 证书是否匹配 |
+| TCP 已连接但协议无响应 | 先将解析器设为 `DIRECT`；确认没有误用 `DELIMITED`、`FIXED_LENGTH` 或错误的 `LENGTH_FIELD` |
+| 日志显示半帧、合帧或 CRC 错误 | 检查网络组件是否输出完整 ADU；不要把 CRC 配成分隔符；有自定义外层帧时使用脚本解析 |
+| 读取超时 | `responseTimeoutMs`、从机是否使用正确功能码、地址是否从 0 开始、CRC 和 TCP 拆包配置 |
+| 属性没有进入轮询 | `pollEnabled`、设备是否处于产品继承、`pollPropertyIds` 是否填写了正确的可读属性 ID |
+| 设备级配置没有生效 | 检查 `pollOverrideEnabled`，再查询 `/modbus/polling/status`；离线网关需重新建立会话 |
+| 只有部分属性有数据 | 查看功能码、地址窗口和数据类型；部分成功会保留成功属性并上报 `partial` |
+| 多台设备互相影响 | 检查是否错误复用了 `slaveId`；同一网关请求本来就是串行执行 |
+| 轮询频率达不到设置值 | 轮询周期从计划完成后开始计算，还要加上设备间隔、帧间隔、响应耗时和重试耗时 |
+| 保存成功但运行时仍是旧配置 | 等待刷新状态完成；连续批量保存时系统会合并刷新，必要时重新检查网关会话 |
+
+## 8. Modbus 协议约定
+
+- 传输层为 TCP，负载为 Modbus RTU ADU：`[slaveId][FC][data][CRC16]`。
+- CRC16 使用 IBM 多项式 `0xA001`，低字节在前。
+- 支持 FC1、FC2、FC3、FC4 读取和 FC5、FC6、FC15、FC16 写入。
+- 异常响应使用 `FC | 0x80`，平台将其转换为失败 Reply，并保留 Modbus 异常码。
+- 错误 CRC 的帧会被丢弃。
+- TCP 网络组件需要正确配置粘包/拆包方式，确保一个 Modbus RTU ADU 能被完整交给协议解码器。
+
+## 9. 配置完成验收清单
+
+- [ ] TCP 通道连接方向和端口正确。
+- [ ] 网关设备为父设备，并已建立在线会话。
+- [ ] 从机设备已绑定到正确网关。
+- [ ] 每个从机 `slaveId` 唯一且在 `1~247` 范围内。
+- [ ] `registerMap` 的属性 ID、功能码、地址和数据类型已核对。
+- [ ] FC1/2/3/4 点位未配置为可写，写点位未加入轮询属性。
+- [ ] 产品轮询配置已明确启用状态和调度方式。
+- [ ] 轮询间隔、设备间隔、帧间隔和重试次数符合现场总线负载。
+- [ ] 读取窗口和地址空洞配置符合设备限制。
+- [ ] 人工读取测试成功。
+- [ ] `/modbus/polling/status` 显示请求版本已应用。
+- [ ] 历史数据或标准消息链路收到成功/部分成功上报。

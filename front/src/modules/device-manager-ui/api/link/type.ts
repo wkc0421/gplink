@@ -8,7 +8,7 @@ export const remove = (id: string) => request.remove(`/network/config/${id}`);
 export const shutdown = (data: object) =>
     request.post(`/network/config/${data}/_shutdown`);
 
-export const start = (data: object) =>
+export const start = (data: string) =>
     request.post(`/network/config/${data}/_start`);
 
 export const supports = () => request.get(`/network/config/supports`);

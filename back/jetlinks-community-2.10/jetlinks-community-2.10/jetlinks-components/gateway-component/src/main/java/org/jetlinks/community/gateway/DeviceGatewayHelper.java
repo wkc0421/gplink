@@ -201,6 +201,7 @@ public class DeviceGatewayHelper {
                                                     Function<DeviceOperator, Mono<DeviceSession>> sessionBuilder,
                                                     Function<DeviceSession, Mono<Void>> sessionConsumer,
                                                     Supplier<Mono<DeviceOperator>> deviceNotFoundCallback) {
+        DeviceMessageUtils.addReportedPropertiesHeader(message);
         String deviceId = message.getDeviceId();
         if (!StringUtils.hasText(deviceId)) {
             return Mono.empty();

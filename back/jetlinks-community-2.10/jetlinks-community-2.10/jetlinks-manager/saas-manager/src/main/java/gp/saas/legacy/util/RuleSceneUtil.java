@@ -1,10 +1,14 @@
 package gp.saas.legacy.util;
 
+import gp.saas.legacy.dto.AlarmRuleEntity;
+import org.hswebframework.web.exception.BusinessException;
 import org.hswebframework.ezorm.core.param.Term;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
 import org.jetlinks.community.relation.utils.VariableSource;
 import org.jetlinks.community.rule.engine.commons.ShakeLimit;
 import org.jetlinks.community.rule.engine.enums.AlarmMode;
+import org.jetlinks.community.rule.engine.entity.SceneEntity;
+import org.jetlinks.community.rule.engine.enums.RuleInstanceState;
 import org.jetlinks.community.rule.engine.executor.device.SelectorValue;
 import org.jetlinks.community.rule.engine.scene.DeviceOperation;
 import org.jetlinks.community.rule.engine.scene.SceneAction;
@@ -19,6 +23,7 @@ import org.jetlinks.community.rule.engine.scene.internal.triggers.DeviceTrigger;
 import org.jetlinks.community.rule.engine.scene.internal.triggers.DeviceTriggerProvider;
 import org.jetlinks.community.rule.engine.scene.internal.triggers.TimerTrigger;
 import org.jetlinks.community.rule.engine.scene.internal.triggers.TimerTriggerProvider;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +35,82 @@ import java.util.stream.Collectors;
 
 public final class RuleSceneUtil {
 
+    private static final String NUMERIC_RULE_ERROR = "error.rule_scene_not_numeric_alarm";
+    private static final String NUMERIC_RULE_REQUEST_ERROR = "error.numeric_alarm_rule_request_invalid";
+
     private RuleSceneUtil() {
+    }
+
+    public static void validateNumericAlarmRequest(AlarmRuleEntity request) {
+        if (request == null
+            || !StringUtils.hasText(request.getName())
+            || !StringUtils.hasText(request.getProductId())
+            || request.getType() == null
+            || request.getTermList() == null
+            || request.getTermList().isEmpty()) {
+            throw new BusinessException(NUMERIC_RULE_REQUEST_ERROR);
+        }
+        validateNumericTerms(request.getTermList());
+    }
+
+    private static void validateNumericTerms(List<Term> terms) {
+        for (Term term : terms) {
+            if (term == null) {
+                throw new BusinessException(NUMERIC_RULE_REQUEST_ERROR);
+            }
+            if (term.getTerms() != null && !term.getTerms().isEmpty()) {
+                validateNumericTerms(term.getTerms());
+                continue;
+            }
+            if (!StringUtils.hasText(term.getColumn())
+                || !term.getColumn().startsWith("properties.")
+                || !StringUtils.hasText(term.getTermType())
+                || term.getValue() == null) {
+                throw new BusinessException(NUMERIC_RULE_REQUEST_ERROR);
+            }
+        }
+    }
+
+    public static boolean isNumericAlarmRule(SceneEntity scene) {
+        if (scene == null
+            || !DeviceTriggerProvider.PROVIDER.equals(scene.getTriggerType())
+            || scene.getTrigger() == null
+            || scene.getTrigger().getDevice() == null
+            || scene.getTrigger().getDevice().getOperation() == null
+            || scene.getTrigger().getDevice().getOperation().getOperator() != DeviceOperation.Operator.reportProperty) {
+            return false;
+        }
+        return hasAlarmMode(scene, AlarmMode.trigger) && hasAlarmMode(scene, AlarmMode.relieve);
+    }
+
+    public static SceneEntity requireNumericAlarmRule(SceneEntity scene) {
+        if (!isNumericAlarmRule(scene)) {
+            throw new BusinessException(NUMERIC_RULE_ERROR);
+        }
+        return scene;
+    }
+
+    public static SceneEntity requireDisabledNumericAlarmRule(SceneEntity scene) {
+        requireNumericAlarmRule(scene);
+        if (scene.getState() != RuleInstanceState.disable) {
+            throw new BusinessException("error.numeric_alarm_rule_must_be_disabled");
+        }
+        return scene;
+    }
+
+    private static boolean hasAlarmMode(SceneEntity scene, AlarmMode mode) {
+        if (scene.getBranches() == null) {
+            return false;
+        }
+        return scene.getBranches().stream()
+            .filter(branch -> branch != null && branch.getThen() != null)
+            .flatMap(branch -> branch.getThen().stream())
+            .filter(actions -> actions != null && actions.getActions() != null)
+            .flatMap(actions -> actions.getActions().stream())
+            .anyMatch(action -> action != null
+                && "alarm".equals(action.getExecutor())
+                && action.getAlarm() != null
+                && mode == action.getAlarm().getMode());
     }
 
     public static Trigger createTimerTrigger(String cron) {
@@ -114,8 +194,14 @@ public final class RuleSceneUtil {
     }
 
     public static SceneConditionAction createRelieveAlarmBranch(boolean parallel, ShakeLimit shakeLimit) {
+        return createRelieveAlarmBranch(parallel, shakeLimit, new ArrayList<>());
+    }
+
+    public static SceneConditionAction createRelieveAlarmBranch(boolean parallel,
+                                                                ShakeLimit shakeLimit,
+                                                                List<Term> when) {
         SceneConditionAction branch = new SceneConditionAction();
-        branch.setWhen(new ArrayList<>());
+        branch.setWhen(when == null ? new ArrayList<>() : when);
         branch.setShakeLimit(shakeLimit);
         branch.setThen(List.of(alarmAction(parallel, AlarmMode.relieve)));
         return branch;

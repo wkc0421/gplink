@@ -20,3 +20,9 @@ TIMESCALEDB_SCHEMA: public # timescaledb 数据库schema,默认public
 
 timescaledb:
     things-data: {}
+
+# Legacy MQTT订阅在多个 MQTT_CLIENT 网络同时启用时使用的默认网络。
+# 测试环境可通过 GPLINK_LEGACY_MQTT_NETWORK_ID 覆盖。
+gplink:
+    legacy:
+        mqtt-network-id: ${GPLINK_LEGACY_MQTT_NETWORK_ID:2068926208973430784}

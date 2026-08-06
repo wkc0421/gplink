@@ -28,10 +28,14 @@ import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class DeviceMessageUtils {
 
@@ -65,6 +69,51 @@ public class DeviceMessageUtils {
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * 标记本次属性上报实际携带的采集项，避免规则引擎使用设备缓存值误判。
+     * 兼容不实现PropertyMessage、但toJson仍包含properties/data的协议消息。
+     */
+    public static void addReportedPropertiesHeader(DeviceMessage message) {
+        if (message.getMessageType() != MessageType.REPORT_PROPERTY) {
+            return;
+        }
+
+        Set<String> properties = new LinkedHashSet<>();
+        tryGetProperties(message)
+            .ifPresent(values -> properties.addAll(values.keySet()));
+
+        if (properties.isEmpty()) {
+            Object json = message.toJson();
+            if (json instanceof Map<?, ?> jsonMap) {
+                addMapKeys(jsonMap.get("properties"), properties);
+                if (properties.isEmpty()) {
+                    addMapKeys(jsonMap.get("data"), properties);
+                }
+            }
+        }
+
+        if (!properties.isEmpty()) {
+            message.addHeader(
+                "_reportedProperties",
+                properties
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .filter(StringUtils::hasText)
+                    .sorted()
+                    .collect(Collectors.joining(",", ",", ",")));
+        }
+    }
+
+    private static void addMapKeys(Object value, Set<String> keys) {
+        if (value instanceof Map<?, ?> map) {
+            map.keySet().forEach(key -> {
+                if (key != null) {
+                    keys.add(String.valueOf(key));
+                }
+            });
+        }
     }
 
     public static Optional<Map<String, Long>> tryGetPropertySourceTimes(DeviceMessage message) {

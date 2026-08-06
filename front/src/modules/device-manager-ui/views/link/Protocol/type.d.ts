@@ -3,6 +3,8 @@ export interface FormDataType {
     name: string;
     configuration: {
         location: string;
+        fileId?: string;
+        fileName?: string;
     };
     description: string;
 }

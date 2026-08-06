@@ -34,7 +34,7 @@ import { useSystemStore } from '@/store/system';
 import { useI18n } from 'vue-i18n';
 
 const { t: $t } = useI18n();
-const emit = defineEmits(['update:modelValue', 'change']);
+const emit = defineEmits(['update:modelValue', 'change', 'uploaded']);
 
 const props = defineProps({
     modelValue: {
@@ -72,6 +72,7 @@ const handleChange = async (info: UploadChangeParam) => {
         value.value = f;
         emit('update:modelValue', f);
         emit('change', f);
+        emit('uploaded', result);
     } else {
         if (info.file.error) {
             Notification.error({

@@ -70,6 +70,15 @@
                     />
                 </a-form-item>
             </template>
+            <template v-if="isModbus">
+                <a-divider>Modbus轮询覆盖</a-divider>
+                <ModbusPollingConfigEditor
+                    v-model="modelRef"
+                    mode="device"
+                    :readable-properties="readableProperties"
+                    :inherited-config="inheritedPollingConfig"
+                />
+            </template>
         </a-form>
     </a-drawer>
 </template>
@@ -80,12 +89,18 @@ import { useInstanceStore } from '../../../../../../../store/instance';
 import { onlyMessage } from '@/utils/comm';
 import { useI18n } from 'vue-i18n';
 import {map, uniqBy} from "lodash-es";
+import ModbusPollingConfigEditor from '@/components/ModbusPollingConfigEditor/index.vue';
+import { detail as getProductDetail } from '../../../../../../../api/product';
+import { getModbusPollingStatus, waitForModbusPollingApplied } from '../../../../../../../api/modbusPolling';
+import { getReadablePropertyIds, parseRegisterMapValue } from '../../../../../ModbusAccess/utils';
 
 const { t: $t } = useI18n();
 const emit = defineEmits(['close', 'save']);
 
 const formRef = ref();
 const modelRef = reactive({});
+const readableProperties = ref<Array<{ label: string; value: string }>>([]);
+const inheritedPollingConfig = ref<Record<string, any>>({});
 
 const instanceStore = useInstanceStore();
 
@@ -105,6 +120,11 @@ const props = defineProps({
 });
 
 const activeKey = ref(props.gatewaysDetail?.[0]?.id);
+const isModbus = computed(() =>
+    String(props.access?.protocol || props.access?.protocolDetail?.id || '')
+        .toLowerCase()
+        .includes('modbus')
+);
 
 const getOptions = (i: any) => {
     if (i.type.type === 'enum') {
@@ -149,6 +169,37 @@ const getRules = (item: any) => {
   }
   return rules;
 };
+const loadModbusProductConfig = async (productId?: string) => {
+  if (!productId || !isModbus.value) return;
+  const response: any = await getProductDetail(productId).catch(() => undefined);
+  const product = response?.result;
+  const configuration = product?.configuration || {};
+  inheritedPollingConfig.value = configuration;
+
+  const rows = parseRegisterMapValue(configuration.registerMap);
+  if (rows.length) {
+    readableProperties.value = rows
+      .filter(row => getReadablePropertyIds([row]).length > 0)
+      .map(row => ({ label: row.propertyName || row.propertyId, value: row.propertyId }));
+    return;
+  }
+
+  try {
+    const metadata = typeof product?.metadata === 'string'
+      ? JSON.parse(product.metadata)
+      : product?.metadata || {};
+    readableProperties.value = (metadata.properties || [])
+      .filter((property: any) => (property.expands?.type || []).includes('read'))
+      .map((property: any) => ({ label: property.name || property.id, value: property.id }));
+  } catch {
+    readableProperties.value = [];
+  }
+};
+
+watch(() => instanceStore.current?.productId, productId => {
+  loadModbusProductConfig(productId);
+}, { immediate: true });
+
 // watchEffect(() => {
 //     const obj = instanceStore.current?.configuration;
 //     if (obj && Object.keys(obj).length) {
@@ -174,6 +225,7 @@ const handleValue = (arr = [], obj = {}) => {
 
 watch(() => instanceStore.current?.configuration, (obj) => {
   if (obj && Object.keys(obj).length) {
+    Object.assign(modelRef, obj);
     if(props.access?.provider === 'composite-device-gateway'){
       (props.gatewaysDetail || []).map((item: any) => {
         handleValue(item.transportDetail.allConfig, obj)
@@ -194,13 +246,21 @@ const onClose = () => {
 const saveBtn = () => {
     formRef.value.validate().then(async (res) => {
         if (res) {
+            const before: any = isModbus.value
+                ? await getModbusPollingStatus().catch(() => undefined)
+                : undefined;
             const values = toRaw(modelRef);
             const resp = await modify(instanceStore.current?.id || '', {
                 id: instanceStore.current?.id,
                 configuration: { ...values },
             });
             if (resp.status === 200) {
-                onlyMessage($t('Config.Save.696838-3'));
+                const applied = isModbus.value
+                    ? await waitForModbusPollingApplied(
+                        Number(before?.result?.requestedRevision ?? before?.requestedRevision),
+                    )
+                    : true;
+                onlyMessage(applied ? $t('Config.Save.696838-3') : '配置已保存，运行时刷新仍在进行中');
                 emit('save');
             }
         }

@@ -1,6 +1,23 @@
-import type { ByteOrder, DeviceMetadata, ImportResult, RegisterDataType, RegisterMappingRow, SlaveRow } from './types'
+import type {
+    ByteOrder,
+    DeviceMetadata,
+    ImportResult,
+    RegisterDataType,
+    RegisterMappingRow,
+    SlaveRow,
+    TcpQuickConfigForm,
+    TcpQuickCreateMode,
+} from './types'
 
 export const MODBUS_PROTOCOL_ID = 'modbus-rtu.v1'
+export const TCP_NETWORK_TYPE = {
+    'tcp-server': 'TCP_SERVER',
+    'tcp-client': 'TCP_CLIENT',
+} as const
+export const TCP_GATEWAY_PROVIDER = {
+    'tcp-server': 'tcp-server-gateway',
+    'tcp-client': 'tcp-client-gateway',
+} as const
 export const READ_FUNCTION_CODES = [1, 2, 3, 4]
 export const WRITE_FUNCTION_CODES = [5, 6, 15, 16]
 export const ALL_FUNCTION_CODES = [...READ_FUNCTION_CODES, ...WRITE_FUNCTION_CODES]
@@ -23,6 +40,114 @@ export const DEFAULT_COMMUNICATION_CONFIG = {
     probeIntervalMs: 30000,
     keepOnlineTimeout: 120,
 }
+
+const isValidPort = (value: unknown) => Number.isInteger(Number(value))
+    && Number(value) >= 1
+    && Number(value) <= 65535
+
+export const validateTcpQuickConfig = (
+    mode: TcpQuickCreateMode,
+    form: TcpQuickConfigForm,
+) => {
+    const errors: string[] = []
+    if (!form.networkName.trim()) errors.push('请输入网络组件名称')
+    if (form.networkName.trim().length > 64) errors.push('网络组件名称不能超过 64 个字符')
+    if (!form.accessName.trim()) errors.push('请输入接入网关名称')
+    if (form.accessName.trim().length > 64) errors.push('接入网关名称不能超过 64 个字符')
+    if ((form.description || '').length > 200) errors.push('说明不能超过 200 个字符')
+    if (!form.host.trim()) {
+        errors.push(mode === 'tcp-server' ? '请输入监听地址' : '请输入远程主机')
+    }
+    if (!isValidPort(form.port)) {
+        errors.push(mode === 'tcp-server' ? '监听端口范围应为 1-65535' : '远程端口范围应为 1-65535')
+    }
+    if (mode === 'tcp-server') {
+        if (!form.publicHost.trim()) errors.push('请输入公网地址')
+        if (!isValidPort(form.publicPort)) errors.push('公网端口范围应为 1-65535')
+    }
+    if (form.tlsEnabled && !form.certId) errors.push('启用 TLS 后必须选择证书')
+    return errors
+}
+
+export const buildTcpNetworkPayload = (
+    mode: TcpQuickCreateMode,
+    form: TcpQuickConfigForm,
+) => {
+    const tls = form.tlsEnabled && form.certId
+        ? { certId: form.certId }
+        : {}
+    const common = {
+        name: form.networkName.trim(),
+        description: form.description?.trim() || undefined,
+        type: TCP_NETWORK_TYPE[mode],
+        state: 'disabled',
+        shareCluster: true,
+    }
+    const parser = {
+        parserType: 'DIRECT',
+        parserConfiguration: {},
+        tcpKeepAlive: true,
+    }
+
+    if (mode === 'tcp-server') {
+        return {
+            ...common,
+            configuration: {
+                host: form.host.trim(),
+                port: Number(form.port),
+                publicHost: form.publicHost.trim(),
+                publicPort: Number(form.publicPort),
+                secure: form.tlsEnabled,
+                ...tls,
+                ...parser,
+            },
+        }
+    }
+
+    return {
+        ...common,
+        configuration: {
+            host: form.host.trim(),
+            port: Number(form.port),
+            ssl: form.tlsEnabled,
+            ...tls,
+            ...parser,
+        },
+    }
+}
+
+export const buildTcpAccessPayload = (
+    mode: TcpQuickCreateMode,
+    form: TcpQuickConfigForm,
+    networkId: string,
+    gatewayDeviceId: string,
+    childDeviceIds: string[],
+) => ({
+    name: form.accessName.trim(),
+    description: form.description?.trim() || undefined,
+    provider: TCP_GATEWAY_PROVIDER[mode],
+    state: 'disabled',
+    channel: 'network',
+    channelId: networkId,
+    protocol: MODBUS_PROTOCOL_ID,
+    transport: 'TCP',
+    configuration: {
+        deviceId: gatewayDeviceId,
+        ...(mode === 'tcp-server' ? { childDeviceIds } : {}),
+    },
+})
+
+export const formatTcpEndpoint = (mode: TcpQuickCreateMode, form: TcpQuickConfigForm) => {
+    if (mode === 'tcp-server') {
+        return `${form.host || '--'}:${form.port || '--'}（公网 ${form.publicHost || '--'}:${form.publicPort || '--'}）`
+    }
+    return `${form.host || '--'}:${form.port || '--'}`
+}
+
+export const ensureQuickResourceId = async (
+    existingId: string | undefined,
+    create: () => Promise<string>,
+) => existingId || create()
 
 const DATA_TYPE_MIN_QUANTITY: Record<RegisterDataType, number> = {
     BIT: 1,
@@ -122,6 +247,7 @@ export const createSlaveRow = (slaveId?: number, gatewayDeviceId = ''): SlaveRow
         description: '',
         autoDeviceId: true,
         autoDeviceName: true,
+        pollOverrideEnabled: false,
     }
 }
 

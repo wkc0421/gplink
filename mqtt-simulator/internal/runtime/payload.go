@@ -14,13 +14,14 @@ import (
 )
 
 type PayloadBuilder struct {
-	taskID    string
-	config    model.TaskConfig
-	mu        sync.RWMutex
-	eCounters map[string]float64
-	random    *rand.Rand
-	randMu    sync.Mutex
-	zeroMu    sync.Mutex
+	taskID     string
+	config     model.TaskConfig
+	mu         sync.RWMutex
+	eCounters  map[string]float64
+	random     *rand.Rand
+	now        func() time.Time
+	randMu     sync.Mutex
+	zeroMu     sync.Mutex
 	zeroStreak int
 }
 
@@ -33,6 +34,7 @@ func NewPayloadBuilder(taskID string, config model.TaskConfig, counters map[stri
 		config:    config,
 		eCounters: counters,
 		random:    rand.New(rand.NewSource(time.Now().UnixNano())),
+		now:       time.Now,
 	}
 }
 
@@ -60,19 +62,20 @@ func (b *PayloadBuilder) Topic() string {
 
 func (b *PayloadBuilder) Build(index int) (string, []byte, error) {
 	deviceID := b.DeviceID(index)
+	now := b.now()
 	items := make([]map[string]any, 0, len(b.config.Metadata))
 	for _, property := range b.config.Metadata {
 		items = append(items, map[string]any{
-			"id":   property.ID,
-			"desc": property.Name,
-			"value": b.valueFor(deviceID, property),
+			"id":    property.ID,
+			"desc":  property.Name,
+			"value": b.valueFor(deviceID, property, now),
 		})
 	}
 
 	body := map[string]any{
 		"type": nonEmpty(b.config.MessageType, "change"),
 		"sn":   b.config.ProductID,
-		"time": time.Now().Format("2006-01-02 15:04:05"),
+		"time": now.Format("2006-01-02 15:04:05"),
 		"data": map[string]any{
 			deviceID: items,
 		},
@@ -85,14 +88,9 @@ func (b *PayloadBuilder) Build(index int) (string, []byte, error) {
 	return b.Topic(), raw, nil
 }
 
-func (b *PayloadBuilder) valueFor(deviceID string, property model.Property) any {
+func (b *PayloadBuilder) valueFor(_ string, property model.Property, now time.Time) any {
 	if property.ID == "E" {
-		b.mu.Lock()
-		defer b.mu.Unlock()
-		last := b.eCounters[deviceID]
-		next := round(last+0.001+b.randFloat64()*0.199, 3)
-		b.eCounters[deviceID] = next
-		return fmt.Sprintf("%.3f", next)
+		return fmt.Sprintf("%.2f", float64(now.UnixMilli())/1000000)
 	}
 
 	switch strings.ToLower(property.ValueType.Type) {

@@ -7,12 +7,15 @@ import gp.saas.legacy.util.RuleSceneUtil;
 import org.hswebframework.ezorm.core.param.Term;
 import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.bean.FastBeanCopier;
+import org.hswebframework.web.exception.BusinessException;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
 import org.jetlinks.community.device.service.LocalDeviceInstanceService;
+import org.jetlinks.community.rule.engine.entity.AlarmRuleBindEntity;
 import org.jetlinks.community.rule.engine.entity.SceneEntity;
 import org.jetlinks.community.rule.engine.scene.SceneConditionAction;
 import org.jetlinks.community.rule.engine.scene.SceneRule;
 import org.jetlinks.community.rule.engine.scene.Trigger;
+import org.jetlinks.community.rule.engine.service.AlarmRuleBindService;
 import org.jetlinks.community.rule.engine.service.SceneService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,16 +33,23 @@ import java.util.Arrays;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/rule/scene")
-@Authorize(ignore = true)
+@RequestMapping({
+    "/v1/rule/scene",
+    "/api/v1/rule/scene"
+})
+@Authorize
 public class LegacyRuleSceneController {
 
     private final LocalDeviceInstanceService deviceService;
     private final SceneService sceneService;
+    private final AlarmRuleBindService alarmRuleBindService;
 
-    public LegacyRuleSceneController(LocalDeviceInstanceService deviceService, SceneService sceneService) {
+    public LegacyRuleSceneController(LocalDeviceInstanceService deviceService,
+                                     SceneService sceneService,
+                                     AlarmRuleBindService alarmRuleBindService) {
         this.deviceService = deviceService;
         this.sceneService = sceneService;
+        this.alarmRuleBindService = alarmRuleBindService;
     }
 
     @PostMapping
@@ -57,22 +67,31 @@ public class LegacyRuleSceneController {
 
     @GetMapping("/{id}")
     public Mono<SceneEntity> getScene(@PathVariable String id) {
-        return sceneService.findById(id);
+        return sceneService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.numeric_alarm_rule_not_found")))
+            .map(RuleSceneUtil::requireNumericAlarmRule);
     }
 
     @DeleteMapping("/{id}")
     public Mono<Integer> deleteScene(@PathVariable String id) {
-        return sceneService.deleteById(id);
+        return sceneService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.numeric_alarm_rule_not_found")))
+            .map(RuleSceneUtil::requireDisabledNumericAlarmRule)
+            .flatMap(scene -> alarmRuleBindService
+                .createDelete()
+                .where(AlarmRuleBindEntity::getRuleId, id)
+                .execute()
+                .then(sceneService.deleteById(id)));
     }
 
     @GetMapping("/{id}/_enable")
     public Mono<Void> enableScene(@PathVariable String id) {
-        return sceneService.enable(id);
+        return findNumericRule(id).then(sceneService.enable(id));
     }
 
     @GetMapping("/{id}/_disable")
     public Mono<Void> disableScene(@PathVariable String id) {
-        return sceneService.disabled(id);
+        return findNumericRule(id).then(sceneService.disabled(id));
     }
 
     @PostMapping("/property/_read")
@@ -103,12 +122,22 @@ public class LegacyRuleSceneController {
 
     @PostMapping("/alarm/_trigger")
     public Mono<SceneEntity> createAlarmRule(@RequestBody AlarmRuleEntity request) {
+        RuleSceneUtil.validateNumericAlarmRequest(request);
         return sceneService.createScene(alarmRule(request));
     }
 
     @PutMapping("/{id}/alarm/_trigger")
     public Mono<SceneEntity> updateAlarmRule(@PathVariable String id, @RequestBody AlarmRuleEntity request) {
-        return sceneService.disabled(id).then(sceneService.updateScene(id, alarmRule(request)));
+        RuleSceneUtil.validateNumericAlarmRequest(request);
+        return findNumericRule(id)
+            .then(sceneService.disabled(id))
+            .then(sceneService.updateScene(id, alarmRule(request)));
+    }
+
+    private Mono<SceneEntity> findNumericRule(String id) {
+        return sceneService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.numeric_alarm_rule_not_found")))
+            .map(RuleSceneUtil::requireNumericAlarmRule);
     }
 
     private Mono<List<DeviceInstanceEntity>> buildDevices(String productId, String deviceIds) {
@@ -147,15 +176,63 @@ public class LegacyRuleSceneController {
         rule.setParallel(false);
         rule.setTrigger(RuleSceneUtil.createDeviceTrigger(request.getProductId(), request.getDeviceIds()));
         rule.setOptions(RuleSceneUtil.createAlarmOptions(request.getProductId()));
-        List<Term> when = new ArrayList<>();
-        Term term = new Term();
-        term.setType(request.getType());
-        term.setTerms(request.getTermList());
-        when.add(term);
+        List<Term> presentTerms = createPresentTerms(request.getTermList());
+        Term condition = new Term();
+        condition.setType(request.getType());
+        condition.setTerms(request.getTermList());
+        List<Term> guardedTerms = new ArrayList<>(presentTerms);
+        guardedTerms.add(condition);
+        Term guardedCondition = new Term();
+        guardedCondition.setType(Term.Type.and);
+        guardedCondition.setTerms(guardedTerms);
         List<SceneConditionAction> branches = new ArrayList<>();
-        branches.add(RuleSceneUtil.createTriggerAlarmBranch(false, request.getShakeLimit(), when));
-        branches.add(RuleSceneUtil.createRelieveAlarmBranch(false, request.getShakeLimit()));
+        branches.add(RuleSceneUtil.createTriggerAlarmBranch(false, request.getShakeLimit(), List.of(guardedCondition)));
+        branches.add(RuleSceneUtil.createRelieveAlarmBranch(false, request.getShakeLimit(), createPresentCondition(presentTerms)));
         rule.setBranches(branches);
         return rule;
+    }
+
+    private List<Term> createPresentCondition(List<Term> terms) {
+        if (terms == null || terms.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Term condition = new Term();
+        condition.setType(Term.Type.and);
+        condition.setTerms(terms);
+        return List.of(condition);
+    }
+
+    private List<Term> createPresentTerms(List<Term> terms) {
+        List<Term> result = new ArrayList<>();
+        collectPresentTerms(terms, result);
+        return result;
+    }
+
+    private void collectPresentTerms(List<Term> terms, List<Term> result) {
+        if (terms == null) {
+            return;
+        }
+        for (Term term : terms) {
+            if (term == null) {
+                continue;
+            }
+            if (term.getTerms() != null && !term.getTerms().isEmpty()) {
+                collectPresentTerms(term.getTerms(), result);
+                continue;
+            }
+            String column = term.getColumn();
+            if (column == null || !column.startsWith("properties.")) {
+                continue;
+            }
+            String[] columnParts = column.split("\\.");
+            if (columnParts.length < 2 || columnParts[1].isBlank()) {
+                continue;
+            }
+            Term present = new Term();
+            present.setColumn("headers._reportedProperties");
+            present.setTermType("like");
+            present.setValue("%," + columnParts[1] + ",%");
+            result.add(present);
+        }
     }
 }

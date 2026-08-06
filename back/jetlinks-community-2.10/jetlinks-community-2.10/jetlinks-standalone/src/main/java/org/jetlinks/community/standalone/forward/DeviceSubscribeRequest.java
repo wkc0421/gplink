@@ -27,6 +27,9 @@ public class DeviceSubscribeRequest {
     @Schema(description = "MQTT topic prefix, defaults to IOT/Business")
     private String mqttTopicPrefix;
 
+    @Schema(description = "Exact MQTT topic name. If set, mqttTopicPrefix is ignored.")
+    private String mqttTopicName;
+
     @Schema(description = "MQTT QoS, defaults to 0")
     private int mqttQos;
 

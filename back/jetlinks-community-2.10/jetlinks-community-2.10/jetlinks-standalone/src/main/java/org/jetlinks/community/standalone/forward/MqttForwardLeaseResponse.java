@@ -22,6 +22,9 @@ public class MqttForwardLeaseResponse {
     @Schema(description = "MQTT topic prefix")
     private String mqttTopicPrefix;
 
+    @Schema(description = "Exact MQTT topic name")
+    private String mqttTopicName;
+
     @Schema(description = "MQTT QoS")
     private int mqttQos;
 

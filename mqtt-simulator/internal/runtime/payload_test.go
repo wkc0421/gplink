@@ -3,11 +3,12 @@ package runtime
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"mqtt-simulator/internal/model"
 )
 
-func TestPayloadBuilderEIsMonotonic(t *testing.T) {
+func TestPayloadBuilderEUsesCurrentTimestamp(t *testing.T) {
 	builder := NewPayloadBuilder("task-1", model.TaskConfig{
 		ProductID:     "prod-1",
 		MessageType:   "change",
@@ -16,20 +17,18 @@ func TestPayloadBuilderEIsMonotonic(t *testing.T) {
 			{ID: "E", Name: "电能", ValueType: model.PropertyType{Type: "float", Scale: 3}},
 		},
 	}, nil)
-
-	_, firstRaw, err := builder.Build(0)
-	if err != nil {
-		t.Fatalf("build first payload: %v", err)
-	}
-	_, secondRaw, err := builder.Build(0)
-	if err != nil {
-		t.Fatalf("build second payload: %v", err)
+	builder.now = func() time.Time {
+		return time.UnixMilli(1700000012345)
 	}
 
-	firstValue := extractValue(t, firstRaw)
-	secondValue := extractValue(t, secondRaw)
-	if secondValue <= firstValue {
-		t.Fatalf("expected E to increase, got first=%s second=%s", firstValue, secondValue)
+	_, raw, err := builder.Build(0)
+	if err != nil {
+		t.Fatalf("build payload: %v", err)
+	}
+
+	value := extractValue(t, raw)
+	if value != "1700000.01" {
+		t.Fatalf("expected E to use timestamp value, got %s", value)
 	}
 }
 

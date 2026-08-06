@@ -16,6 +16,7 @@
 package org.jetlinks.community.network.mqtt.client;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.ReferenceCountUtil;
 import io.vertx.core.buffer.Buffer;
@@ -34,11 +35,13 @@ import reactor.core.Disposables;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 import reactor.util.function.Tuple3;
 import reactor.util.function.Tuples;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -62,6 +65,8 @@ public class VertxMqttClient implements MqttClient {
 
     private final List<Runnable> loadSuccessListener = new CopyOnWriteArrayList<>();
 
+    private final List<PendingPublish> pendingPublishes = new CopyOnWriteArrayList<>();
+
     //订阅前缀
     @Setter
     private String topicPrefix;
@@ -69,10 +74,19 @@ public class VertxMqttClient implements MqttClient {
     public void setLoading(boolean loading) {
         this.loading = loading;
         if (!loading) {
-            try {
-                loadSuccessListener.forEach(Runnable::run);
-            } finally {
-                loadSuccessListener.clear();
+            List<Runnable> listeners = List.copyOf(loadSuccessListener);
+            loadSuccessListener.clear();
+            for (Runnable listener : listeners) {
+                try {
+                    listener.run();
+                } catch (Throwable error) {
+                    log.warn("execute mqtt client [{}] load listener error", id, error);
+                }
+            }
+            List<PendingPublish> publishes = List.copyOf(pendingPublishes);
+            pendingPublishes.clear();
+            for (PendingPublish publish : publishes) {
+                publish.start();
             }
         }
     }
@@ -221,28 +235,33 @@ public class VertxMqttClient implements MqttClient {
     private Mono<Void> doPublish(MqttMessage message) {
         return Mono.create((sink) -> {
             ByteBuf payload = message.getPayload();
+            Buffer buffer;
             try {
-                Buffer buffer = Buffer.buffer(payload);
+                // The MQTT message transfers ownership of its reference-counted payload to this method.
+                // Copy it into a Vert.x-owned byte array so a missing publish callback cannot retain ByteBuf.
+                buffer = Buffer.buffer(ByteBufUtil.getBytes(payload));
+            } catch (Throwable error) {
+                sink.error(error);
+                return;
+            } finally {
+                ReferenceCountUtil.safeRelease(payload);
+            }
+            try {
                 client.publish(message.getTopic(),
                                buffer,
                                MqttQoS.valueOf(message.getQosLevel()),
                                message.isDup(),
                                message.isRetain(),
                                result -> {
-                                   try {
-                                       if (result.succeeded()) {
-                                           log.info("publish mqtt [{}] message success: {}", client.clientId(), message);
-                                           sink.success();
-                                       } else {
-                                           log.info("publish mqtt [{}] message error : {}", client.clientId(), message, result.cause());
-                                           sink.error(result.cause());
-                                       }
-                                   } finally {
-                                       ReferenceCountUtil.safeRelease(payload);
+                                   if (result.succeeded()) {
+                                       log.info("publish mqtt [{}] message success: {}", client.clientId(), message);
+                                       sink.success();
+                                   } else {
+                                       log.info("publish mqtt [{}] message error : {}", client.clientId(), message, result.cause());
+                                       sink.error(result.cause());
                                    }
                                });
             } catch (Throwable e) {
-                ReferenceCountUtil.safeRelease(payload);
                 sink.error(e);
             }
         });
@@ -252,12 +271,13 @@ public class VertxMqttClient implements MqttClient {
     public Mono<Void> publish(MqttMessage message) {
         if (loading) {
             return Mono.create(sink -> {
-                loadSuccessListener.add(() -> {
-                    doPublish(message)
-                        .doOnSuccess(sink::success)
-                        .doOnError(sink::error)
-                        .subscribe(null, sink::error);
-                });
+                PendingPublish pending = new PendingPublish(message, sink);
+                pendingPublishes.add(pending);
+                sink.onCancel(pending::cancel);
+                // Avoid losing a publish when loading changes between the initial check and queue insertion.
+                if (!loading && pendingPublishes.remove(pending)) {
+                    pending.start();
+                }
             });
         }
         return doPublish(message);
@@ -276,6 +296,11 @@ public class VertxMqttClient implements MqttClient {
     @Override
     public void shutdown() {
         loading = false;
+        IllegalStateException shutdownError = new IllegalStateException("MQTT client has been shut down");
+        List<PendingPublish> publishes = List.copyOf(pendingPublishes);
+        pendingPublishes.clear();
+        publishes.forEach(publish -> publish.fail(shutdownError));
+        loadSuccessListener.clear();
         // Clean up topic tree to prevent memory leaks
         subscriber.clean();
         if (isAlive()) {
@@ -285,6 +310,42 @@ public class VertxMqttClient implements MqttClient {
 
             }
             client = null;
+        }
+    }
+
+    private final class PendingPublish {
+        private final MqttMessage message;
+        private final MonoSink<Void> sink;
+        private final AtomicBoolean claimed = new AtomicBoolean();
+
+        private PendingPublish(MqttMessage message, MonoSink<Void> sink) {
+            this.message = message;
+            this.sink = sink;
+        }
+
+        private void start() {
+            if (!claimed.compareAndSet(false, true)) {
+                return;
+            }
+            pendingPublishes.remove(this);
+            doPublish(message).subscribe(sink::success, sink::error);
+        }
+
+        private void cancel() {
+            if (!claimed.compareAndSet(false, true)) {
+                return;
+            }
+            pendingPublishes.remove(this);
+            ReferenceCountUtil.safeRelease(message.getPayload());
+        }
+
+        private void fail(Throwable error) {
+            if (!claimed.compareAndSet(false, true)) {
+                return;
+            }
+            pendingPublishes.remove(this);
+            ReferenceCountUtil.safeRelease(message.getPayload());
+            sink.error(error);
         }
     }
 

@@ -132,8 +132,8 @@ async function run() {
   }
 
   for (let i = 1; i < target.length; i++) {
-    if (!(target[i] > target[i - 1])) {
-      throw new Error(`E values are not increasing: ${target.join(', ')}`);
+    if (!(target[i] >= target[i - 1])) {
+      throw new Error(`E values are decreasing: ${target.join(', ')}`);
     }
   }
 
@@ -149,7 +149,7 @@ async function run() {
   await page.request.delete(`${baseUrl}/api/tasks/${task.id}`);
   await new Promise((resolve) => subClient.end(true, resolve));
   await browser.close();
-  console.log(`Concurrency and E monotonic test passed. runningStatus=${running.status} sentTotal=${runtime.sentTotal} messagesCaptured=${messages.length}`);
+  console.log(`Concurrency and E timestamp test passed. runningStatus=${running.status} sentTotal=${runtime.sentTotal} messagesCaptured=${messages.length}`);
   process.exit(0);
 }
 

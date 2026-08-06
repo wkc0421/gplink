@@ -106,6 +106,11 @@ public class ScheduledTaskEntity extends GenericEntity<String> implements Record
     @Schema(description = "读取属性时每个属性间的间隔(毫秒),默认500")
     private Long propertyIntervalMs;
 
+    @Column(name = "report_read_result")
+    @DefaultValue("false")
+    @Schema(description = "读取属性后是否通过标准消息入口上报，默认关闭")
+    private Boolean reportReadResult;
+
     @Column(name = "state", length = 16)
     @EnumCodec
     @ColumnType(jdbcType = JDBCType.VARCHAR)

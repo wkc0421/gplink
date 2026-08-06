@@ -28,8 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/v1/system")
-@Authorize(ignore = true)
+@RequestMapping({
+    "/v1/system",
+    "/api/v1/system"
+})
+@Authorize
 @Tag(name = "Legacy System API")
 public class LegacySystemController {
 

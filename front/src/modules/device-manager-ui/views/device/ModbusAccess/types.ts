@@ -10,6 +10,29 @@ export type RegisterDataType =
 
 export type ByteOrder = 'ABCD' | 'CDAB' | 'BADC' | 'DCBA'
 
+export type AccessMode = 'existing' | 'tcp-server' | 'tcp-client'
+
+export type TcpQuickCreateMode = Exclude<AccessMode, 'existing'>
+
+export interface TcpQuickConfigForm {
+    networkName: string
+    accessName: string
+    description?: string
+    host: string
+    port?: number
+    publicHost: string
+    publicPort?: number
+    tlsEnabled: boolean
+    certId?: string
+}
+
+export interface QuickCreatedResources {
+    networkId?: string
+    accessId?: string
+    networkState?: string
+    accessState?: string
+}
+
 export interface RegisterMappingRow {
     key: string
     propertyId: string
@@ -33,6 +56,7 @@ export interface SlaveRow {
     description?: string
     autoDeviceId?: boolean
     autoDeviceName?: boolean
+    pollOverrideEnabled?: boolean
 }
 
 export interface ImportResult<T> {

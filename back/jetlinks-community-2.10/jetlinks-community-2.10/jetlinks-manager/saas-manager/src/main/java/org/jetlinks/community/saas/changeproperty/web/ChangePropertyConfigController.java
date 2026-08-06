@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.hswebframework.reactor.excel.ReactorExcel;
 import org.hswebframework.web.api.crud.entity.PagerResult;
 import org.hswebframework.web.api.crud.entity.QueryParamEntity;
+import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.exception.ValidationException;
 import org.jetlinks.community.io.excel.ImportExportService;
 import org.jetlinks.community.io.utils.FileUtils;
@@ -44,7 +45,11 @@ import java.util.Map;
 import static org.hswebframework.reactor.excel.ReactorExcel.read;
 
 @RestController
-@RequestMapping("/api/v1/change-property/config")
+@RequestMapping({
+    "/v1/change-property/config",
+    "/api/v1/change-property/config"
+})
+@Authorize
 @Tag(name = "Change Property Config API")
 public class ChangePropertyConfigController {
 

@@ -94,7 +94,7 @@
                                         ...item.tooltip,
                                     }"
                                     @click="item.onClick"
-                                    :hasPermission="'link/Protocol:' + item.key"
+                                    :hasPermission="'link/Protocol:' + (item.permission || item.key)"
                                 >
                                     <AIcon
                                         type="DeleteOutlined"
@@ -109,7 +109,7 @@
                         </CardBox>
                     </template>
                     <template #action="slotProps">
-                        <a-space :size="16">
+                            <a-space :size="16">
                             <template
                                 v-for="i in getActions(slotProps, 'table')"
                                 :key="i.key"
@@ -124,7 +124,7 @@
                                     @click="i.onClick"
                                     type="link"
                                     :danger="i.key === 'delete'"
-                                    :hasPermission="'link/Protocol:' + i.key"
+                                    :hasPermission="'link/Protocol:' + (i.permission || i.key)"
                                 >
                                     <template #icon
                                         ><AIcon :type="i.icon"
@@ -137,10 +137,24 @@
             </FullPage>
         </div>
         <Save v-if="visible" :data="current" @change="saveChange" />
+        <a-modal
+            v-model:open="passwordVisible"
+            :title="$t('Protocol.index.437945-11')"
+            :confirm-loading="passwordSubmitting"
+            :mask-closable="false"
+            @ok="confirmDownload"
+            @cancel="cancelDownload"
+        >
+            <a-input-password
+                v-model:value="downloadPassword"
+                :placeholder="$t('Protocol.index.437945-12')"
+                @press-enter="confirmDownload"
+            />
+        </a-modal>
     </j-page-container>
 </template>
 <script lang="ts" setup name="AccessConfigPage">
-import { list, remove } from '../../../api/link/protocol';
+import { downloadJar, list, remove } from '../../../api/link/protocol';
 import { onlyMessage } from '@jetlinks-web/utils';
 import Save from './Save/index.vue';
 import { link } from '../../../assets'
@@ -153,6 +167,11 @@ const params = ref<Record<string, any>>({});
 const route = useRoute();
 const visible = ref(false);
 const current = ref({});
+const downloadingId = ref<string>();
+const passwordVisible = ref(false);
+const passwordSubmitting = ref(false);
+const downloadPassword = ref('');
+const pendingDownload = ref<Record<string, any>>();
 
 const columns = [
     {
@@ -207,7 +226,7 @@ const columns = [
         title: $t('Protocol.index.437945-4'),
         key: 'action',
         fixed: 'right',
-        width: 100,
+        width: 180,
         scopedSlots: true,
     },
 ];
@@ -217,7 +236,23 @@ const getActions = (
     type: 'card' | 'table',
 ): any[] => {
     if (!data) return [];
-    const actions = [
+    const actions: any[] = [];
+    if (isJarProtocol(data) && hasJarSource(data)) {
+        actions.push({
+            key: 'download',
+            permission: 'view',
+            text: $t('Protocol.index.437945-9'),
+            tooltip: {
+                title: $t('Protocol.index.437945-9'),
+            },
+            icon: 'DownloadOutlined',
+            disabled: downloadingId.value === data.id,
+            onClick: () => {
+                openDownload(data);
+            },
+        });
+    }
+    actions.push(
         {
             key: 'update',
             text: $t('Protocol.index.437945-5'),
@@ -252,8 +287,68 @@ const getActions = (
             },
             icon: 'DeleteOutlined',
         },
-    ];
+    );
     return actions;
+};
+
+const isJarProtocol = (data: Record<string, any>) => {
+    const type = Array.isArray(data.type) ? data.type[0]?.value : data.type;
+    return type?.toLowerCase?.() === 'jar';
+};
+
+const hasJarSource = (data: Record<string, any>) => {
+    const configuration = data.configuration || {};
+    return !!(configuration.fileId || configuration.location);
+};
+
+const openDownload = (data: Record<string, any>) => {
+    if (downloadingId.value || passwordSubmitting.value) return;
+    pendingDownload.value = data;
+    downloadPassword.value = '';
+    passwordVisible.value = true;
+};
+
+const confirmDownload = async () => {
+    const data = pendingDownload.value;
+    if (!data || !downloadPassword.value) {
+        onlyMessage($t('Protocol.index.437945-13'), 'error');
+        return;
+    }
+    passwordSubmitting.value = true;
+    downloadingId.value = data.id;
+    let succeeded = false;
+    try {
+        const response: any = await downloadJar(data.id, downloadPassword.value);
+        const blob = response instanceof Blob
+            ? response
+            : new Blob([response], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const configuration = data.configuration || {};
+        const fileName = configuration.fileName || `${data.name || data.id}.jar`;
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        succeeded = true;
+    } catch (error: any) {
+        onlyMessage($t('Protocol.index.437945-14'), 'error');
+    } finally {
+        passwordSubmitting.value = false;
+        downloadingId.value = undefined;
+        if (succeeded) {
+            passwordVisible.value = false;
+            pendingDownload.value = undefined;
+            downloadPassword.value = '';
+        }
+    }
+};
+
+const cancelDownload = () => {
+    if (passwordSubmitting.value) return;
+    passwordVisible.value = false;
+    pendingDownload.value = undefined;
+    downloadPassword.value = '';
 };
 
 const handleAdd = () => {

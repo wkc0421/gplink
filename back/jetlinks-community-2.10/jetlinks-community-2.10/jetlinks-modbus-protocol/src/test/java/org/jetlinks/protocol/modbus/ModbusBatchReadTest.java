@@ -10,7 +10,6 @@ import org.jetlinks.protocol.modbus.mapping.ByteOrder;
 import org.jetlinks.protocol.modbus.mapping.RegisterDataType;
 import org.jetlinks.protocol.modbus.mapping.RegisterMapping;
 import org.jetlinks.protocol.modbus.mapping.RegisterMappingTable;
-import org.jetlinks.protocol.modbus.pending.PendingRequestQueue;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -63,8 +62,8 @@ public class ModbusBatchReadTest {
 
     @Test
     public void batchReadCoalescesIntoSingleFrame() {
-        PendingRequestQueue queue = new PendingRequestQueue();
-        ModbusRtuCodec codec = new ModbusRtuCodec(queue);
+        ModbusGatewayRequestExecutor executor = new ModbusGatewayRequestExecutor();
+        ModbusRtuCodec codec = new ModbusRtuCodec(executor);
         RegisterMappingTable table = buildTable();
 
         // Build a batch request the same way encode() would
@@ -75,14 +74,18 @@ public class ModbusBatchReadTest {
         String gatewayId = "gw1";
         String deviceId  = "slave1";
         String messageId = "msg-001";
-        PendingRequestQueue.PendingRequest pending = new PendingRequestQueue.PendingRequest(
-                gatewayId, deviceId, messageId, batchReq, 3000);
-
-        // Simulate what trackAndEncode stores in PENDING_META
-        codec.putBatchMeta(messageId, props, 0);
-
-        queue.offer(gatewayId, pending);
-        queue.promote(gatewayId);
+        ModbusGatewayRequestExecutor.PendingRequest pending =
+                ModbusGatewayRequestExecutor.PendingRequest.builder()
+                        .gatewayId(gatewayId)
+                        .deviceId(deviceId)
+                        .messageId(messageId)
+                        .replyMessageId(messageId)
+                        .request(batchReq)
+                        .timeoutMillis(3000)
+                        .batchPropertyIds(props)
+                        .batchStartAddress(0)
+                        .build();
+        executor.submit(pending);
 
         // Build a fake FC03 response: slaveId=1, fc=3, byteCount=6
         // temp = 0x00FA (250 → 25.0°C), humidity = 0x01F4 (500 → 50.0%), status = 0x0001
@@ -115,20 +118,26 @@ public class ModbusBatchReadTest {
 
     @Test
     public void batchReadHandlesPayloadTooShortGracefully() {
-        PendingRequestQueue queue = new PendingRequestQueue();
-        ModbusRtuCodec codec = new ModbusRtuCodec(queue);
+        ModbusGatewayRequestExecutor executor = new ModbusGatewayRequestExecutor();
+        ModbusRtuCodec codec = new ModbusRtuCodec(executor);
         RegisterMappingTable table = buildTable();
 
         // Request 3 regs but response only returns 2 (edge case / truncation)
         ModbusRequest batchReq = ModbusRequest.read(1, ModbusFunctionCode.READ_HOLDING_REGISTERS, 0, 3);
         String gatewayId = "gw2";
         String messageId = "msg-002";
-        PendingRequestQueue.PendingRequest pending = new PendingRequestQueue.PendingRequest(
-                gatewayId, "slave1", messageId, batchReq, 3000);
-
-        codec.putBatchMeta(messageId, Arrays.asList("temperature", "humidity", "status"), 0);
-        queue.offer(gatewayId, pending);
-        queue.promote(gatewayId);
+        ModbusGatewayRequestExecutor.PendingRequest pending =
+                ModbusGatewayRequestExecutor.PendingRequest.builder()
+                        .gatewayId(gatewayId)
+                        .deviceId("slave1")
+                        .messageId(messageId)
+                        .replyMessageId(messageId)
+                        .request(batchReq)
+                        .timeoutMillis(3000)
+                        .batchPropertyIds(Arrays.asList("temperature", "humidity", "status"))
+                        .batchStartAddress(0)
+                        .build();
+        executor.submit(pending);
 
         // Only 2 registers in payload (4 bytes data)
         byte[] body = {0x01, 0x03, 0x04, 0x00, (byte) 0xFA, 0x01, (byte) 0xF4};

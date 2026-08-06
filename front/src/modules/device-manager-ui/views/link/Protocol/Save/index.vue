@@ -62,6 +62,7 @@
                     v-else
                     v-model:modelValue="formData.configuration.location"
                     @change="handleFileUploadChange"
+                    @uploaded="handleFileUploaded"
                 />
             </a-form-item>
             <a-form-item :label="$t('Save.index.903552-9')" name="description">
@@ -139,7 +140,14 @@ const { onBack } = useTabSaveSuccessBack()
 
 const changeType = (value: Array<string>) => {
     formData.value.type = value[0];
-    formData.value.configuration.location = '';
+    formData.value.configuration = {
+        location: '',
+    };
+};
+
+const handleFileUploaded = (file: any) => {
+    formData.value.configuration.fileId = file?.id;
+    formData.value.configuration.fileName = file?.name;
 };
 
 const onSubmit = async () => {

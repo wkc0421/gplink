@@ -91,7 +91,8 @@ public class TcpClientDeviceGatewayProvider implements DeviceGatewayProvider {
                             registry,
                             messageHandler,
                             sessionManager,
-                            client
+                            client,
+                            (String) properties.getConfiguration().get("deviceId")
                     );
                 });
     }

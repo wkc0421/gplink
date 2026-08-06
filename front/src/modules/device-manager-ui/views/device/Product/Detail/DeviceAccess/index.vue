@@ -218,6 +218,14 @@
             </a-form>
           </div>
         </template>
+        <template v-if="isModbusProduct">
+          <Title data="Modbus轮询计划" />
+          <ModbusPollingConfigEditor
+            v-model="formData.data"
+            mode="product"
+            :readable-properties="modbusReadableProperties"
+          />
+        </template>
         <Title :data="$t('DeviceAccess.index.594346-14')">
           <template #extra>
             <a-tooltip :title="$t('DeviceAccess.index.594346-15')">
@@ -363,6 +371,8 @@ import {onlyMessage} from "@/utils/comm";
 import {pick} from "lodash-es";
 import {useI18n} from "vue-i18n";
 import { useTabSaveSuccessBack } from '@/hooks'
+import ModbusPollingConfigEditor from '@/components/ModbusPollingConfigEditor/index.vue'
+import { getModbusPollingStatus, waitForModbusPollingApplied } from '@/modules/device-manager-ui/api/modbusPolling'
 
 const { t: $t } = useI18n();
 const route = useRoute();
@@ -404,6 +414,27 @@ const form = reactive<Record<string, any>>({
 const formData = reactive<Record<string, any>>({
   data: productStore.current?.configuration || {},
 });
+
+const isModbusProduct = computed(() =>
+  String(productStore.current?.messageProtocol || '').toLowerCase().includes('modbus'),
+)
+
+const modbusReadableProperties = computed(() => {
+  const raw = formData.data?.registerMap
+  let rows: any[] = []
+  try {
+    rows = Array.isArray(raw) ? raw : JSON.parse(raw || '[]')
+  } catch {
+    rows = []
+  }
+  return rows
+    .filter(item => [1, 2, 3, 4].includes(Number(item.functionCode ?? item.fc)))
+    .map(item => ({
+      label: item.propertyName || item.propertyId,
+      value: item.propertyId,
+    }))
+    .filter(item => item.value)
+})
 //获取物模型下拉选项
 const getOptions = (i: any) => {
   if (i.type.type === "enum") {
@@ -937,6 +968,9 @@ const updateAccessData = async (id: string, values: any) => {
     messageProtocol: access.value?.protocol,
   };
   submitLoading.value = true;
+  const pollingBefore: any = isModbusProduct.value
+    ? await getModbusPollingStatus().catch(() => undefined)
+    : undefined;
   const updateDeviceResp = await updateDevice(accessObj).catch(() => {
     submitLoading.value = false;
   });
@@ -962,7 +996,12 @@ const updateAccessData = async (id: string, values: any) => {
     submitLoading.value = false;
   });
   if (resp.status === 200) {
-    onlyMessage($t("DeviceAccess.index.594346-30"));
+    const applied = isModbusProduct.value
+      ? await waitForModbusPollingApplied(
+          Number(pollingBefore?.result?.requestedRevision ?? pollingBefore?.requestedRevision),
+        )
+      : true;
+    onlyMessage(applied ? $t("DeviceAccess.index.594346-30") : '配置已保存，运行时刷新仍在进行中');
     productStore.current!.storePolicy = storePolicy;
     const isTabBack = await onBack(resp)
     if (!isTabBack) {

@@ -22,7 +22,10 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/mqtt/forward/subscription")
+@RequestMapping({
+    "/v1/mqtt/forward/subscription",
+    "/api/v1/mqtt/forward/subscription"
+})
 @RequiredArgsConstructor
 @Authorize
 @Resource(id = "mqtt-forward-subscription", name = "MQTT转发订阅")

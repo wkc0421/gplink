@@ -57,8 +57,11 @@ import java.util.stream.Collectors;
 import static org.hswebframework.reactor.excel.ReactorExcel.read;
 
 @RestController
-@RequestMapping("/api/v1/product")
-@Authorize(ignore = true)
+@RequestMapping({
+    "/v1/product",
+    "/api/v1/product"
+})
+@Authorize
 @Tag(name = "Legacy Product API")
 public class LegacyProductController {
 

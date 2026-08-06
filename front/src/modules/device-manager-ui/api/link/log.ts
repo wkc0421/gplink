@@ -5,3 +5,6 @@ export const queryAccess = (data: object) =>
 
 export const querySystem = (data: object) =>
     request.post(`/logger/system/_query`, data);
+
+export const latestApplicationLog = (params: { lines?: number }) =>
+    request.get(`/system/logs/latest`, params);

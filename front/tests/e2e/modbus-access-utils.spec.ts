@@ -1,13 +1,131 @@
 import { expect, test } from '@playwright/test'
 import {
+    buildTcpAccessPayload,
+    buildTcpNetworkPayload,
     buildMetadataFromRegisterMap,
+    ensureQuickResourceId,
     parseRegisterMapText,
     parseSlaveText,
+    validateTcpQuickConfig,
     validateSlaveRows,
     validateRegisterRows,
 } from '../../src/modules/device-manager-ui/views/device/ModbusAccess/utils'
+import type { TcpQuickConfigForm } from '../../src/modules/device-manager-ui/views/device/ModbusAccess/types'
 
 test.describe('Modbus 接入向导工具函数', () => {
+    const tcpForm: TcpQuickConfigForm = {
+        networkName: 'Modbus TCP 网络组件',
+        accessName: 'Modbus TCP 接入网关',
+        description: '快速配置',
+        host: '0.0.0.0',
+        port: 502,
+        publicHost: '192.168.1.10',
+        publicPort: 1502,
+        tlsEnabled: false,
+    }
+
+    test('构造 TCP 服务端网络组件和接入网关 payload', () => {
+        const network = buildTcpNetworkPayload('tcp-server', tcpForm)
+        const access = buildTcpAccessPayload(
+            'tcp-server',
+            tcpForm,
+            'network-server-1',
+            'gateway-1',
+            ['slave-1', 'slave-2'],
+        )
+
+        expect(network).toMatchObject({
+            type: 'TCP_SERVER',
+            state: 'disabled',
+            shareCluster: true,
+            configuration: {
+                host: '0.0.0.0',
+                port: 502,
+                publicHost: '192.168.1.10',
+                publicPort: 1502,
+                secure: false,
+                parserType: 'DIRECT',
+                parserConfiguration: {},
+            },
+        })
+        expect(network.configuration).not.toHaveProperty('ssl')
+        expect(access).toMatchObject({
+            provider: 'tcp-server-gateway',
+            protocol: 'modbus-rtu.v1',
+            transport: 'TCP',
+            channel: 'network',
+            channelId: 'network-server-1',
+            configuration: {
+                deviceId: 'gateway-1',
+                childDeviceIds: ['slave-1', 'slave-2'],
+            },
+        })
+    })
+
+    test('构造 TCP 客户端 payload 并使用 ssl 字段', () => {
+        const form = {
+            ...tcpForm,
+            host: 'modbus.example.com',
+            port: 4000,
+            tlsEnabled: true,
+            certId: 'cert-1',
+        }
+        const network = buildTcpNetworkPayload('tcp-client', form)
+        const access = buildTcpAccessPayload('tcp-client', form, 'network-client-1', 'gateway-1', ['slave-1'])
+
+        expect(network).toMatchObject({
+            type: 'TCP_CLIENT',
+            configuration: {
+                host: 'modbus.example.com',
+                port: 4000,
+                ssl: true,
+                certId: 'cert-1',
+                parserType: 'DIRECT',
+            },
+        })
+        expect(network.configuration).not.toHaveProperty('secure')
+        expect(access.provider).toBe('tcp-client-gateway')
+        expect(access.configuration).toEqual({ deviceId: 'gateway-1' })
+    })
+
+    test('校验 TCP 快速配置必填项、端口和 TLS 证书', () => {
+        const errors = validateTcpQuickConfig('tcp-server', {
+            ...tcpForm,
+            networkName: '',
+            accessName: '',
+            host: '',
+            port: 0,
+            publicHost: '',
+            publicPort: 65536,
+            tlsEnabled: true,
+            certId: undefined,
+        })
+
+        expect(errors).toEqual(expect.arrayContaining([
+            '请输入网络组件名称',
+            '请输入接入网关名称',
+            '请输入监听地址',
+            '监听端口范围应为 1-65535',
+            '请输入公网地址',
+            '公网端口范围应为 1-65535',
+            '启用 TLS 后必须选择证书',
+        ]))
+    })
+
+    test('失败重试时复用已创建资源 ID', async () => {
+        let createCount = 0
+        const create = async () => {
+            createCount += 1
+            return 'created-resource-1'
+        }
+
+        const firstId = await ensureQuickResourceId(undefined, create)
+        const retryId = await ensureQuickResourceId(firstId, create)
+
+        expect(retryId).toBe('created-resource-1')
+        expect(createCount).toBe(1)
+    })
+
     test('解析 registerMap CSV 并兼容字段别名', () => {
         const text = [
             'propertyId,propertyName,fc,addr,qty,dataType,order,scale,offset,writable,unit',

@@ -25,7 +25,6 @@ import org.jetlinks.core.metadata.DeviceMetadata;
 import org.jetlinks.core.metadata.PropertyMetadata;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -689,34 +688,40 @@ public class ChangePropertyConfigService
     public Mono<Map<String, Object>> monitorOnce() {
         MonitorResult result = new MonitorResult();
         int scanCount = Math.max(1, monitorScanCount);
+        // Enabled configurations are the finite work set. Latest values may contain stale fields,
+        // so they must not drive the monitor lifecycle or keep a cursor-based scan alive.
         return redis
             .<String, String>opsForHash()
-            .scan(LATEST_KEY, ScanOptions.scanOptions().count(scanCount).build())
+            .keys(CONFIG_INDEX_KEY)
             .buffer(scanCount)
-            .concatMap(batch -> {
-                Map<String, String> latest = batch
-                    .stream()
-                    .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (left, right) -> right,
-                        LinkedHashMap::new));
-                result.latestCount += latest.size();
-                if (latest.isEmpty()) {
-                    return Mono.empty();
-                }
-                List<String> pairs = new ArrayList<>(latest.keySet());
-                return Mono
-                    .zip(multiGet(CONFIG_INDEX_KEY, pairs), multiGet(LAST_KEY, pairs))
-                    .flatMap(tuple -> handleMonitorLatestValues(
+            .concatMap(pairs -> Mono
+                .zip(
+                    multiGet(CONFIG_INDEX_KEY, pairs),
+                    multiGet(LATEST_KEY, pairs),
+                    multiGet(LAST_KEY, pairs))
+                .flatMap(tuple -> {
+                    Map<String, String> latest = latestValues(pairs, tuple.getT2());
+                    result.latestCount += latest.size();
+                    return handleMonitorLatestValues(
                         latest,
                         pairs,
                         tuple.getT1(),
-                        tuple.getT2(),
-                        result))
-                    .then();
-            })
+                        tuple.getT3(),
+                        result);
+                })
+                .then())
             .then(Mono.fromSupplier(result::toMap));
+    }
+
+    private Map<String, String> latestValues(List<String> pairs, List<String> values) {
+        Map<String, String> latest = new LinkedHashMap<>();
+        for (int i = 0; i < pairs.size(); i++) {
+            String value = valueAt(values, i);
+            if (value != null) {
+                latest.put(pairs.get(i), value);
+            }
+        }
+        return latest;
     }
 
     private Mono<Void> handleMonitorLatestValues(Map<String, String> latest,

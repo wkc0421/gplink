@@ -18,6 +18,7 @@ package org.jetlinks.community.device.message;
 import lombok.extern.slf4j.Slf4j;
 import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.community.PropertyConstants;
+import org.jetlinks.community.gateway.DeviceMessageUtils;
 import org.jetlinks.core.Values;
 import org.jetlinks.core.device.DeviceOperator;
 import org.jetlinks.core.device.DeviceRegistry;
@@ -290,6 +291,9 @@ public class DeviceMessageConnector implements DecodedClientMessageHandler {
         if (null == message) {
             return Mono.empty();
         }
+        if (message instanceof DeviceMessage deviceMessage) {
+            DeviceMessageUtils.addReportedPropertiesHeader(deviceMessage);
+        }
         message.addHeaderIfAbsent(PropertyConstants.uid, IDGenerator.RANDOM.generate());
         return this
                 .getTopic(message)
@@ -297,6 +301,7 @@ public class DeviceMessageConnector implements DecodedClientMessageHandler {
                 .onErrorResume(doOnError)
                 .then();
     }
+
 
     private Flux<String> getTopic(Message message) {
         Flux<String> topicsStream = createDeviceMessageTopic(registry, message);

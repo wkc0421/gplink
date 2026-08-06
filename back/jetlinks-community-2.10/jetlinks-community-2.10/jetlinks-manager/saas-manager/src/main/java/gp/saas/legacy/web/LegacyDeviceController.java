@@ -52,8 +52,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/device")
-@Authorize(ignore = true)
+@RequestMapping({
+    "/v1/device",
+    "/api/v1/device"
+})
+@Authorize
 public class LegacyDeviceController {
 
     private static final String LEGACY_PASSWORD = "yada8888";

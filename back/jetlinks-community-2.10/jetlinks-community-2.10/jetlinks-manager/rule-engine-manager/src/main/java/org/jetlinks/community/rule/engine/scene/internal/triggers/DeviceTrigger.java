@@ -310,6 +310,9 @@ public class DeviceTrigger extends DeviceSelectorSpec implements SceneTriggerPro
 
             }
         }
+        if ("headers".equals(arr[0])) {
+            return "this.headers['" + String.join(".", Arrays.copyOfRange(arr, 1, arr.length)) + "']";
+        }
         return "this['" + String.join(".", Arrays.copyOfRange(arr, 1, arr.length)) + "']";
     }
 

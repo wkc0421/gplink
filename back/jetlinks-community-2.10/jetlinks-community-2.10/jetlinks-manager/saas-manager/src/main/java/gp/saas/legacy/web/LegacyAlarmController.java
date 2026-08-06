@@ -4,14 +4,18 @@ import com.alibaba.fastjson.JSONObject;
 import gp.saas.legacy.dto.DiYaAlarmRecordEntity;
 import gp.saas.legacy.dto.SynchronizationAlarmRecordEntity;
 import gp.saas.legacy.service.LegacyMessagePublishService;
+import gp.saas.legacy.util.RuleSceneUtil;
 import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.bean.FastBeanCopier;
+import org.hswebframework.web.exception.BusinessException;
 import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.community.rule.engine.entity.AlarmConfigEntity;
 import org.jetlinks.community.rule.engine.entity.AlarmRuleBindEntity;
+import org.jetlinks.community.rule.engine.entity.SceneEntity;
 import org.jetlinks.community.rule.engine.service.AlarmConfigService;
 import org.jetlinks.community.rule.engine.service.AlarmRecordService;
 import org.jetlinks.community.rule.engine.service.AlarmRuleBindService;
+import org.jetlinks.community.rule.engine.service.SceneService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,22 +34,28 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/alarm")
-@Authorize(ignore = true)
+@RequestMapping({
+    "/v1/alarm",
+    "/api/v1/alarm"
+})
+@Authorize
 public class LegacyAlarmController {
 
     private final AlarmRecordService alarmRecordService;
     private final AlarmConfigService alarmConfigService;
     private final AlarmRuleBindService alarmRuleBindService;
+    private final SceneService sceneService;
     private final LegacyMessagePublishService messagePublishService;
 
     public LegacyAlarmController(AlarmRecordService alarmRecordService,
                                  AlarmConfigService alarmConfigService,
                                  AlarmRuleBindService alarmRuleBindService,
+                                 SceneService sceneService,
                                  LegacyMessagePublishService messagePublishService) {
         this.alarmRecordService = alarmRecordService;
         this.alarmConfigService = alarmConfigService;
         this.alarmRuleBindService = alarmRuleBindService;
+        this.sceneService = sceneService;
         this.messagePublishService = messagePublishService;
     }
 
@@ -83,10 +93,12 @@ public class LegacyAlarmController {
 
     @PutMapping("/config/{id}")
     public Mono<Integer> updateAlarmConfig(@PathVariable String id, @RequestBody AlarmConfigEntity entity) {
-        return alarmConfigService.findById(id).flatMap(config -> {
-            FastBeanCopier.copy(entity, config);
-            return alarmConfigService.updateById(id, config);
-        });
+        return alarmConfigService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.alarm_config_not_found")))
+            .flatMap(config -> {
+                FastBeanCopier.copy(entity, config);
+                return alarmConfigService.updateById(id, config);
+            });
     }
 
     @GetMapping("/config/{id}")
@@ -96,7 +108,13 @@ public class LegacyAlarmController {
 
     @DeleteMapping("/config/{id}")
     public Mono<Integer> deleteAlarmConfig(@PathVariable String id) {
-        return alarmConfigService.deleteById(id);
+        return alarmConfigService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.alarm_config_not_found")))
+            .flatMap(config -> alarmRuleBindService
+                .createDelete()
+                .where(AlarmRuleBindEntity::getAlarmId, id)
+                .execute()
+                .then(alarmConfigService.deleteById(id)));
     }
 
     @GetMapping("/config/{id}/_enable")
@@ -111,19 +129,40 @@ public class LegacyAlarmController {
 
     @GetMapping("/config/{id}/_bind")
     public Mono<Integer> bindScene(@PathVariable String id, @RequestParam String ruleId) {
-        AlarmRuleBindEntity bind = new AlarmRuleBindEntity();
-        bind.setAlarmId(id);
-        bind.setRuleId(ruleId);
-        return alarmRuleBindService.insert(bind);
+        return findConfig(id)
+            .then(findNumericRule(ruleId))
+            .then(Mono.defer(() -> {
+                AlarmRuleBindEntity bind = new AlarmRuleBindEntity();
+                bind.setAlarmId(id);
+                bind.setRuleId(ruleId);
+                bind.setBranchIndex(AlarmRuleBindEntity.ANY_BRANCH_INDEX);
+                String bindId = bind.getId();
+                return alarmRuleBindService.findById(bindId)
+                    .map(exists -> 0)
+                    .switchIfEmpty(alarmRuleBindService.insert(bind));
+            }));
     }
 
     @GetMapping("/config/{id}/_unbind")
     public Mono<Integer> unbindScene(@PathVariable String id, @RequestParam String ruleId) {
-        return alarmRuleBindService
-            .createDelete()
-            .where(AlarmRuleBindEntity::getAlarmId, id)
-            .in(AlarmRuleBindEntity::getRuleId, ruleId)
-            .execute();
+        return findConfig(id)
+            .then(findNumericRule(ruleId))
+            .then(alarmRuleBindService
+                .createDelete()
+                .where(AlarmRuleBindEntity::getAlarmId, id)
+                .where(AlarmRuleBindEntity::getRuleId, ruleId)
+                .execute());
+    }
+
+    private Mono<AlarmConfigEntity> findConfig(String id) {
+        return alarmConfigService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.alarm_config_not_found")));
+    }
+
+    private Mono<SceneEntity> findNumericRule(String id) {
+        return sceneService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new BusinessException("error.numeric_alarm_rule_not_found")))
+            .map(RuleSceneUtil::requireNumericAlarmRule);
     }
 
     private DiYaAlarmRecordEntity toDiYaAlarm(SynchronizationAlarmRecordEntity request) {

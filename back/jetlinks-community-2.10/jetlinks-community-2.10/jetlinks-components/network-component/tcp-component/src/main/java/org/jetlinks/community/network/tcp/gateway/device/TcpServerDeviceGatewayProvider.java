@@ -33,6 +33,8 @@ import org.springframework.util.Assert;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class TcpServerDeviceGatewayProvider implements DeviceGatewayProvider {
@@ -87,13 +89,28 @@ public class TcpServerDeviceGatewayProvider implements DeviceGatewayProvider {
 
                 Assert.hasText(protocol, "protocol can not be empty");
 
+                Object configuredChildren = properties.getConfiguration().get("childDeviceIds");
+                List<String> childDeviceIds = configuredChildren instanceof Iterable
+                    ? java.util.stream.StreamSupport.stream(((Iterable<?>) configuredChildren).spliterator(), false)
+                        .map(String::valueOf)
+                        .filter(id -> !id.isEmpty())
+                        .collect(Collectors.toList())
+                    : configuredChildren == null
+                        ? java.util.Collections.emptyList()
+                        : java.util.Arrays.stream(String.valueOf(configuredChildren).split(","))
+                            .map(String::trim)
+                            .filter(id -> !id.isEmpty())
+                            .collect(Collectors.toList());
+
                 return new TcpServerDeviceGateway(
                     properties.getId(),
                     Mono.defer(() -> protocolSupports.getProtocol(protocol)),
                     registry,
                     messageHandler,
                     sessionManager,
-                    mqttServer
+                    mqttServer,
+                    (String) properties.getConfiguration().get("deviceId"),
+                    childDeviceIds
                 );
             });
     }

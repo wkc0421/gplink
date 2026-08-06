@@ -249,11 +249,6 @@ func (t *runningTask) connect() error {
 func (t *runningTask) run(ctx context.Context, manager *Manager) {
 	defer recoverTaskPanic(t.config.ID, "run")
 
-	perSecond := float64(t.config.MessagesPerMinute) / 60.0
-	if perSecond < 1 {
-		perSecond = 1
-	}
-
 	workers := t.workerCount()
 	jobs := make(chan int, workers*4)
 	var wg sync.WaitGroup
@@ -281,19 +276,17 @@ func (t *runningTask) run(ctx context.Context, manager *Manager) {
 	defer close(jobs)
 	defer wg.Wait()
 
-	var carry float64
+	var carry int
 	var index int
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			carry += perSecond
-			n := int(carry)
+			n := messagesDueForSecond(t.config.MessagesPerMinute, &carry)
 			if n < 1 {
 				continue
 			}
-			carry -= float64(n)
 			for i := 0; i < n; i++ {
 				deviceIndex := index % t.config.DeviceCount
 				index++
@@ -307,6 +300,16 @@ func (t *runningTask) run(ctx context.Context, manager *Manager) {
 			}
 		}
 	}
+}
+
+func messagesDueForSecond(messagesPerMinute int, carry *int) int {
+	if messagesPerMinute <= 0 {
+		return 0
+	}
+	*carry += messagesPerMinute
+	due := *carry / 60
+	*carry %= 60
+	return due
 }
 
 func (t *runningTask) publishDevice(idx int, manager *Manager) {

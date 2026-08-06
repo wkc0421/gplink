@@ -845,7 +845,7 @@
             "id": "e47f5c42cbb3441e8aa769f5dbd7b214",
             "url": "/iot/device/ModbusAccess",
             "icon": "ApiOutlined",
-            "sortIndex": 4,
+            "sortIndex": 7,
             "showPage": [
               "device-product",
               "device-instance",
@@ -936,6 +936,163 @@
                     "permission": "device-opt-api",
                     "actions": [
                       "read-property"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accessSupport": {
+              "text": "支持",
+              "value": "support"
+            },
+            "supportDataAccess": false
+          },
+          {
+            "code": "device/MqttClientAccess",
+            "name": "MQTT客户端向导",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "MQTT客户端向导",
+                "en_US": "MQTT Client Wizard",
+                "en": "MQTT Client Wizard"
+              }
+            },
+            "owner": "iot",
+            "id": "c6d5b41f24814df5b51a7a49b128f062",
+            "url": "/iot/device/MqttClientAccess",
+            "icon": "CloudServerOutlined",
+            "sortIndex": 8,
+            "showPage": [
+              "network-config",
+              "device-gateway",
+              "device-product",
+              "device-instance"
+            ],
+            "permissions": [
+              {
+                "permission": "network-config",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "certificate",
+                "actions": [
+                  "query"
+                ]
+              },
+              {
+                "permission": "device-gateway",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "protocol-supports",
+                "actions": [
+                  "query"
+                ]
+              },
+              {
+                "permission": "device-product",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "device-instance",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": [
+                  {
+                    "permission": "network-config",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-gateway",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-product",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-instance",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "save",
+                "name": "保存",
+                "i18nMessages": {
+                  "zh_CN": "保存",
+                  "en_US": "Save",
+                  "en": "Save"
+                },
+                "permissions": [
+                  {
+                    "permission": "network-config",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "certificate",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-gateway",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "protocol-supports",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-product",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "device-instance",
+                    "actions": [
+                      "query",
+                      "save"
                     ]
                   }
                 ]
@@ -2229,6 +2386,39 @@
                 ]
               },
               {"permission": "resources-cloud", "actions": ["query"]}
+            ],
+            "accessSupport": {
+              "text": "不支持",
+              "value": "unsupported"
+            },
+            "supportDataAccess": false
+          },
+          {
+            "sortIndex": 12,
+            "owner": "iot",
+            "name": "应用日志",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "应用日志",
+                "en_US": "Application Log",
+                "en": "Application Log"
+              }
+            },
+            "id": "b4c1e5f9a72d4ab4b2de982f4c1a7f61",
+            "code": "link/ApplicationLog",
+            "describe": "",
+            "url": "/iot/link/applicationLog",
+            "icon": "FileTextOutlined",
+            "showPage": [
+              "system-application-log"
+            ],
+            "permissions": [
+              {
+                "permission": "system-application-log",
+                "actions": [
+                  "query"
+                ]
+              }
             ],
             "accessSupport": {
               "text": "不支持",

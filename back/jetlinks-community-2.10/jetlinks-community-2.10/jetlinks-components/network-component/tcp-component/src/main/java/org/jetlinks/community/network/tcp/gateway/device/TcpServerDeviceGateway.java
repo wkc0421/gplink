@@ -25,10 +25,12 @@ import org.jetlinks.core.device.DeviceProductOperator;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.DeviceOnlineMessage;
 import org.jetlinks.core.message.codec.DefaultTransport;
 import org.jetlinks.core.message.codec.FromDeviceMessageContext;
 import org.jetlinks.core.message.codec.Transport;
 import org.jetlinks.core.server.DeviceGatewayContext;
+import org.jetlinks.core.server.session.ChildrenDeviceSession;
 import org.jetlinks.core.server.session.DeviceSession;
 import org.jetlinks.core.trace.DeviceTracer;
 import org.jetlinks.core.trace.MonoTracer;
@@ -50,6 +52,8 @@ import reactor.core.scheduler.Schedulers;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -77,6 +81,21 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
 
     private final DeviceGatewayHelper helper;
 
+    /**
+     * Modbus RTU has no in-band device identity. When a server-side gateway
+     * accepts a connection, bind it to the configured logical gateway device
+     * before the first probe response arrives so child-device requests can be
+     * routed through the connection.
+     */
+    private final String gatewayDeviceId;
+
+    /**
+     * Optional child devices sharing the physical Modbus TCP connection.
+     * Modbus has no child-device login frame, so these sessions must be
+     * established when the parent connection is accepted.
+     */
+    private final List<String> childDeviceIds;
+
     //连接检查超时时间,超过时间连接没有被正确处理返回会话,将被自动断开连接
     @Setter
     private Duration connectCheckTimeout = TimeUtils.parse(System.getProperty("gateway.tcp.network.connect-check-timeout", "10s"));
@@ -86,13 +105,17 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
                                   DeviceRegistry deviceRegistry,
                                   DecodedClientMessageHandler clientMessageHandler,
                                   DeviceSessionManager sessionManager,
-                                  TcpServer tcpServer) {
+                                  TcpServer tcpServer,
+                                  String gatewayDeviceId,
+                                  List<String> childDeviceIds) {
         super(id);
         this.protocol = protocol;
         this.registry = deviceRegistry;
         this.tcpServer = tcpServer;
         this.sessionManager = sessionManager;
         this.helper = new DeviceGatewayHelper(registry, sessionManager, clientMessageHandler);
+        this.gatewayDeviceId = gatewayDeviceId;
+        this.childDeviceIds = childDeviceIds == null ? Collections.emptyList() : childDeviceIds;
     }
 
     @Override
@@ -133,9 +156,38 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
 
             sessionRef.set(new UnknownTcpDeviceSession(client.getId(), client, DefaultTransport.TCP, monitor));
 
+            if (gatewayDeviceId != null && !gatewayDeviceId.isEmpty()) {
+                DeviceOnlineMessage online = new DeviceOnlineMessage();
+                online.setDeviceId(gatewayDeviceId);
+                online.timestamp(System.currentTimeMillis());
+                handleDeviceMessage(online)
+                    .then(bindConfiguredChildren())
+                    .subscribe(null,
+                               err -> log.warn("bind configured gateway device [{}] failed", gatewayDeviceId, err));
+            }
+
             legalityChecker = Schedulers
                 .parallel()
                 .schedule(this::checkLegality, connectCheckTimeout.toMillis(), TimeUnit.MILLISECONDS);
+        }
+
+        private Mono<Void> bindConfiguredChildren() {
+            if (childDeviceIds.isEmpty()) {
+                return Mono.empty();
+            }
+            return Mono
+                .justOrEmpty(sessionRef.get())
+                .filter(parentSession -> !(parentSession instanceof UnknownTcpDeviceSession))
+                .flatMapMany(parentSession -> reactor.core.publisher.Flux
+                    .fromIterable(childDeviceIds)
+                    .flatMap(childId -> registry
+                        .getDevice(childId)
+                        .flatMap(child -> sessionManager.compute(
+                            childId,
+                            Mono.just(new ChildrenDeviceSession(childId, parentSession, child)),
+                            existing -> Mono.just(new ChildrenDeviceSession(childId, parentSession, child)))))
+                )
+                .then();
         }
 
         public void checkLegality() {
@@ -203,6 +255,7 @@ class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGate
                     session -> {
                         TcpDeviceSession deviceSession = session.unwrap(TcpDeviceSession.class);
                         deviceSession.setClient(client);
+                        deviceSession.setShutdownClientOnClose(true);
                         sessionRef.set(deviceSession);
                     },
                     () -> log.warn("TCP{}: The device[{}] in the message body does not exist:{}", address, message.getDeviceId(), message)

@@ -51,14 +51,29 @@ class TcpDeviceSession implements DeviceSession {
 
     private final DeviceGatewayMonitor monitor;
 
+    private volatile boolean shutdownClientOnClose;
+
     TcpDeviceSession(DeviceOperator operator,
                      TcpClient client,
                      Transport transport,
                      DeviceGatewayMonitor monitor) {
+        this(operator, client, transport, monitor, true);
+    }
+
+    TcpDeviceSession(DeviceOperator operator,
+                     TcpClient client,
+                     Transport transport,
+                     DeviceGatewayMonitor monitor,
+                     boolean shutdownClientOnClose) {
         this.operator = operator;
         this.client = client;
         this.transport = transport;
         this.monitor=monitor;
+        this.shutdownClientOnClose = shutdownClientOnClose;
+    }
+
+    void setShutdownClientOnClose(boolean shutdownClientOnClose) {
+        this.shutdownClientOnClose = shutdownClientOnClose;
     }
 
     @Override
@@ -89,7 +104,9 @@ class TcpDeviceSession implements DeviceSession {
 
     @Override
     public void close() {
-        client.shutdown();
+        if (shutdownClientOnClose) {
+            client.shutdown();
+        }
     }
 
     @Override
