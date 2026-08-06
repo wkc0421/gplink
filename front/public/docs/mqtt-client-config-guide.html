@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MQTT 客户端配置说明</title>
+  <style>
+    :root { color-scheme: light; --blue:#1677ff; --ink:#1f2937; --muted:#667085; --line:#e5e7eb; --soft:#f6f8fb; --ok:#087443; --warn:#ad5c00; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin:0; background:#f3f6fa; color:var(--ink); font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",Arial,sans-serif; }
+    a { color:var(--blue); }
+    .shell { width:min(1120px, calc(100% - 32px)); margin:0 auto; padding:32px 0 64px; }
+    .hero { padding:30px 34px; border-radius:16px; color:#fff; background:linear-gradient(135deg,#155eef,#1677ff 58%,#36a9ff); box-shadow:0 12px 30px #1677ff22; }
+    .eyebrow { margin:0 0 5px; font-size:13px; letter-spacing:.08em; opacity:.82; }
+    h1 { margin:0; font-size:clamp(26px,4vw,38px); line-height:1.25; }
+    .hero p { max-width:800px; margin:12px 0 0; color:#e9f2ff; }
+    .layout { display:grid; grid-template-columns:220px 1fr; gap:24px; align-items:start; margin-top:24px; }
+    .toc { position:sticky; top:18px; padding:18px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+    .toc strong { display:block; margin-bottom:8px; }
+    .toc a { display:block; padding:5px 0; color:#475467; text-decoration:none; font-size:14px; }
+    .toc a:hover { color:var(--blue); }
+    main { min-width:0; }
+    section.card { margin-bottom:20px; padding:26px 30px; border:1px solid var(--line); border-radius:12px; background:#fff; box-shadow:0 4px 14px #1f293708; }
+    h2 { margin:0 0 12px; font-size:23px; line-height:1.35; }
+    h3 { margin:22px 0 6px; font-size:18px; }
+    p { margin:8px 0; }
+    ul,ol { margin:8px 0 12px; padding-left:23px; }
+    .notice { margin:14px 0; padding:13px 15px; border-left:4px solid var(--blue); border-radius:6px; background:#eff6ff; }
+    .notice.ok { border-color:#12b76a; background:#ecfdf3; color:#075e38; }
+    .notice.warn { border-color:#f79009; background:#fffaeb; color:#8a4b08; }
+    .checklist { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px; padding:0; list-style:none; }
+    .checklist li { padding:10px 12px 10px 36px; border:1px solid var(--line); border-radius:8px; position:relative; background:var(--soft); }
+    .checklist li::before { content:"✓"; position:absolute; left:12px; color:var(--ok); font-weight:700; }
+    .step { margin:20px 0 28px; padding-top:20px; border-top:1px solid var(--line); }
+    .step:first-of-type { padding-top:0; border-top:0; }
+    .step-title { display:flex; gap:10px; align-items:center; margin-bottom:6px; }
+    .num { display:inline-grid; place-items:center; width:30px; height:30px; border-radius:50%; color:#fff; background:var(--blue); font-weight:700; }
+    figure { margin:16px 0 0; }
+    figure img { display:block; width:100%; max-height:680px; object-fit:contain; border:1px solid #d9e0ea; border-radius:8px; background:#f8fafc; }
+    figcaption { margin-top:7px; color:var(--muted); font-size:13px; }
+    .fields { width:100%; border-collapse:collapse; margin:12px 0; }
+    .fields th,.fields td { padding:9px 10px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    .fields th { width:22%; background:var(--soft); font-weight:600; }
+    code { padding:2px 5px; border-radius:4px; background:#f2f4f7; color:#344054; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.92em; }
+    .troubleshoot { width:100%; border-collapse:collapse; }
+    .troubleshoot th,.troubleshoot td { padding:10px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    .troubleshoot th { background:var(--soft); }
+    footer { margin-top:20px; color:var(--muted); font-size:13px; text-align:center; }
+    @media (max-width:760px) { .shell { width:min(100% - 20px, 680px); padding-top:16px; } .hero { padding:24px 20px; } .layout { display:block; } .toc { position:static; margin-bottom:16px; } .toc a { display:inline-block; margin-right:14px; } section.card { padding:20px 17px; } .checklist { grid-template-columns:1fr; } .fields,.troubleshoot { display:block; overflow-x:auto; white-space:normal; } figure img { max-height:none; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <p class="eyebrow">GPLink 物联网平台 · 设备管理</p>
+      <h1>MQTT 客户端配置说明</h1>
+      <p>这份说明面向第一次接入外部 MQTT Broker 的用户。按页面从上到下完成网络组件、接入网关、产品和设备配置，最后再验证启用状态。</p>
+    </header>
+
+    <div class="layout">
+      <nav class="toc" aria-label="目录">
+        <strong>本页目录</strong>
+        <a href="#before">开始前准备</a>
+        <a href="#steps">四步配置</a>
+        <a href="#verify">保存与验证</a>
+        <a href="#troubleshoot">常见问题</a>
+      </nav>
+
+      <main>
+        <section class="card" id="before">
+          <h2>先理解这条链路</h2>
+          <p>MQTT 客户端向导的作用是：让平台作为 MQTT 客户端连接第三方 Broker，再由 MQTT 接入网关把 Broker 上的设备消息交给平台协议解析。设备不需要直接连接 GPLink，但 Topic 和消息格式必须与协议约定一致。</p>
+          <ul class="checklist">
+            <li>已知 Broker 域名或 IP、端口和网络连通性</li>
+            <li>准备好 Broker 用户名和密码（匿名连接可留空）</li>
+            <li>准备协议、上行 Topic 和设备 ID 规则</li>
+            <li>确认产品类型为普通直连设备，并准备设备 ID</li>
+          </ul>
+          <div class="notice warn"><strong>安全提示：</strong>本页截图来自测试环境，页面中的密码仍由输入框遮挡。生产环境请替换为自己的 Broker 参数，不要把密码写入文档或工单。</div>
+        </section>
+
+        <section class="card" id="steps">
+          <h2>四步完成配置</h2>
+
+          <article class="step">
+            <div class="step-title"><span class="num">1</span><h3>连接外部 MQTT Broker</h3></div>
+            <p>在设备管理菜单中进入“MQTT 客户端向导”，第一步选择已有 <code>MQTT_CLIENT</code> 网络组件，或切换到“新建客户端”填写连接参数。</p>
+            <table class="fields"><tr><th>字段</th><th>填写规则</th></tr><tr><td>组件名称</td><td>对应页面中的“组件名称”，用容易识别的名称，例如“生产 Broker 客户端”。</td></tr><tr><td>客户端 ID</td><td>对应页面中的“客户端 ID”，必须在 Broker 侧唯一；同一个 ID 被多个连接使用会互相踢下线。</td></tr><tr><td>Broker 地址/端口</td><td>分别填写页面中的“Broker 地址”和“Broker 端口”。地址只填域名或 IP，不要写 <code>mqtt://</code>；普通 MQTT 通常使用 1883，TLS 通常使用 8883。本地 EMQX 请填写 <code>127.0.0.1:2883</code>。</td></tr><tr><td>用户名/密码</td><td>对应页面中的“用户名”和“密码”，两项同时填写或同时留空。密码由输入框自动遮挡。</td></tr><tr><td>主题前缀</td><td>对应页面中的“主题前缀”；普通订阅留空，共享订阅可填写类似 <code>$share/gplink</code> 的前缀。</td></tr><tr><td>最大消息长度</td><td>按页面中的“最大消息长度（字节）”填写，必须不小于设备上行消息的实际长度。</td></tr><tr><td>TLS/网络证书</td><td>Broker 要求加密连接时打开页面中的 TLS 开关，并选择已上传的网络证书。</td></tr></table>
+            <figure><img src="/images/docs/mqtt-client-config-guide/01-broker-connection.png" alt="MQTT Broker 客户端连接步骤截图"><figcaption>图 1：选择已有或新建 MQTT_CLIENT 网络组件，并核对 Broker 参数。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">2</span><h3>绑定 MQTT 接入网关和协议</h3></div>
+            <p>点击第一步右下角的“下一步”，进入页面中的“MQTT Broker 接入网关与协议”区域。在“配置方式”中选择“选择已有”或“新建接入网关”：选择已有时，从“MQTT 客户端接入网关”下拉框选择绑定当前 <code>MQTT_CLIENT</code> 网络组件的网关；新建时填写“接入网关名称”和“说明”。</p>
+            <p>在“MQTT 协议”下拉框选择协议，页面下方的“协议主题预览”会显示 Topic、方向、QoS 和说明。上行订阅主题来自协议声明的 MQTT routes，本页面不手工新增 Topic；如果预览为空，需要先补齐协议路由。</p>
+            <figure><img src="/images/docs/mqtt-client-config-guide/02-gateway-protocol.png" alt="MQTT 接入网关和协议步骤截图"><figcaption>图 2：选择 MQTT 接入网关、协议并确认路由预览。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">3</span><h3>绑定产品并准备设备</h3></div>
+            <p>进入“设备产品与设备”区域，分别选择“选择已有”或“新建产品”，以及“选择已有”或“新建设备”。新建产品时填写“产品 ID”和“产品名称”；新建设备时填写“设备 ID”和“设备名称”。</p>
+            <p>设备 ID 必须符合协议从 Topic 或消息体中解析的设备标识规则，否则消息到达平台后无法匹配设备。页面中的“保存后状态”勾选后会启用网络组件、接入网关、产品和设备；只想保存草稿时可以取消勾选。</p>
+            <figure><img src="/images/docs/mqtt-client-config-guide/03-product-device.png" alt="产品和设备步骤截图"><figcaption>图 3：选择或创建产品、设备，并确认设备 ID 与协议约定一致。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">4</span><h3>按顺序保存并完成校验</h3></div>
+            <p>点击第三步右下角的“下一步”，进入“配置确认与启用校验”。逐项核对页面摘要中的网络组件、Broker、接入网关、协议、产品、设备、主题前缀和保存后启用状态，确认无误后点击右下角“保存并启用”。</p>
+            <p>保存按“网络组件 → 接入网关 → 产品接入 → 设备”的依赖顺序执行；若中途失败，已经创建成功的资源不会自动删除，需要修正配置后复用或清理这些资源。</p>
+            <figure><img src="/images/docs/mqtt-client-config-guide/04-review-and-save.png" alt="保存校验步骤截图"><figcaption>图 4：保存前核对网络、网关、产品和设备摘要。</figcaption></figure>
+          </article>
+        </section>
+
+        <section class="card" id="verify">
+          <h2>保存后如何验证</h2>
+          <div class="notice ok"><strong>成功标准：</strong>页面提示保存成功，网络组件、接入网关和设备状态为“已启用”，产品的接入方式显示为 MQTT 接入网关。</div>
+          <p>配置保存成功只说明平台资源已经建立并通过向导校验，不代表外部 Broker 一定已经收到或转发设备消息。还需要使用设备或 MQTT 客户端实际发布协议约定的 Topic 和 payload，再到设备详情、属性或事件页面查看数据。</p>
+          <figure><img src="/images/docs/mqtt-client-config-guide/05-success.png" alt="MQTT 配置保存成功截图"><figcaption>图 5：保存并启用后的校验结果。实际消息链路仍需用设备数据验证。</figcaption></figure>
+        </section>
+
+        <section class="card" id="troubleshoot">
+          <h2>常见问题</h2>
+          <table class="troubleshoot"><thead><tr><th>现象</th><th>优先检查</th></tr></thead><tbody>
+            <tr><td>网络组件启动失败</td><td>检查 Broker 地址、端口、防火墙和用户名密码；TLS 开启时确认端口和证书匹配。</td></tr>
+            <tr><td>Client ID 冲突</td><td>换成 Broker 侧唯一的 Client ID，并确认没有其他平台节点复用该 ID。</td></tr>
+            <tr><td>协议路由为空</td><td>确认选择了支持 MQTT 客户端接入的协议，并检查协议是否包含上行 Topic 路由。</td></tr>
+            <tr><td>设备在线但没有数据</td><td>逐字符对照 Topic 前缀、产品 ID、设备 ID 和 payload 字段；保存成功不等于消息格式正确。</td></tr>
+            <tr><td>TLS 握手失败</td><td>确认 Broker 证书链、域名、端口、TLS 版本以及平台上传的网络证书。</td></tr>
+          </tbody></table>
+        </section>
+      </main>
+    </div>
+    <footer>GPLink MQTT 客户端配置说明 · 页面内容与 MQTT 客户端接入向导保持同步</footer>
+  </div>
+</body>
+</html>
