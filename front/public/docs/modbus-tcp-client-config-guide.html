@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modbus TCP 客户端配置说明</title>
+  <style>
+    :root { color-scheme: light; --blue:#1677ff; --ink:#1f2937; --muted:#667085; --line:#e5e7eb; --soft:#f6f8fb; --ok:#087443; --warn:#ad5c00; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin:0; background:#f3f6fa; color:var(--ink); font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",Arial,sans-serif; }
+    a { color:var(--blue); }
+    .shell { width:min(1120px, calc(100% - 32px)); margin:0 auto; padding:32px 0 64px; }
+    .hero { padding:30px 34px; border-radius:16px; color:#fff; background:linear-gradient(135deg,#155eef,#1677ff 58%,#36a9ff); box-shadow:0 12px 30px #1677ff22; }
+    .eyebrow { margin:0 0 5px; font-size:13px; letter-spacing:.08em; opacity:.82; }
+    h1 { margin:0; font-size:clamp(26px,4vw,38px); line-height:1.25; }
+    .hero p { max-width:820px; margin:12px 0 0; color:#e9f2ff; }
+    .layout { display:grid; grid-template-columns:220px 1fr; gap:24px; align-items:start; margin-top:24px; }
+    .toc { position:sticky; top:18px; padding:18px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+    .toc strong { display:block; margin-bottom:8px; }
+    .toc a { display:block; padding:5px 0; color:#475467; text-decoration:none; font-size:14px; }
+    .toc a:hover { color:var(--blue); }
+    main { min-width:0; }
+    section.card { margin-bottom:20px; padding:26px 30px; border:1px solid var(--line); border-radius:12px; background:#fff; box-shadow:0 4px 14px #1f293708; }
+    h2 { margin:0 0 12px; font-size:23px; line-height:1.35; }
+    h3 { margin:22px 0 6px; font-size:18px; }
+    p { margin:8px 0; }
+    ul,ol { margin:8px 0 12px; padding-left:23px; }
+    .notice { margin:14px 0; padding:13px 15px; border-left:4px solid var(--blue); border-radius:6px; background:#eff6ff; }
+    .notice.ok { border-color:#12b76a; background:#ecfdf3; color:#075e38; }
+    .notice.warn { border-color:#f79009; background:#fffaeb; color:#8a4b08; }
+    .checklist { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px; padding:0; list-style:none; }
+    .checklist li { padding:10px 12px 10px 36px; border:1px solid var(--line); border-radius:8px; position:relative; background:var(--soft); }
+    .checklist li::before { content:"✓"; position:absolute; left:12px; color:var(--ok); font-weight:700; }
+    .step { margin:20px 0 28px; padding-top:20px; border-top:1px solid var(--line); }
+    .step:first-of-type { padding-top:0; border-top:0; }
+    .step-title { display:flex; gap:10px; align-items:center; margin-bottom:6px; }
+    .num { display:inline-grid; place-items:center; width:30px; height:30px; border-radius:50%; color:#fff; background:var(--blue); font-weight:700; }
+    figure { margin:16px 0 0; }
+    figure img { display:block; width:100%; max-height:680px; object-fit:contain; border:1px solid #d9e0ea; border-radius:8px; background:#f8fafc; }
+    figcaption { margin-top:7px; color:var(--muted); font-size:13px; }
+    .fields,.troubleshoot { width:100%; border-collapse:collapse; margin:12px 0; }
+    .fields th,.fields td,.troubleshoot th,.troubleshoot td { padding:9px 10px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    .fields th,.troubleshoot th { background:var(--soft); font-weight:600; }
+    .fields th { width:25%; }
+    code { padding:2px 5px; border-radius:4px; background:#f2f4f7; color:#344054; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.92em; }
+    footer { margin-top:20px; color:var(--muted); font-size:13px; text-align:center; }
+    @media (max-width:760px) { .shell { width:min(100% - 20px, 680px); padding-top:16px; } .hero { padding:24px 20px; } .layout { display:block; } .toc { position:static; margin-bottom:16px; } .toc a { display:inline-block; margin-right:14px; } section.card { padding:20px 17px; } .checklist { grid-template-columns:1fr; } .fields,.troubleshoot { display:block; overflow-x:auto; white-space:normal; } figure img { max-height:none; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <p class="eyebrow">GPLink 物联网平台 · 设备管理</p>
+      <h1>Modbus TCP 客户端配置说明</h1>
+      <p>这份说明面向第一次使用 Modbus TCP 客户端向导的用户。平台会主动连接现场 Modbus 网关，在 TCP 链路上以 Modbus Master 身份读取或写入从机设备。</p>
+    </header>
+
+    <div class="layout">
+      <nav class="toc" aria-label="目录">
+        <strong>本页目录</strong>
+        <a href="#before">开始前准备</a>
+        <a href="#steps">五步配置</a>
+        <a href="#verify">保存与测试</a>
+        <a href="#troubleshoot">常见问题</a>
+      </nav>
+
+      <main>
+        <section class="card" id="before">
+          <h2>先理解连接关系</h2>
+          <p>TCP 客户端表示平台主动连接现场设备网关；它描述的是 TCP 连接方向，不改变 Modbus 层的主从角色。平台仍以 Master 发起标准 Modbus RTU 报文，现场设备作为 slave 响应。</p>
+          <ul class="checklist">
+            <li>已确认现场网关的 IP、TCP 端口和防火墙放行</li>
+            <li>已确认每台从机的 <code>slaveId</code>，范围通常为 1–247</li>
+            <li>已准备功能码、寄存器地址、数量、数据类型和字节序</li>
+            <li>已知道属性 ID、单位、比例和偏移等物模型信息</li>
+          </ul>
+          <div class="notice warn"><strong>安全提示：</strong>本页截图来自测试环境。生产环境请替换为自己的设备地址和参数，不要把凭据、内网拓扑或敏感地址复制到公开文档。</div>
+        </section>
+
+        <section class="card" id="steps">
+          <h2>五步完成配置</h2>
+
+          <article class="step">
+            <div class="step-title"><span class="num">1</span><h3>新建 TCP 客户端接入</h3></div>
+            <p>在设备管理菜单进入“Modbus 接入向导”，将“配置方式”切换为“新建 TCP 客户端”。填写网络组件和接入网关名称，再填写现场网关的远程主机与远程端口。</p>
+            <table class="fields"><tr><th>页面字段</th><th>填写规则</th></tr><tr><td>网络组件名称</td><td>用于识别 TCP_CLIENT 网络组件，例如“产线 Modbus TCP 客户端”。</td></tr><tr><td>接入网关名称</td><td>用于识别 Modbus 接入网关，例如“产线 Modbus 网关”。</td></tr><tr><td>远程主机/远程端口</td><td>填写现场网关的 IP 或域名及 TCP 端口；不要填写 <code>modbus://</code> 等协议前缀。</td></tr><tr><td>说明</td><td>补充现场位置、线路或用途，最多 200 个字符。</td></tr><tr><td>TLS（可选）</td><td>现场网关提供 TLS 时打开开关并选择已有网络证书；普通 Modbus TCP 保持关闭。</td></tr><tr><td>负载解析</td><td>本向导的 Modbus RTU over TCP 使用 <code>DIRECT</code> 解析器，不要把 CRC 当作 TCP 分隔符配置。</td></tr></table>
+            <figure><img src="/images/docs/modbus-tcp-client-config-guide/01-tcp-client-connection.png" alt="新建 Modbus TCP 客户端连接步骤截图"><figcaption>图 1：选择“新建 TCP 客户端”，填写网络组件、接入网关、远程主机和端口。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">2</span><h3>配置网关产品、网关设备和通讯参数</h3></div>
+            <p>点击“下一步”进入“网关产品与网关设备”。网关是承载 TCP 会话的父设备，同一条 TCP 连接下的多个 Modbus 从机设备都挂在它下面。</p>
+            <p>可以选择已有网关产品和设备，也可以分别选择“新建”并填写产品 ID、产品名称、设备 ID、设备名称。再确认响应超时、探测周期和保活超时，这些参数会写入网关产品和从机产品。</p>
+            <figure><img src="/images/docs/modbus-tcp-client-config-guide/02-gateway-product-device.png" alt="网关产品网关设备和通讯参数截图"><figcaption>图 2：配置网关产品、网关设备，以及响应超时、探测周期和保活超时。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">3</span><h3>配置从机产品和 registerMap</h3></div>
+            <p>在“从机产品与 registerMap”中选择已有 <code>deviceType=childrenDevice</code> 产品，或新建从机产品。每一行点位说明一个物模型属性如何读取 Modbus 地址。</p>
+            <table class="fields"><tr><th>点位字段</th><th>填写规则</th></tr><tr><td>属性 ID/名称</td><td>属性 ID 必须与产品物模型一致，名称用于阅读和测试结果展示。</td></tr><tr><td>功能码</td><td><code>0x01/0x02/0x03/0x04</code> 用于读取，<code>0x05/0x06/0x0F/0x10</code> 用于写入。</td></tr><tr><td>地址/数量</td><td>按设备协议填写，页面地址通常从 0 开始；数量必须覆盖数据类型需要的寄存器数。</td></tr><tr><td>数据类型/字节序</td><td>按设备实际编码选择 BIT、INT16、UINT16、INT32、UINT32、FLOAT32、INT64 或 FLOAT64，以及 ABCD、CDAB、BADC、DCBA。</td></tr><tr><td>比例/偏移/可写/单位</td><td>用于把寄存器原始值换算为业务值；只有确认设备支持写入时才勾选“可写”。</td></tr></table>
+            <p>点位可以逐行添加，也可以通过 CSV 或粘贴导入。需要周期采集时，在“轮询计划”中启用轮询并选择采集项；留空采集项表示使用全部可读点位。</p>
+            <figure><img src="/images/docs/modbus-tcp-client-config-guide/03-register-map-polling.png" alt="从机产品寄存器映射和轮询计划截图"><figcaption>图 3：配置从机产品的 registerMap，并按需要启用轮询计划。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">4</span><h3>填写从机列表</h3></div>
+            <p>点击“下一步”进入“从机列表”。每一行代表一台挂在当前网关设备下的 Modbus 从机，填写唯一的 <code>slaveId</code>、平台设备 ID、设备名称和说明。</p>
+            <p>设备 ID 和设备名称可以由页面自动生成，也可以手工指定。只有确实需要单台设备不同轮询策略时，才打开“覆盖产品轮询”；否则让从机继承产品轮询配置。</p>
+            <figure><img src="/images/docs/modbus-tcp-client-config-guide/04-slave-list.png" alt="Modbus 从机列表截图"><figcaption>图 4：为每台现场从机填写 slaveId、设备 ID、设备名称和轮询覆盖选项。</figcaption></figure>
+          </article>
+
+          <article class="step">
+            <div class="step-title"><span class="num">5</span><h3>保存并执行通讯测试</h3></div>
+            <p>进入“保存后通讯测试”后，先核对接入方式、连接地址、网络组件和接入网关。可以选择要测试的从机和属性；不选择时默认测试导入的全部从机和第一个可读点位。</p>
+            <p>点击“保存并测试”后，向导会依次保存产品、物模型、从机设备和 <code>slaveId</code>，启动 TCP 客户端和接入网关，再调用属性读取接口发起标准 Modbus RTU 读请求。中途失败时已经创建的资源不会自动删除。</p>
+            <figure><img src="/images/docs/modbus-tcp-client-config-guide/05-review-before-save.png" alt="保存前通讯测试确认截图"><figcaption>图 5：保存前确认连接摘要、测试从机和测试属性。</figcaption></figure>
+          </article>
+        </section>
+
+        <section class="card" id="verify">
+          <h2>保存后如何判断成功</h2>
+          <div class="notice ok"><strong>成功标准：</strong>网络组件和接入网关启动成功，测试结果中目标从机和属性显示“成功”，并返回实际读取值。</div>
+          <p>配置保存成功不等于 Modbus 通讯成功；选定点位测试成功也不代表全部点位和轮询计划均已验证。应继续检查其他从机、其他属性和轮询数据。</p>
+          <figure><img src="/images/docs/modbus-tcp-client-config-guide/06-communication-test-success.png" alt="Modbus 通讯测试成功截图"><figcaption>图 6：真实 Modbus 读取返回成功和值后的测试结果。</figcaption></figure>
+        </section>
+
+        <section class="card" id="troubleshoot">
+          <h2>常见问题</h2>
+          <table class="troubleshoot"><thead><tr><th>现象</th><th>优先检查</th></tr></thead><tbody>
+            <tr><td>TCP 连接被拒绝或超时</td><td>检查远程主机、远程端口、防火墙、路由和现场网关是否监听；确认平台所在节点能访问该地址。</td></tr>
+            <tr><td>slaveId 无响应</td><td>确认设备地址在 1–247 范围内且与现场拨码或配置一致；同一链路不要重复使用相同 slaveId。</td></tr>
+            <tr><td>读取值为空或数值异常</td><td>逐项核对功能码、地址起点、数量、数据类型、字节序、比例和偏移。设备手册中的 40001 可能对应页面地址 0。</td></tr>
+            <tr><td>CRC 或拆包错误</td><td>Modbus RTU over TCP 使用 DIRECT 负载解析；不要把 TCP 连接配置成按 CRC 分隔或混用其他协议解析器。</td></tr>
+            <tr><td>人工读取成功但轮询没有数据</td><td>确认产品轮询已启用、采集项包含可读属性、周期和从机覆盖配置正确，并查看设备最新属性时间。</td></tr>
+            <tr><td>保存中途失败后再次保存异常</td><td>先查看“网络组件、接入网关、产品、设备”哪些已创建，复用已有资源或按依赖逆序清理后再重试。</td></tr>
+          </tbody></table>
+        </section>
+      </main>
+    </div>
+    <footer>GPLink Modbus TCP 客户端配置说明 · 页面内容与 Modbus 接入向导保持同步</footer>
+  </div>
+</body>
+</html>

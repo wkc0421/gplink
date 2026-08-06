@@ -10,6 +10,14 @@
                         </div>
                     </div>
                     <a-space>
+                        <a-button
+                            href="/docs/modbus-tcp-client-config-guide.html"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <template #icon><AIcon type="ReadOutlined" /></template>
+                            新手配置说明
+                        </a-button>
                         <a-button :loading="loading" @click="loadBaseData">
                             <template #icon><AIcon type="ReloadOutlined" /></template>
                             刷新
