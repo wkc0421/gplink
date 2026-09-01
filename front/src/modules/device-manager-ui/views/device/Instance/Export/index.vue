@@ -7,7 +7,7 @@
         @ok="handleOk"
         @cancel="handleCancel"
     >
-        <div style="background-color: rgb(236, 237, 238)">
+        <div style="background-color: var(--app-elevated)">
             <p style="padding: 10px">
                 <AIcon type="ExclamationCircleOutlined" />
                 {{ $t('Export.index.225315-1') }}

@@ -105,7 +105,7 @@ watch(
 
     .desc {
       font-size: 12px;
-      color: rgba(0, 0, 0, .7);
+      color: var(--app-text-secondary);
     }
   }
 

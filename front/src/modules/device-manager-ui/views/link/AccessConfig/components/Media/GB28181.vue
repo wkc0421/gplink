@@ -417,11 +417,11 @@
                 <title-component :data="$t('Media.GB28181.666483-31')" />
                 <a-descriptions
                   :column="1"
-                  :labelStyle="{ width: '80px' }"
+                  :labelstyle="{ width: '80px' }"
                 >
                   <a-descriptions-item :label="$t('Media.GB28181.666483-32')">{{ provider.name }}</a-descriptions-item>
                   <a-descriptions-item>
-                    <span style="color: #a3a3a3">{{ provider.description }}</span>
+                    <span style="color: var(--app-text-secondary)">{{ provider.description }}</span>
                   </a-descriptions-item>
                   <a-descriptions-item :label="$t('Media.GB28181.666483-1')">
                     {{ formState.domain }}
@@ -898,9 +898,9 @@ watch(
 .alert {
   height: 40px;
   padding-left: 10px;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--app-text-secondary);
   line-height: 40px;
-  background-color: #f6f6f6;
+  background-color: var(--app-elevated);
 }
 .search {
   display: flex;
@@ -923,7 +923,7 @@ watch(
 }
 
 .form-item1 {
-  background-color: #f6f6f6;
+  background-color: var(--app-elevated);
   padding: 10px;
 }
 .form-label {
@@ -932,9 +932,9 @@ watch(
 }
 .delete-btn {
   display: inline-block;
-  color: #e50012;
+  color: var(--app-text);
   padding: 0px 8px;
-  background: #ffffff;
+  background: var(--app-surface);
   border: 1px solid #e50012;
   border-radius: 2px;
 }

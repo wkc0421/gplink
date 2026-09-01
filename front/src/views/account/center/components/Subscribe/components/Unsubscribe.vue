@@ -101,7 +101,7 @@ const onBindSave = (cur: any) => {
   width: 100%;
   margin: 30px 0;
   font-size: 16px;
-  color: #333333;
+  color: var(--app-text);
 }
 
 .code {

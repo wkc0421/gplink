@@ -219,7 +219,8 @@ const handleClick = () => {
 <style lang="less" scoped>
 .card {
   width: 100%;
-  background-color: #fff;
+  color: @app-text;
+  background-color: @app-surface;
 
   .checked-icon {
     position: absolute;
@@ -248,12 +249,18 @@ const handleClick = () => {
 
   .card-warp {
     position: relative;
-    border: 1px solid #e6e6e6;
+    border: 1px solid fade(@app-border-strong, 62%);
+    border-radius: @app-radius-card;
+    background: @app-surface;
     overflow: hidden;
     cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .16);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 
     &:hover {
-      box-shadow: 0 0 24px rgba(#000, 0.1);
+      border-color: @app-primary;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+      transform: translateY(-1px);
 
       .card-mask {
         visibility: visible;
@@ -276,9 +283,9 @@ const handleClick = () => {
       left: -15px;
       height: 32px;
       padding: 0 30px;
-      color: rgba(0, 0, 0, 0.65);
+      color: @app-text-secondary;
       line-height: 32px;
-      background-color: rgba(0, 0, 0, 0.06);
+      background-color: @app-elevated;
       transform: skewX(-45deg);
 
       .card-type-text {
@@ -293,6 +300,7 @@ const handleClick = () => {
       position: relative;
       padding: 30px 12px 30px 30px;
       overflow: hidden;
+      background-color: @app-surface;
 
       .card-item-avatar {
         margin-right: 16px;
@@ -305,9 +313,25 @@ const handleClick = () => {
         flex-direction: column;
         flex-grow: 1;
         width: 0;
+        color: @app-text-value;
+        font-size: @app-font-size-base;
+        line-height: @app-line-height-base;
 
         .ant-row {
-          margin-top: 18px;
+          margin-top: 16px;
+
+          :deep(.ant-col) {
+            min-width: 0;
+            color: @app-text-value;
+            line-height: @app-line-height-base;
+          }
+
+          :deep(.j-ellipsis) {
+            color: @app-text-value;
+            font-size: @app-font-size-base;
+            font-weight: @app-font-weight-medium;
+            line-height: @app-line-height-base;
+          }
         }
       }
 
@@ -318,7 +342,7 @@ const handleClick = () => {
         display: flex;
         justify-content: center;
         padding: 0 20px 0 20px;
-        background-color: rgba(#5995f5, 0.15);
+        background-color: rgba(47, 128, 255, 0.16);
         transform: skewX(45deg);
 
         &.success {
@@ -326,22 +350,30 @@ const handleClick = () => {
         }
 
         &.warning {
-          background-color: rgba(#ff9000, 0.1);
+          background-color: rgba(255, 180, 84, 0.16);
         }
 
         &.error {
-          background-color: rgba(#e50012, 0.1);
+          background-color: rgba(255, 100, 116, 0.16);
         }
 
         .card-state-content {
           transform: skewX(-45deg);
+
+          :deep(.ant-badge-status-text) {
+            color: @app-text-value !important;
+            font-size: 13px;
+            font-weight: @app-font-weight-medium;
+            line-height: 20px;
+          }
         }
       }
 
       :deep(.card-item-content-title) {
         cursor: pointer;
-        font-size: 16px;
-        font-weight: 700;
+        font-size: @app-section-size;
+        font-weight: @app-font-weight-semibold;
+        line-height: @app-section-line-height;
         color: @primary-color;
         width: calc(100% - 100px);
         overflow: hidden;
@@ -350,14 +382,19 @@ const handleClick = () => {
       }
 
       :deep(.card-item-heard-name) {
-        font-weight: 700;
-        font-size: 16px;
-        margin-bottom: 12px;
+        font-weight: @app-font-weight-semibold;
+        font-size: @app-section-size;
+        line-height: @app-section-line-height;
+        margin-bottom: 10px;
+        color: @app-text;
       }
 
       :deep(.card-item-content-text) {
-        color: rgba(0, 0, 0, 0.7);
-        font-size: 12px;
+        color: @app-text-table-header;
+        font-size: @app-label-size;
+        font-weight: @app-font-weight-regular;
+        line-height: @app-label-line-height;
+        letter-spacing: .01em;
       }
     }
 
@@ -384,8 +421,8 @@ const handleClick = () => {
       width: 44.65%;
       top: 0;
       background: linear-gradient(188.4deg,
-      rgba(229, 0, 18, 0.03) 22.94%,
-      rgba(229, 0, 18, 0) 94.62%);
+      rgba(47, 128, 255, 0.08) 22.94%,
+      rgba(47, 128, 255, 0) 94.62%);
       transform: skewX(-15deg);
     }
 
@@ -396,8 +433,8 @@ const handleClick = () => {
       width: calc(44.65% + 34px);
       top: 0;
       background: linear-gradient(188.4deg,
-      rgba(229, 0, 18, 0.03) 22.94%,
-      rgba(229, 0, 18, 0) 94.62%);
+      rgba(47, 128, 255, 0.08) 22.94%,
+      rgba(47, 128, 255, 0) 94.62%);
       transform: skewX(-15deg);
     }
 
@@ -456,9 +493,9 @@ const handleClick = () => {
 
       :deep(button) {
         width: 100%;
-        border-radius: 0;
-        background: #f6f6f6;
-        border: 1px solid #e6e6e6;
+        border-radius: 6px;
+        background: @app-elevated;
+        border: 1px solid @app-border;
         color: @primary-color;
 
         &:hover {

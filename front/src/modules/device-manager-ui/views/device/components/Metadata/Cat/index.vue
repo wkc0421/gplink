@@ -178,16 +178,16 @@ watch(() => metadata.value, () => {
 </script>
 <style scoped lang="less">
 .cat-content {
-  background: #F6F6F6;
+  background: var(--app-elevated);
 
   .cat-tip {
     padding: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
   }
 }
 
 .cat-panel {
-  border: 1px solid #eeeeee;
+  border: 1px solid var(--app-border);
   height: 670px;
   width: 650px;
 }

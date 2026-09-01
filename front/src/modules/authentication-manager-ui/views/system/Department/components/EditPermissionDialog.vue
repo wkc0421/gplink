@@ -75,9 +75,9 @@ const options = computed(() => {
 
 <style scoped lang="less">
 .alert-info {
-    background: #f3f3f3;
+    background: var(--app-elevated);
     border-radius: 2px;
     padding: 6px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
 }
 </style>

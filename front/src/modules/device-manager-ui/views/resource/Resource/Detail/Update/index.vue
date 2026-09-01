@@ -154,7 +154,7 @@ onMounted(() => {
   text-align: center;
 }
 .content {
-  background-color: #eee;
+  background-color: var(--app-elevated);
   padding: 12px;
   border-radius: 6px;
 
@@ -170,7 +170,7 @@ onMounted(() => {
 }
 
 .noUpdate {
-  background-color: #eee;
+  background-color: var(--app-elevated);
   padding: 12px;
   border-radius: 6px;
 }

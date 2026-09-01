@@ -89,24 +89,24 @@ const _value = computed(() => {
   display: flex;
   align-items: center;
   padding: 6px 8px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   cursor: pointer;
 
   &.column {
-    color: #00a4fe;
+    color: var(--app-text-secondary);
     background-color: rgba(154, 219, 255, 0.3);
     border-color: rgba(0, 164, 254, 0.3);
   }
 
   &.termType {
-    color: #13C2C2;
+    color: var(--app-text-secondary);
     background: rgba(135, 232, 222, 0.3);
     border: 1px solid rgba(54, 207, 201, 0.4);
   }
 
   &.value {
-    color: #692ca7;
+    color: var(--app-text);
     background-color: rgba(188, 125, 238, 0.1);
     border-color: rgba(188, 125, 238, 0.5);
   }
@@ -117,7 +117,7 @@ const _value = computed(() => {
   }
 
   &.alarm {
-    color: #2F54EB;
+    color: var(--app-primary);
     background: rgba(163, 202, 255, 0.3);
     border: 1px solid rgba(47, 84, 235, 0.3);
   }

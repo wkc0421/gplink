@@ -448,7 +448,7 @@ onUnmounted(() => {
 
     .toolbar-tip,
     .muted {
-        color: rgba(0, 0, 0, 0.45);
+        color: var(--app-text-secondary);
         font-size: 12px;
     }
 
@@ -462,19 +462,19 @@ onUnmounted(() => {
     .summary-item {
         min-height: 76px;
         padding: 12px 16px;
-        background: #fff;
-        border: 1px solid #f0f0f0;
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
         border-radius: 6px;
     }
 
     .summary-label {
         margin-bottom: 8px;
-        color: rgba(0, 0, 0, 0.45);
+        color: var(--app-text-secondary);
         font-size: 12px;
     }
 
     .summary-value {
-        color: rgba(0, 0, 0, 0.88);
+        color: var(--app-text-secondary);
         font-weight: 600;
         font-size: 24px;
         line-height: 30px;
@@ -491,7 +491,7 @@ onUnmounted(() => {
 }
 
 .strong {
-    color: rgba(0, 0, 0, 0.88);
+    color: var(--app-text-secondary);
     font-weight: 500;
 }
 

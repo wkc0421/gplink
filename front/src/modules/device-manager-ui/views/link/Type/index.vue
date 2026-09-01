@@ -472,7 +472,7 @@ const handleSearch = (e: any) => {
     font-weight: 400;
     font-size: 14px;
     line-height: 170%;
-    color: rgba(0, 0, 0, 0.85);
+    color: var(--app-text-secondary);
     opacity: 0.75;
     overflow: hidden; //超出的文本隐藏
     text-overflow: ellipsis; //溢出用省略号显示
@@ -484,7 +484,7 @@ const handleSearch = (e: any) => {
     font-weight: 400;
     font-size: 12px;
     line-height: 170%;
-    color: rgba(0, 0, 0, 0.75);
+    color: var(--app-text-secondary);
     opacity: 0.75;
   }
 }

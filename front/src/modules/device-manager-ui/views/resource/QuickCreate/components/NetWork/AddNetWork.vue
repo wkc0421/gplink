@@ -68,7 +68,7 @@
           </a-row>
           <div
             v-if="!shareCluster && dynamicValidateForm.cluster.length === 0"
-            style="border: 1px #d9d9d9 solid; margin-bottom: 12px"
+            style="border: 1px var(--app-border) solid; margin-bottom: 12px"
           >
             <a-empty style="margin-top: 12px" />
           </div>
@@ -1104,7 +1104,7 @@ onMounted(async () => {
 
 .form2 {
   :deep(.ant-collapse-content-box) {
-    background: #fafafa;
+    background: var(--app-elevated);
     border-radius: 2px;
   }
 
@@ -1131,7 +1131,7 @@ onMounted(async () => {
       right: 10px;
       width: calc(100% - 10px);
       height: 100%;
-      background-color: #f4f4f4;
+      background-color: var(--app-elevated);
       content: " ";
     }
   }
@@ -1139,7 +1139,7 @@ onMounted(async () => {
 
 .collapse {
   margin-bottom: 20px;
-  background: #f4f4f4;
+  background: var(--app-elevated);
 
   :deep(.ant-collapse-header-text) {
     flex: 1;
@@ -1148,8 +1148,8 @@ onMounted(async () => {
 
 .collapse-panel {
   margin-bottom: 20px;
-  border: #d9d9d9 1px solid;
-  background: #f4f4f4;
+  border: var(--app-border) 1px solid;
+  background: var(--app-elevated);
   border-radius: 2px;
 
   :deep(.ant-collapse-header) {
@@ -1159,9 +1159,9 @@ onMounted(async () => {
 
 .delete-btn {
   display: inline-block;
-  color: #e50012;
+  color: var(--app-text);
   padding: 0px 8px;
-  background: #ffffff;
+  background: var(--app-surface);
   border: 1px solid #e50012;
   border-radius: 2px;
   cursor: pointer;

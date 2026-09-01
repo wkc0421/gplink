@@ -24,7 +24,7 @@ export default {
     width: 100%;
     margin-bottom: 10px;
     padding-left: 10px;
-    color: rgba(0, 0, 0, 0.8);
+    color: var(--app-text-secondary);
     font-weight: 600;
     font-size: 16px;
 }

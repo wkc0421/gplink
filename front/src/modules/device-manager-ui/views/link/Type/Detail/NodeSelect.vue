@@ -242,11 +242,11 @@ watch(() => visible.value, (val) => {
 }
 .node-select {
   width: 100%;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--app-border);
   cursor: pointer;
   padding: 4px 8px;
   text-align: center;
-  background-color: #fff;
+  background-color: var(--app-surface);
 }
 .node-item {
     display: flex;

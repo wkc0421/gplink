@@ -171,7 +171,7 @@ onUnmounted(() => {
     width: 100%;
     min-height: 156px;
     padding: 0 @padding;
-    background-color: #fff;
+    background-color: @app-surface;
 
     .person-header-item {
       display: flex;
@@ -197,7 +197,7 @@ onUnmounted(() => {
           .person-header-item-info-right-top {
             display: flex;
             font-size: 26px;
-            color: #1d2129;
+            color: @app-text;
             font-weight: 500;
             width: 100%;
             margin-top: 10px;
@@ -211,9 +211,9 @@ onUnmounted(() => {
 
       .person-header-item-action {
         button {
-          background-color: #ebeef4;
-          color: #333333;
-          border: none;
+          background-color: @app-elevated;
+          color: @app-text-secondary;
+          border: 1px solid @app-border;
         }
 
         .btn {
@@ -226,7 +226,7 @@ onUnmounted(() => {
 
   .person-content-item {
     padding: 10px 20px;
-    background-color: #fff;
+    background-color: @app-surface;
     // overflow: hidden;
     height: 100%;
   }

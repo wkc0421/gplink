@@ -242,7 +242,7 @@ const onOk = async () => {
     width: 100%;
     margin-bottom: 17px;
     padding-bottom: 17px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--app-border);
 }
 
 .steps-content {

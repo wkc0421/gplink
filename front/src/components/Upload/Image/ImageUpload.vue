@@ -179,7 +179,7 @@ watch(() => props.value, (newValue) => {
     height: 100%;
     overflow: hidden;
     transition: all 0.3s;
-    border: 1px dashed #1890ff;
+    border: 1px dashed var(--app-primary);
 
     &:hover {
        border-color: @primary-color-hover;

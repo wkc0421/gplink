@@ -6,7 +6,7 @@
                     <AIcon type="AppstoreOutlined" style="font-size: 18px" />
                     <span style="font-size: 20px">{{ $t('Apply.List.326977-0') }}</span>
                     <span @click="handleClick('metadata')"
-                        >{{ $t('Apply.List.326977-1') }} <span style="color: #1890ff; "> {{ productList.length }} </span></span
+                        >{{ $t('Apply.List.326977-1') }} <span style="color: var(--app-primary); "> {{ productList.length }} </span></span
                     >
                 </a-space>
                 <a-space>
@@ -108,9 +108,9 @@ const handleClick = (type: any) => {
         justify-content: space-between;
     }
     .items {
-        background-color: #eee;
+        background-color: var(--app-elevated);
         padding: 6px;
-        border: 1px solid #eeeeee;
+        border: 1px solid var(--app-border);
         border-radius: 6px;
         display: flex;
         flex-direction: column;
@@ -134,15 +134,15 @@ const handleClick = (type: any) => {
         }
     }
     .expand-btn {
-        color: #1890ff;
+        color: var(--app-primary);
         cursor: pointer;
         width: 100%;
         text-align: center;
     }
     .protocol-items {
-        background-color: #eeeeee;
+        background-color: var(--app-elevated);
         padding: 6px;
-        border: 1px solid #eeeeee;
+        border: 1px solid var(--app-border);
         border-radius: 6px;
         display: flex;
         flex-direction: column;
@@ -150,7 +150,7 @@ const handleClick = (type: any) => {
         .protocol-item {
             display: flex;
             align-items: center;
-            background-color: #eeeeee83;
+            background-color: var(--app-elevated);
             border-radius: 6px;
             padding: 6px;
             gap: 12px;

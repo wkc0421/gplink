@@ -7,7 +7,7 @@
       modeValue='CARD'
       :params='_params'
       :gridColumns='[2, 4]'
-      :bodyStyle="{ padding: '0 0 0 20px' }"
+      :bodystyle="{ padding: '0 0 0 20px' }"
       :scroll='{y : 450}'
     >
       <template #headerLeftRender>

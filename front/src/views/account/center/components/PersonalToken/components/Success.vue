@@ -127,7 +127,7 @@ const handleClose = () => {
         top: 20px;
         left: 30px;
         font-size: 48px;
-        color: #6366f1;
+        color: var(--app-text);
         z-index: 2;
       }
 
@@ -136,7 +136,7 @@ const handleClose = () => {
         bottom: 20px;
         right: 20px;
         font-size: 36px;
-        color: #f97316;
+        color: var(--app-text-secondary);
         z-index: 1;
       }
 
@@ -149,7 +149,7 @@ const handleClose = () => {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background-color: #e5e7eb;
+        background-color: var(--app-elevated);
       }
 
       &::after {
@@ -168,7 +168,7 @@ const handleClose = () => {
   .success-title {
     font-size: 18px;
     font-weight: 500;
-    color: #262626;
+    color: var(--app-text);
     margin-bottom: 24px;
   }
 
@@ -185,11 +185,11 @@ const handleClose = () => {
         font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 
         :deep(.ant-input) {
-          background-color: #f8f9fa;
-          border: 1px solid #e9ecef;
+          background-color: var(--app-elevated);
+          border: 1px solid var(--app-border);
           padding: 8px 12px;
           font-size: 13px;
-          color: #495057;
+          color: var(--app-text);
         }
       }
 
@@ -200,7 +200,7 @@ const handleClose = () => {
         align-items: center;
         gap: 4px;
         background: #1890ff;
-        border-color: #1890ff;
+        border-color: var(--app-primary);
 
         &:hover {
           background: #40a9ff;
@@ -225,7 +225,7 @@ const handleClose = () => {
     }
 
     .warning-text {
-      color: #666;
+      color: var(--app-text-secondary);
       font-size: 13px;
       line-height: 1.5;
     }
@@ -244,7 +244,7 @@ const handleClose = () => {
 // 自定义modal样式
 :deep(.ant-modal) {
   .ant-modal-header {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--app-border);
     padding: 16px 24px;
 
     .ant-modal-title {

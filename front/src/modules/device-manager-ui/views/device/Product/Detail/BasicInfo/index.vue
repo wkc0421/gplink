@@ -4,7 +4,7 @@
         <template #title>
             <div style="display: flex">
                 <h3>{{ $t('BasicInfo.indev.028379-0') }}</h3>
-                <!-- <div style="margin: 0 0px 0 15px; color: #1d39c4">
+                <!-- <div style="margin: 0 0px 0 15px; color: var(--app-text)">
                         <AIcon type="EditOutlined" @click="editConfig" />
                     </div> -->
                 <j-permission-button

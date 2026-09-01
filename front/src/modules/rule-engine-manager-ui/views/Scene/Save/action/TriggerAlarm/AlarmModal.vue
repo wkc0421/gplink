@@ -21,7 +21,7 @@
         mode="CARD"
         :columns="columns"
         :request="queryAlarmPage"
-        :bodyStyle="{ padding: 0 }"
+        :bodystyle="{ padding: 0 }"
         :gridColumn="3"
         :defaultParams="{
           sorts: [{ name: 'createTime', order: 'desc' }],

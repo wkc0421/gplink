@@ -157,21 +157,21 @@ const img6 = systemImg.apply6;
     padding: 24px;
     overflow-y: auto;
     height: 100%;
-    color: rgba(#000, 0.8);
+    color: var(--app-text-secondary);
     font-size: 14px;
-    background-color: #fafafa;
+    background-color: var(--app-elevated);
 
     .url {
         padding: 8px 16px;
-        color: #2f54eb;
+        color: var(--app-primary);
         background-color: rgba(#a7bdf7, 0.2);
         word-wrap: break-word;
     }
 
     h1 {
         margin: 16px 0;
-        color: rgba(#000, 0.85);
-        font-weight: bold;
+        color: var(--app-text-secondary);
+        font-weight: 600;
         font-size: 14px;
 
         &:first-child {
@@ -181,7 +181,7 @@ const img6 = systemImg.apply6;
 
     h2 {
         margin: 6px 0;
-        color: rgba(0, 0, 0, 0.8);
+        color: var(--app-text-secondary);
         font-size: 14px;
     }
 

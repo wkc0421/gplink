@@ -15,10 +15,29 @@ import { federation, sharpOptimize } from '@jetlinks-web/vite'
 import customTheme from './configs/theme'
 import { antdLegacyVarsPlugin } from './configs/plugin/antd-legacy-vars-plugin'
 
-const { defaultAlgorithm, defaultSeed } = theme
+const { darkAlgorithm, defaultSeed } = theme
 
-const mapToken = defaultAlgorithm({ ...defaultSeed, ...customTheme })
-const v3Token = convertLegacyToken(mapToken)
+const mapToken = darkAlgorithm({ ...defaultSeed, ...customTheme })
+const v3Token = {
+  ...convertLegacyToken(mapToken),
+  // Keep legacy Less consumers on the same explicit product palette as
+  // Ant Design's runtime tokens instead of the algorithm's derived blue/gray.
+  'primary-color': customTheme.colorPrimary,
+  'primary-color-hover': '#52A0FF',
+  'primary-color-active': '#1F6FE5',
+  'link-color': customTheme.colorLink,
+  'success-color': customTheme.colorSuccess,
+  'warning-color': customTheme.colorWarning,
+  'error-color': customTheme.colorError,
+  'text-color': customTheme.colorText,
+  'text-color-secondary': customTheme.colorTextSecondary,
+  'heading-color': customTheme.colorText,
+  'border-color-base': customTheme.colorBorder,
+  'border-color-split': customTheme.colorBorderSecondary,
+  'background-color-base': customTheme.colorBgBase,
+  'background-color-light': customTheme.colorBgElevated,
+  'disabled-color': customTheme.colorTextQuaternary,
+}
 
 const federationSharedMap = {
   vue: ['vue'],

@@ -298,7 +298,7 @@ onMounted(() => {
   getSystemPermission_api().then(async (resp: any) => {
     const baseMenus = await BaseMenuData()
     const filterBaseMenu = baseMenus.filter(
-      (item) => ![USER_CENTER_MENU_CODE, messageSubscribe].includes(item.code),
+      (item) => ![USER_CENTER_MENU_CODE, messageSubscribe, 'system/NoticeRule'].includes(item.code),
     );
 
     // 根据showPage过滤菜单
@@ -342,13 +342,13 @@ const filterMenus = (menus: any[]) => {
 
 <style lang="less" scoped>
 .top {
-  background: #f6f6f6;
+  background: var(--app-elevated);
   height: 40px;
   font-style: normal;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--app-text-secondary);
   margin-bottom: 12px;
 }
 .content {
@@ -382,7 +382,7 @@ const filterMenus = (menus: any[]) => {
     height: 540px;
     margin: 16px 0;
     padding: 12px;
-    background: #ffffff;
+    background: var(--app-surface);
     border-radius: 4px;
     overflow: hidden;
     width: 100%;
@@ -399,7 +399,7 @@ const filterMenus = (menus: any[]) => {
         line-height: 24px;
         display: flex;
         align-items: center;
-        color: #333333;
+        color: var(--app-text);
       }
       &-action {
         // width: 20px;

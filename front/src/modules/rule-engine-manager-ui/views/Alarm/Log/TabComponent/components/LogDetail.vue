@@ -107,7 +107,7 @@ const gotoRule = (record) => {
   .alarmTitle {
     font-weight: 600;
     font-size: 16px;
-    color: #1a1a1a;
+    color: @app-text;
   }
   .alarmTime {
     font-size: 14px;

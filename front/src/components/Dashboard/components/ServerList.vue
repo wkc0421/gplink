@@ -64,13 +64,13 @@ watch(() => JSON.stringify(props.value), () => {
    .server-item {
      cursor: pointer;
      :deep(.ant-badge-status-text) {
-       color: #a3a3a3;
+       color: var(--app-text-secondary);
        transition: color .3s;
      }
 
      &.active {
        :deep(.ant-badge-status-text) {
-         color: #000;
+         color: var(--app-text);
        }
      }
    }

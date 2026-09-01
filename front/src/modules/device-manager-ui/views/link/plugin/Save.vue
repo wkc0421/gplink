@@ -197,7 +197,7 @@ const handleCancel = () => {
     margin-bottom: 16px;
 
     .file-detail-item {
-        color: #4f4f4f;
+        color: var(--app-text);
     }
 }
 </style>

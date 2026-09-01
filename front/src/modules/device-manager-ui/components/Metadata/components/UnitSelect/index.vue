@@ -4,12 +4,13 @@
     style="width: 100%"
     mode="tags"
     v-model:value="myValue"
-    :dropdownStyle="{
+    :dropdownstyle="{
       zIndex: 1071
     }"
     :getPopupContainer="(node) => tableWrapperRef || node"
     :options="options"
     optionFilterProp="label"
+    :disabled="props.disabled"
     @change="change"
   />
 </template>
@@ -35,6 +36,10 @@ const props = defineProps({
   rules: {
     type: Array,
     default: () => []
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 })
 

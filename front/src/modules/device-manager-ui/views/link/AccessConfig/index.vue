@@ -460,7 +460,7 @@ const addressesTip = (data) => {
             font-style: normal;
             font-weight: 400;
             font-size: 12px;
-            color: rgba(0, 0, 0, 0.75);
+            color: var(--app-text-secondary);
             opacity: 0.75;
         }
     }
@@ -468,7 +468,7 @@ const addressesTip = (data) => {
         // font-style: normal;
         font-size: 12px;
         // line-height: 20px;
-        color: #666666;
+        color: var(--app-text-secondary);
         // overflow: hidden; //超出的文本隐藏
         // text-overflow: ellipsis; //溢出用省略号显示
         // white-space: nowrap; //溢出不换行

@@ -2,7 +2,7 @@
     <a-spin :spinning="spinning">
         <div class="child-item">
             <div class="child-item-left">
-                <div style="color: #333333">
+                <div style="color: var(--app-text)">
                     {{ data?.name }}
                 </div>
                 <div>
@@ -410,9 +410,9 @@ const onSave = (_data: any) => {
     justify-content: space-between;
     align-items: center;
     height: 68px;
-    background: linear-gradient(270deg, #ffffff 0%, #f1f6ff 99%);
+    background: linear-gradient(270deg, var(--app-surface) 0%, var(--app-info-bg) 99%);
     border-radius: 4px;
-    border: 1px solid #ebeef3;
+    border: 1px solid var(--app-border);
     margin-bottom: 10px;
 
     .child-item-left {
@@ -436,10 +436,10 @@ const onSave = (_data: any) => {
             }
 
             .child-item-left-auth-text {
-                color: #666666;
+                color: var(--app-text-secondary);
             }
             .child-item-left-auth-key {
-                color: #00c800;
+                color: var(--app-text-secondary);
                 font-size: 18px;
                 margin-right: 10px;
             }
@@ -453,7 +453,7 @@ const onSave = (_data: any) => {
             &.disabled {
                 .child-item-left-auth-key,
                 .child-item-left-auth-lock {
-                    color: #666666 !important;
+                    color: var(--app-text-secondary) !important;
                 }
             }
         }
@@ -478,28 +478,28 @@ const onSave = (_data: any) => {
             .box-item-text {
                 width: 100%;
                 text-align: center;
-                color: #666666;
+                color: var(--app-text-secondary);
                 font-size: 12px;
             }
         }
 
         .box-item-add {
             cursor: pointer;
-            background-color: #f7f8fa;
+            background-color: var(--app-elevated);
             width: 54px;
             height: 54px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #666666;
+            color: var(--app-text-secondary);
             border: none;
             padding: 0;
             border-radius: 0;
             margin: 0 16px;
 
             &:hover {
-                background-color: #eff2fe;
-                color: #2f54eb;
+                background-color: var(--app-info-bg);
+                color: var(--app-primary);
             }
         }
 

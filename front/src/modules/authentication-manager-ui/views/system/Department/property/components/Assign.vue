@@ -23,7 +23,7 @@
         <div>
           <TabsCard :options="typeOptions" v-model:activeKey="activeKey"/>
         </div>
-        <div style="color: rgba(0, 0, 0, 0.25)">
+        <div style="color: var(--app-text-secondary)">
           {{ $t('components.AddDeviceOrProductDialog.314014-1') }}
         </div>
       </div>
@@ -226,12 +226,12 @@ watch(() => activeKey.value, (val) => {
   h5 {
       padding: 12px;
       padding-left: 24px;
-      background-color: #f6f6f6;
+      background-color: var(--app-elevated);
       font-size: 14px;
   }
   .batch-config {
       padding: 8px 16px;
-      background: #F5F5F5;
+      background: var(--app-elevated);
       border-radius: 6px;
       border: 1px solid #CCCCCC;
       display: flex;

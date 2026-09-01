@@ -301,7 +301,7 @@ watch(
 <style scoped lang="less">
 .card {
   width: 100%;
-  background-color: #fff;
+  background-color: var(--app-surface);
 
   .checked-icon {
     position: absolute;
@@ -330,7 +330,7 @@ watch(
 
   .card-warp {
     position: relative;
-    border: 1px solid #e6e6e6;
+    border: 1px solid var(--app-border);
     overflow: hidden;
     cursor: pointer;
 
@@ -341,7 +341,7 @@ watch(
 
     &.active {
       position: relative;
-      border: 1px solid #2f54eb;
+      border: 1px solid var(--app-primary);
     }
 
     .card-type {
@@ -350,9 +350,9 @@ watch(
       left: -15px;
       height: 32px;
       padding: 0 30px;
-      color: rgba(0, 0, 0, 0.65);
+      color: var(--app-text-secondary);
       line-height: 32px;
-      background-color: rgba(0, 0, 0, 0.06);
+      background-color: var(--app-highlight-bg);
       transform: skewX(-45deg);
 
       .card-type-text {
@@ -421,7 +421,7 @@ watch(
       :deep(.card-item-content-title) {
         cursor: pointer;
         font-size: 16px;
-        font-weight: 700;
+        font-weight: 600;
         color: @primary-color;
         width: calc(100% - 100px);
         overflow: hidden;
@@ -430,13 +430,13 @@ watch(
       }
 
       :deep(.card-item-heard-name) {
-        font-weight: 700;
+        font-weight: 600;
         font-size: 16px;
         margin-bottom: 12px;
       }
 
       :deep(.card-item-content-text) {
-        color: rgba(0, 0, 0, 0.7);
+        color: var(--app-text-secondary);
         font-size: 12px;
       }
     }
@@ -527,14 +527,14 @@ watch(
 
   &.item-active {
     position: relative;
-    color: #2f54eb;
+    color: var(--app-primary);
 
     .checked-icon {
       display: block;
     }
 
     .card-warp {
-      border: 1px solid #2f54eb;
+      border: 1px solid var(--app-primary);
     }
   }
 
@@ -554,9 +554,9 @@ watch(
       :deep(button) {
         width: 100%;
         border-radius: 0;
-        background: #f6f6f6;
-        border: 1px solid #e6e6e6;
-        color: #2f54eb;
+        background: var(--app-elevated);
+        border: 1px solid var(--app-border);
+        color: var(--app-primary);
 
         &:hover {
           background-color: @primary-color-hover;

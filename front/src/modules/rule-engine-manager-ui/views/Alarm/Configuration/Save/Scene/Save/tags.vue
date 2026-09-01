@@ -60,8 +60,8 @@ const tagOptions = computed(() => {
 
   .tags-item {
     text-align: center;
-    color: #4096FF;
-    background-color: #F0F0F0;
+    color: var(--app-text-secondary);
+    background-color: var(--app-elevated);
     border-radius: 2px;
     padding: 4px 4px;
     width: 80px;

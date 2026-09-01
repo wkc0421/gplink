@@ -345,7 +345,7 @@ onMounted(() => {
 
 .search-box {
     padding-bottom: 24px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--app-border);
     display: flex;
     margin-bottom: 12px;
     gap: 24px;
@@ -371,8 +371,8 @@ onMounted(() => {
     .device-list-items {
         .device-list-item {
             padding: 10px 16px;
-            color: #4f4f4f;
-            border-bottom: 1px solid #f0f0f0;
+            color: var(--app-text);
+            border-bottom: 1px solid var(--app-border);
             display: flex;
             justify-content: space-between;
 
@@ -400,7 +400,7 @@ onMounted(() => {
 
                 .title-id {
                     flex: 1 1 auto;
-                    color: #a3a3a3;
+                    color: var(--app-text-secondary);
                 }
             }
 

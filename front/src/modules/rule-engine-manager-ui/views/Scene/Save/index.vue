@@ -220,7 +220,7 @@ onBeforeRouteUpdate((to, from, next) => { // 设备管理内路由跳转
 <style scoped lang="less">
 .scene-warp {
   padding: 24px;
-  background-color: #fff;
+  background-color: var(--app-surface);
 
   .header {
     display: flex;
@@ -229,7 +229,7 @@ onBeforeRouteUpdate((to, from, next) => { // 设备管理内路由跳转
     margin-bottom: 16px;
     .title {
       font-size: 20px;
-      color: rgba(#000, 0.8);
+      color: var(--app-text-secondary);
       font-weight: bold;
     }
     .type {
@@ -238,7 +238,7 @@ onBeforeRouteUpdate((to, from, next) => { // 设备管理内路由跳转
       min-width: 80px;
       margin-left: 16px;
       padding: 4px 8px;
-      color: rgba(0, 0, 0, 0.65);
+      color: var(--app-text-secondary);
       font-size: 14px;
       border: 1px solid rgba(0, 0, 0, 0.2);
       border-radius: 2px;

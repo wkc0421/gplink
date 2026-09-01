@@ -80,12 +80,12 @@ const jumpDetail = (item: any) => {
 <style scoped lang="less">
 .new-alarm {
   padding: 24px;
-  background-color: #fff;
-  border: 1px solid #e0e4e8;
-  border-radius: 2px;
+  background-color: @app-surface;
+  border: 1px solid @app-border;
+  border-radius: @app-radius-card;
   height: 100%;
   .title {
-        color: rgba(0, 0, 0, 0.64);
+        color: @app-text-secondary;
         font-size: 14px;
     }
 }
@@ -131,23 +131,23 @@ const jumpDetail = (item: any) => {
     border-radius: 2px;
 
     &.level-1 {
-      background-color: #e50012;
+      background-color: @app-error;
     }
 
     &.level-2 {
-      background-color: #ff9457;
+      background-color: @app-warning;
     }
 
     &.level-3 {
-      background-color: #fabd47;
+      background-color: #D8A34C;
     }
 
     &.level-4 {
-      background-color: #999;
+      background-color: #687991;
     }
 
     &.level-5 {
-      background-color: #bbb;
+      background-color: #52637A;
     }
   }
 }

@@ -340,7 +340,7 @@ watch([() => responseStatusCard.activeKey, () => props.selectApi], (n) => {
         width: 100%;
 
         h5 {
-            font-weight: bold;
+            font-weight: 600;
             font-size: 16px;
         }
 
@@ -355,7 +355,7 @@ watch([() => responseStatusCard.activeKey, () => props.selectApi], (n) => {
         font-size: 14px;
 
         .label {
-            font-weight: bold;
+            font-weight: 500;
         }
     }
     .api-card {

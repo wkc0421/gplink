@@ -12,7 +12,7 @@
       :request="getList_api"
       mode="TABLE"
       :params="queryParams"
-      :bodyStyle="{ padding: 0 }"
+      :bodystyle="{ padding: 0 }"
       :defaultParams="defaultParams"
       :scroll="{ y: 420 }"
     >

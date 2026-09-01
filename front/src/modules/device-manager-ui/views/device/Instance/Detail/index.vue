@@ -14,7 +14,7 @@
                 </a-tooltip>
                 <a-divider type="vertical" />
                 <a-space>
-                    <span style="font-size: 14px; color: rgba(0, 0, 0, 0.85)">
+                    <span style="font-size: 14px; color: var(--app-text-secondary)">
                         {{ $t('Detail.index.957187-0') }}
                         <a-badge
                             :status="

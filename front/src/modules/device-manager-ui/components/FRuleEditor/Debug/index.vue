@@ -48,7 +48,7 @@
                                 size="small"
                                 style="width: 100%;"
                                 :virtual="true"
-                                :dropdownStyle="{
+                                :dropdownstyle="{
                                   zIndex: 1072
                                 }"
                             />
@@ -104,7 +104,7 @@
                                 style="width: 100%;"
                                 :virtual="true"
                                 :getPopupContainer="getPopupContainer"
-                                :dropdownStyle="{
+                                :dropdownstyle="{
                                   zIndex: 1072
                                 }"
                             />

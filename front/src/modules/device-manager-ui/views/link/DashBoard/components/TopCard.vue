@@ -153,7 +153,7 @@ watch(
 
 <style lang="less" scoped>
 .dash-board {
-    background-color: #fff;
+    background-color: var(--app-surface);
   padding: 24px;
     .dash-board-items {
       display: flex;

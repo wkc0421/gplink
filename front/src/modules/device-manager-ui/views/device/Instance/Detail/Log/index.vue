@@ -13,7 +13,7 @@
         mode="TABLE"
         :defaultParams="{ sorts: [{ name: 'timestamp', order: 'desc' }] }"
         :params="params"
-        :bodyStyle="{ padding: 0 , minHeight: 'auto' }"
+        :bodystyle="{ padding: 0 , minHeight: 'auto' }"
     >
         <template #type="slotProps">
             {{ slotProps?.type?.text }}

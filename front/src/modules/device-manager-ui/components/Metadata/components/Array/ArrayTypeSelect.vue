@@ -6,7 +6,7 @@
             :value="myValue"
             style="width: 100%"
             :placeholder="$t('Array.ArrayTypeSelect.363831-0')"
-            :dropdownStyle="{
+            :dropdownstyle="{
                 zIndex: 1071,
             }"
             :options="options"

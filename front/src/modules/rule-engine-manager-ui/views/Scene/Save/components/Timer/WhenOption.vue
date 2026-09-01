@@ -83,20 +83,20 @@ watch(() => props.type, () => {
   flex-wrap: wrap;
   gap: 8px 16px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--app-elevated);
 
   .when-item-option {
     width: 76px;
     padding: 6px 0;
     text-align: center;
-    background: #fff;
-    border: 1px solid #e6e6e6;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
     border-radius: 2px;
     cursor: pointer;
   }
 
   .active {
-    color: #233dd7;
+    color: var(--app-text);
     border-color: #233dd7;
   }
 

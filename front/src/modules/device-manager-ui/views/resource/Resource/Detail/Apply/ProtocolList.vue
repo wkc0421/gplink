@@ -5,7 +5,7 @@
         <AIcon type="AppstoreOutlined" style="font-size: 18px" />
         <span style="font-size: 20px">{{ type === 'plugin' ? $t('Apply.ProtocolList.294910-6') : $t('Apply.ProtocolList.294910-0') }}</span>
         <span @click="handleClick('metadata')"
-          >{{ $t('Apply.ProtocolList.294910-1') }} <span style="color: #1890ff"> {{ count }} </span></span
+          >{{ $t('Apply.ProtocolList.294910-1') }} <span style="color: var(--app-primary)"> {{ count }} </span></span
         >
       </a-space>
     </div>
@@ -22,7 +22,7 @@
         <template #leftRender>
           <a-space :size="12" align="end">
             <div>
-              <div style="color: #00000080">{{ type === 'plugin' ? $t('Apply.ProtocolList.294910-7') : $t('Apply.ProtocolList.294910-4') }}</div>
+              <div style="color: var(--app-text-secondary)">{{ type === 'plugin' ? $t('Apply.ProtocolList.294910-7') : $t('Apply.ProtocolList.294910-4') }}</div>
               <div class="protocol-item">
                 <div class="protocol-item-img">
                   <img :src="device.deviceCard" />
@@ -46,7 +46,7 @@
               />
             </div>
             <div>
-              <div style="color: #00000080">{{ type === 'plugin' ? $t('Apply.ProtocolList.294910-8') : $t('Apply.ProtocolList.294910-5') }}</div>
+              <div style="color: var(--app-text-secondary)">{{ type === 'plugin' ? $t('Apply.ProtocolList.294910-8') : $t('Apply.ProtocolList.294910-5') }}</div>
               <div class="protocol-item">
                 <div class="protocol-item-img">
                   <img :src="device.deviceCard" />
@@ -140,9 +140,9 @@ onMounted(() => {
     justify-content: space-between;
   }
   .items {
-    background-color: #eee;
+    background-color: var(--app-elevated);
     padding: 6px;
-    border: 1px solid #eeeeee;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
     display: flex;
     flex-direction: column;
@@ -165,15 +165,15 @@ onMounted(() => {
     }
   }
   .expand-btn {
-    color: #1890ff;
+    color: var(--app-primary);
     cursor: pointer;
     width: 100%;
     text-align: center;
   }
   .protocol-items {
-    background-color: #eeeeee;
+    background-color: var(--app-elevated);
     padding: 6px;
-    border: 1px solid #eeeeee;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
     display: flex;
     flex-direction: column;
@@ -181,7 +181,7 @@ onMounted(() => {
     .protocol-item {
       display: flex;
       align-items: center;
-      background-color: #eeeeee83;
+      background-color: var(--app-elevated);
       border-radius: 6px;
       padding: 6px;
       gap: 12px;

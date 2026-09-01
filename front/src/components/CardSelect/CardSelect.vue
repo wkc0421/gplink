@@ -209,13 +209,13 @@ watch(
 </script>
 
 <style lang="less" scoped>
-@card-border: #e6e6e6;
+@card-border: var(--app-border);
 .j-card-panel {
   .j-card-item {
     border: 1px solid @card-border;
     border-radius: 4px;
     cursor: pointer;
-    color: @black;
+    color: var(--app-text);
     display: flex;
     width: 100%;
     gap: 12px;
@@ -245,7 +245,7 @@ watch(
     }
 
     .sub-title {
-      color: rgba(0, 0, 0, 0.24);
+      color: var(--app-text-secondary);
     }
 
     &.right {

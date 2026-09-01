@@ -188,7 +188,7 @@ watch(
   margin: 80px 0;
   text-align: center;
   font-size: 14px;
-  color: #7f7f7f;
+  color: var(--app-text);
 }
 
 .code {

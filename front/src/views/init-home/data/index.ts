@@ -1,5 +1,6 @@
 import proMenu from './baseMenu';
 import {getModulesMenu} from '@/utils/modules'
+import { normalizeMenuPresentation } from '@/utils/menu'
 /**
  * 合并菜单数据
  * @param tree1 基础菜单数据
@@ -35,7 +36,7 @@ const BaseMenuFn = () => {
   const modules = getModulesMenu()
   let baseModuleMenu: any = [...proMenu]
   baseModuleMenu = mergeTrees(baseModuleMenu, modules)
-  return baseModuleMenu
+  return normalizeMenuPresentation(baseModuleMenu)
 }
 
 export default BaseMenuFn

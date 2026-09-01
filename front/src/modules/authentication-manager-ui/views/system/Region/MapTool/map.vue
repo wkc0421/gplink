@@ -326,14 +326,14 @@ defineExpose({
       .tool-item-group {
         display: flex;
         flex-direction: column;
-        border: 1px solid #e3e3e3;
-        background-color: #fff;
+        border: 1px solid var(--app-border);
+        background-color: var(--app-surface);
         border-radius: 4px;
         box-shadow: 0 0 16px rgba(#000, .15);
 
         .tool-item {
           padding: 4px 6px;
-          color: #333;
+          color: var(--app-text);
           font-size: 16px;
 
           &:first-child {
@@ -347,7 +347,7 @@ defineExpose({
           }
 
           &:not(:first-child) {
-            border-top: 1px solid #e3e3e3;
+            border-top: 1px solid var(--app-border);
           }
 
           &.active {
@@ -357,11 +357,11 @@ defineExpose({
 
           &.disabled {
             cursor: not-allowed !important;
-            background-color: #efefef;
+            background-color: var(--app-elevated);
 
             > span {
               cursor: not-allowed !important;
-              color: #666;
+              color: var(--app-text-secondary);
             }
           }
         }

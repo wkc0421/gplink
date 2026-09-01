@@ -312,14 +312,14 @@ onMounted(() => {
 
 .edit {
     height: 550px;
-    border: 1px solid #dcdcdc;
+    border: 1px solid var(--app-border);
 
     .edit-only {
         height: 550px;
         width: 97%;
         position: absolute;
         z-index: 1;
-        background-color: #eeeeee70;
+        background-color: var(--app-elevated);
         cursor: not-allowed;
     }
 }
@@ -328,7 +328,7 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    background-color: #f7f7f7;
+    background-color: var(--app-elevated);
 
     .bottom-title {
         display: flex;

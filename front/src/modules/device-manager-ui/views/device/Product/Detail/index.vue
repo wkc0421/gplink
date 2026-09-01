@@ -88,13 +88,13 @@
                 <a-descriptions size="small" :column="4">
                     <a-descriptions-item
                         :label="$t('Detail.index.478940-5')"
-                        :labelStyle="{
+                        :labelstyle="{
                             fontSize: '14px',
                             opacity: 0.55,
                         }"
-                        :contentStyle="{
+                        :contentstyle="{
                             fontSize: '14px',
-                            color: '#092EE7',
+                            color: 'var(--app-text)',
                             cursor: 'pointer',
                         }"
                         ><span @click="jumpDevice">{{

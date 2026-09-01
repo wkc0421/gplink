@@ -24,12 +24,16 @@
  <style lang="less" scoped>
  .dictionary_contain{
      display: flex;
-     background-color: #fff;
+     background-color: @app-surface;
+     border: 1px solid @app-border;
      padding: 24px;
      height: 100%;
+     min-width: 0;
+     box-sizing: border-box;
+     overflow: hidden;
  }
  .dictionary_left{
-     border-right: 1px solid #f0f0f0;
+     border-right: 1px solid @app-border;
      padding-right: 24px;
      height:100%;
    width: 320px;
@@ -37,6 +41,7 @@
  .dictionary_right{
      flex:1 1 0;
       min-width: 0;
+     overflow: hidden;
      height:100%
  }
  </style>

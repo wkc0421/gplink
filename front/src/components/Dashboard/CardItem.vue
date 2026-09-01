@@ -788,7 +788,7 @@ const setChartOptions = (x: any[], y: number[], name: string, ThemeColor: string
               },
               {
                 offset: 1,
-                color: '#FFFFFF' //   0% 处的颜色
+                color: '#52A0FF' //   0% 处的颜色
               }
             ],
             global: false // 缺省为 false
@@ -912,8 +912,8 @@ watch(
   flex-direction: column;
   height: 100%;
   padding: 24px;
-  background-color: #fff;
-  border: 1px solid #e0e4e8;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
   border-radius: 2px;
   .top-card-content {
     display: flex;
@@ -924,11 +924,11 @@ watch(
       height: 100%;
       width: 50%;
       &-title {
-        color: rgba(0, 0, 0, 0.64);
+        color: var(--app-text-secondary);
       }
       &-value {
         padding: 12px 0;
-        color: #323130;
+        color: var(--app-text);
         font-weight: 700;
         font-size: 36px;
       }
@@ -955,10 +955,10 @@ watch(
     align-items: center;
     justify-content: space-between;
     padding-top: 16px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid var(--app-border);
     min-height: 40px;
     .footer-item-value {
-      color: #323130;
+      color: var(--app-text);
       font-weight: 700;
       font-size: 16px;
     }

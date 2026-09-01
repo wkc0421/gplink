@@ -382,12 +382,12 @@ onMounted(() => {
         margin-left: 10px;
     }
     .upgradeMode {
-        background: #e6f4ff;
+        background: var(--app-info-bg);
         border-radius: 4px;
         border: 1px solid #91caff;
         height: 22px;
         padding: 0 8px;
-        color: #1677ff;
+        color: var(--app-primary);
         margin-top: 4px;
         line-height: 22px;
     }
@@ -395,7 +395,7 @@ onMounted(() => {
         font-size: 16px;
         font-weight: 500;
         margin-left: 12px;
-        color: #1a1a1a;
+        color: var(--app-text);
         max-width: 300px;
     }
 }

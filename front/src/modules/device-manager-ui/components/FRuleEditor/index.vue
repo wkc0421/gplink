@@ -7,7 +7,7 @@
         :title="$t('FRuleEditor.index.911643-0')"
         centered
         :destroyOnClose="true"
-        :dialogStyle="{
+        :dialogstyle="{
           zIndex: 1072
         }"
         :getContainer="(node) => tableWrapperRef || node"
@@ -146,7 +146,7 @@ getAllCrud()
         gap: 24px;
 
         div span {
-            color: rgba(0, 0, 0, 0.8);
+            color: var(--app-text-secondary);
         }
     }
 }

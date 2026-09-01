@@ -217,7 +217,7 @@ watch(
     .calendar-item {
       position: relative;
       margin-bottom: 12px;
-      border: 1px solid #cfcfcf;
+      border: 1px solid var(--app-border);
       border-radius: 4px;
       padding: 12px;
       display: flex;
@@ -234,7 +234,7 @@ watch(
       .calendar-item-delete {
         position: absolute;
         right: 12px;
-        color: #e50012;
+        color: var(--app-text);
       }
 
       .calendar-item-content {

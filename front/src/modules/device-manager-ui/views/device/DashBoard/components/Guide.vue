@@ -50,7 +50,7 @@ const props = defineProps({
     .home-title-english {
         position: absolute;
         top: 30px;
-        color: rgba(0, 0, 0, 0.3);
+        color: var(--app-text-secondary);
         font-size: 12px;
     }
 }

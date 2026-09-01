@@ -6,6 +6,17 @@ import {
 import {LocalStore} from "@jetlinks-web/utils";
 import {langKey, isSubApp} from "@/utils/consts";
 
+// Keep the browser tab branded with the deployed GP mark. A custom icon from
+// the system settings is still respected; only empty/legacy favicon paths are
+// normalized so an old cube favicon cannot silently override the new default.
+export const DEFAULT_GP_FAVICON = '/favicon.svg?theme=gp-v7'
+const resolveFavicon = (url?: string) => {
+  const value = (url || '').trim()
+  return !value || /(?:^|\/)favicon\.ico(?:$|\?)/i.test(value)
+    ? DEFAULT_GP_FAVICON
+    : value
+}
+
 interface LayoutType {
   siderWidth: number
   headerHeight: number
@@ -16,7 +27,7 @@ interface LayoutType {
 }
 
 export const useSystemStore = defineStore('system', () => {
-  const theme = ref<string>('light') // 主题色
+  const theme = ref<string>('dark') // 主题色
   const ico = ref<string>('/favicon.ico') // 浏览器标签页logo
   const systemInfo = ref<Record<string, any>>({})
   const microApp = ref<Record<string, any>>({})
@@ -55,10 +66,11 @@ export const useSystemStore = defineStore('system', () => {
    * @param url
    */
   const changeIco = (url: string) => {
-    ico.value = url
+    const resolvedUrl = resolveFavicon(url)
+    ico.value = resolvedUrl
     const icoDom: any = document.querySelector('link[rel="icon"]')!;
     if (!icoDom) return
-    icoDom.href = url
+    icoDom.href = resolvedUrl
   }
 
   const changeTitle = (value: string) => {
@@ -70,7 +82,7 @@ export const useSystemStore = defineStore('system', () => {
     if (_data) {
       const ico: any = document.querySelector('link[rel="icon"]');
       if (!ico) return
-      ico.href = _data.ico;
+      ico.href = resolveFavicon(_data.ico);
       document.title = _data.title || '';
     }
   }
@@ -78,7 +90,7 @@ export const useSystemStore = defineStore('system', () => {
   const handleFront = (_value: any) => {
     layout.title = _value.title
     layout.logo = _value.logo
-    theme.value = _value.headerTheme
+    theme.value = _value.headerTheme || 'dark'
     changeIco(_value.ico)
     setDocumentTitle()
     changeTitle(_value.title)

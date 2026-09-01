@@ -4,7 +4,7 @@
         <!--        <a-tooltip :title="instanceStore.detail?.independentMetadata && type === 'device'-->
         <!--        ? '该设备已脱离产品物模型，修改产品物模型对该设备无影响'-->
         <!--        : '设备会默认继承产品的物模型，修改设备物模型后将脱离产品物模型'">-->
-        <!--          <div class="ellipsis" style='color: #999;'>-->
+        <!--          <div class="ellipsis" style='color: var(--app-text-secondary);'>-->
         <!--            <AIcon type="InfoCircleOutlined" style="margin-right: 3px" />-->
         <!--            {{-->
         <!--              instanceStore.detail?.independentMetadata && type === 'device'-->
@@ -200,7 +200,7 @@ watch(
     }
     .desc {
         font-size: 13px;
-        color: rgba(0, 0, 0, 0.8);
+        color: var(--app-text-secondary);
         display: inline-block;
         margin-top: 12px;
         margin-left: 5px;

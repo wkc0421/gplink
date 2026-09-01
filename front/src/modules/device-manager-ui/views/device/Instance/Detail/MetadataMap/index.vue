@@ -391,7 +391,7 @@ onUnmounted(() => {
 
             :deep(.metadata-search-row) {
                 td {
-                    background: #ffff80 !important;
+                    background: var(--app-warning-bg) !important;
                 }
             }
         }
@@ -409,18 +409,18 @@ onUnmounted(() => {
 
         .title {
             margin-bottom: 16px;
-            color: rgba(#000, 0.85);
+            color: var(--app-text-secondary);
             font-weight: bold;
 
             p {
                 initial-letter: 28px;
-                color: #666666;
+                color: var(--app-text-secondary);
             }
         }
     }
 
     .metadata-title {
-        color: #666666;
+        color: var(--app-text-secondary);
     }
 
     :deep(.ant-table-selection-column) {

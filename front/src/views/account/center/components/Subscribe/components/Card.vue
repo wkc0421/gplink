@@ -166,7 +166,7 @@ const onCheckChange = (dt: any) => {
   .box-item-text {
     width: 100%;
     text-align: center;
-    color: #666666;
+    color: var(--app-text-secondary);
     font-size: 12px;
   }
 }

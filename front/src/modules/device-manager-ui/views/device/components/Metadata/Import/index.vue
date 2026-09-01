@@ -148,7 +148,7 @@
                         {{ $t('Import.index.603910-15') }}
                     </a-button>
                 </a-upload>
-                <div style="margin-left: 10px; color: rgba(0, 0, 0, 0.6)">
+                <div style="margin-left: 10px; color: var(--app-text-secondary)">
                     {{ $t('Import.index.603910-16') }}
                 </div>
             </a-form-item>
@@ -171,7 +171,7 @@
                         <a-tooltip :title="$t('Import.index.603910-19')">
                             <AIcon
                                 type="QuestionCircleOutlined"
-                                style="color: rgb(136, 136, 136)"
+                                style="color: var(--app-text-tertiary)"
                             />
                         </a-tooltip>
                     </a-space>
@@ -945,7 +945,7 @@ onMounted(async () => {
 </script>
 <style scoped lang="less">
 .import-content {
-    background: rgb(236, 237, 238);
+    background: var(--app-elevated);
 
     .import-tip {
         padding: 10px;

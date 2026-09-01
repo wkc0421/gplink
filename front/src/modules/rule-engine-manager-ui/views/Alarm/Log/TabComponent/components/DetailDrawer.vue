@@ -144,10 +144,10 @@ const refresh = async () => {
   display: flex;
   justify-content: space-between;
   .alarmType {
-    background-color: #e6f4ff;
+    background-color: rgba(47, 128, 255, .16);
     padding: 2px 8px;
     margin-right: 10px;
-    color: #1677ff;
+    color: @app-primary-hover;
   }
   .alarmTitle {
     display: flex;

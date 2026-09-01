@@ -319,7 +319,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: var(--app-elevated);
   padding: 20px;
 }
 
@@ -336,7 +336,7 @@ onMounted(() => {
 
 .loading-text {
   margin-top: 16px;
-  color: #666;
+  color: var(--app-text-secondary);
 }
 
 .status-container {
@@ -347,7 +347,7 @@ onMounted(() => {
 }
 
 .status-card {
-  background: white;
+  background: var(--app-surface);
   border-radius: 8px;
   padding: 40px;
   text-align: center;
@@ -357,7 +357,7 @@ onMounted(() => {
 }
 
 .status-card.error .status-icon {
-  color: #ff4d4f;
+  color: var(--app-text-secondary);
 }
 
 .status-icon {
@@ -368,12 +368,12 @@ onMounted(() => {
 .status-title {
   font-size: 20px;
   font-weight: 500;
-  color: #333;
+  color: var(--app-text);
   margin-bottom: 12px;
 }
 
 .status-description {
-  color: #666;
+  color: var(--app-text-secondary);
   line-height: 1.5;
   margin-bottom: 24px;
 }
@@ -390,7 +390,7 @@ onMounted(() => {
 }
 
 .auth-card {
-  background: white;
+  background: var(--app-surface);
   border-radius: 8px;
   padding: 40px;
   max-width: 400px;
@@ -419,7 +419,7 @@ onMounted(() => {
 .auth-title {
   font-size: 20px;
   font-weight: 500;
-  color: #333;
+  color: var(--app-text);
 }
 
 .auth-form {
@@ -446,13 +446,13 @@ onMounted(() => {
   justify-content: center;
   width: 80px;
   height: 32px;
-  background: #f5f5f5;
+  background: var(--app-elevated);
   border-radius: 4px;
-  color: #999;
+  color: var(--app-text-secondary);
 }
 
 .verify-code-placeholder:hover {
-  background: #e8e8e8;
+  background: var(--app-elevated);
 }
 
 .form-actions {

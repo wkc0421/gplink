@@ -76,9 +76,11 @@ import { TOKEN_KEY } from '@jetlinks-web/constants'
 import { captchaConfig, codeUrl, getOAuth2, initApplication, authLogin, encryptionConfig } from '@/api/login'
 import { settingDetail } from '@/api/system/basis'
 import { getMe_api } from '@/api/auth'
-import { getImage, getToken, encrypt } from '@jetlinks-web/utils'
+import { getToken, encrypt } from '@jetlinks-web/utils'
 import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
+import gpMonogram from '@/assets/theme-icons/gp-monogram.svg'
+import { DEFAULT_GP_FAVICON } from '@/store/system'
 
 const { t: $t } = useI18n()
 
@@ -92,7 +94,7 @@ const internal = ref('false')
 const params = ref()
 
 document.title = $t('auth.index.559799-6', 'Jetlinks');
-headerImg.value = getImage('/logo.png')
+headerImg.value = gpMonogram
 
 type LoginParam = {
   username: string;
@@ -265,8 +267,12 @@ const getSettingDetail = () => {
   settingDetail('front').then((res: any) => {
     if (res.success) {
       const ico: any = document.querySelector('link[rel="icon"]');
-      ico.href = res.result.ico;
-      headerImg.value = res.result.logo
+      const configuredIcon = res.result.ico || ''
+      ico.href = /(?:^|\/)favicon\.ico(?:$|\?)/i.test(configuredIcon)
+        ? DEFAULT_GP_FAVICON
+        : (configuredIcon || DEFAULT_GP_FAVICON)
+      // Keep OAuth branding aligned with the deployed GP mark.
+      headerImg.value = gpMonogram
       if (res.result.title) {
         document.title = $t('auth.index.559799-6', [res.result.title]);
       } else {
@@ -297,7 +303,7 @@ initPage()
     justify-content: space-between;
     height: 60px;
     font-size: 26px;
-    background-color: #fff;
+    background-color: var(--app-surface);
 
     .oauth-header-left {
       margin-left: 10%;
@@ -310,7 +316,7 @@ initPage()
       font-size: 14px;
 
       .oauth-header-right-text {
-        color: rgb(0 0 0 / 70%);
+        color: var(--app-text-secondary);
       }
 
       // .oauth-header-right-connect {
@@ -328,8 +334,8 @@ initPage()
     height: 380px;
     margin: 0 auto;
     margin-top: 5%;
-    background: #fff;
-    box-shadow: 0 5px 5px #d4d4d4;
+    background: var(--app-surface);
+    box-shadow: 0 5px 5px rgba(0, 0, 0, .34);
 
     .oauth-content-header {
       width: 60px;
@@ -350,7 +356,7 @@ initPage()
       }
 
       ul {
-        color: #00000085;
+        color: var(--app-text-secondary);
         list-style: inherit;
         li {
           padding-top: 10px;

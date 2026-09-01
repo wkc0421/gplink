@@ -14,7 +14,7 @@
             font-weight: 600;
         }
         .header-action-desc {
-            color: #8d9399;
+            color: var(--app-text-secondary);
         }
     }
 
@@ -36,11 +36,11 @@
                 line-height: 56px;
                 border-radius: 4px;
                 padding-left: 12px;
-                background: #f8f9fa;
+                background: var(--app-elevated);
                 box-sizing: border-box;
                 border-width: 0 0 1px 0;
                 border-style: solid;
-                border-color: #e4e6e7;
+                border-color: var(--app-border);
                 display: flex;
                 justify-content: space-between;
             }
@@ -53,11 +53,11 @@
                 }
 
                 .left-drag {
-                    border: 1px solid #eff0f1;
+                    border: 1px solid var(--app-border);
                     height: 32px;
                     line-height: 32px;
                     border-radius: 3px;
-                    color: #a3a3a3;
+                    color: var(--app-text-secondary);
                     font-size: 14px;
                     letter-spacing: 0;
                     padding-left: 4px;
@@ -66,13 +66,13 @@
                 }
                 .left-map {
                     height: 32px;
-                    background-color: #f8f9fa;
+                    background-color: var(--app-elevated);
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    border: 1px solid #eff0f1;
+                    border: 1px solid var(--app-border);
                     border-radius: 3px;
-                    color: #1a1a1a;
+                    color: var(--app-text);
                     font-size: 14px;
                     letter-spacing: 0;
                     padding: 0 8px;
@@ -95,7 +95,7 @@
                 font-weight: normal;
                 letter-spacing: 0em;
                 /* Gray600 */
-                color: #646c73;
+                color: var(--app-text-secondary);
             }
         }
         .fold {
@@ -107,7 +107,7 @@
                 height: 55px;
                 border-radius: 4px;
                 border: 1px solid #9e9e9e;
-                background-color: #fff;
+                background-color: var(--app-surface);
                 display: flex;
                 align-items: center;
             }
@@ -123,12 +123,12 @@
             .right-title {
                 height: 56px;
                 border-radius: 4px;
-                background: #f8f9fa;
+                background: var(--app-elevated);
                 box-sizing: border-box;
                 /* Gray300 */
                 border-width: 0px 0px 1px 0px;
                 border-style: solid;
-                border-color: #e4e6e7;
+                border-color: var(--app-border);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -142,9 +142,9 @@
                 flex: 1;
                 .right-item {
                     height: 80px;
-                    border: 1px solid #eff0f1;
+                    border: 1px solid var(--app-border);
                     border-radius: 6px;
-                    background-color: #f8f9fa;
+                    background-color: var(--app-elevated);
                     margin-bottom: 10px;
                     padding: 12px;
                     .item-header {
@@ -153,12 +153,12 @@
                         margin-bottom: 6px;
 
                         .item-name {
-                            color: #1f2429;
+                            color: var(--app-text);
                             font-size: 16px;
                         }
 
                         .item-tag {
-                            background-color: #FFFFFF;
+                            background-color: var(--app-surface);
                             color: @primary-color;
                             border-radius: 12px;
                             padding: 0 12px;
@@ -168,7 +168,7 @@
                         display: flex;
                         gap: 16px;
                         font-size: 14px;
-                        color: #646c73;
+                        color: var(--app-text-secondary);
                         span {
                             max-width: 140px;
                         }

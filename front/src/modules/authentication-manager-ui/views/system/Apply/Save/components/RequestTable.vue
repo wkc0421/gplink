@@ -194,7 +194,7 @@ function addRow() {
 .request-table-container {
     width: 100%;
     :deep(.ant-btn-link) {
-        color: #000000d9;
+        color: var(--app-text-secondary);
 
         &:hover {
             color: @primary-color;

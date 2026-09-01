@@ -24,7 +24,7 @@
             :columns="columns"
             :request="(e) => handleData(e)"
             mode="CARD"
-            :bodyStyle="{
+            :bodystyle="{
                 padding: 0,
             }"
             ref="tableRef"
@@ -252,9 +252,9 @@ watch(
     height: 40px;
     padding: 0 20px 0 10px;
     margin-bottom: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     line-height: 40px;
-    background-color: #f6f6f6;
+    background-color: var(--app-elevated);
 }
 :deep(.JSearch-warp) {
   margin-bottom: 0 !important;

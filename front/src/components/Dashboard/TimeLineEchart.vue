@@ -235,7 +235,7 @@ defineExpose({ refreshManual })
   flex-direction: column;
   height: 100%;
   padding: 24px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   // box-shadow: 0px 2.73036px 5.46071px rgba(31, 89, 245, 0.2);
   border-radius: 2px;
 }

@@ -12,6 +12,7 @@
 </template>
 <script setup lang="ts">
 import { ConfigProvider } from '@jetlinks-web/components'
+import { theme as antdTheme } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import enUs from 'ant-design-vue/es/locale/en_US'
 import componentsZhCN from '@jetlinks-web/components/es/locale/zh-CN'
@@ -40,7 +41,59 @@ const componentsLocale = {
 const { hasPermission } = useAuthStore()
 
 const themeConfig = {
-  token: theme
+  algorithm: antdTheme.darkAlgorithm,
+  token: theme,
+  components: {
+    Layout: {
+      headerBg: '#0B192A',
+      bodyBg: '#0A1422',
+      siderBg: '#0B192A',
+      triggerBg: '#172F49'
+    },
+    Menu: {
+      darkItemBg: '#0B192A',
+      darkSubMenuItemBg: '#0B192A',
+      darkItemColor: '#C4D0DE',
+      darkItemHoverColor: '#F4F7FC',
+      darkItemSelectedColor: '#F4F7FC',
+      darkItemSelectedBg: 'rgba(47, 128, 255, 0.2)',
+      darkGroupTitleColor: '#8799AD',
+      itemBorderRadius: 7,
+      itemHeight: 39,
+      itemMarginBlock: 3,
+      itemMarginInline: 0,
+      itemPaddingInline: 11
+    },
+    Card: {
+      colorBgContainer: '#102238',
+      colorBorderSecondary: '#35516F',
+      headerBg: '#102238'
+    },
+    Table: {
+      colorBgContainer: '#102238',
+      headerBg: '#172F49',
+      headerColor: '#B9C7D8',
+      rowHoverBg: 'rgba(47, 128, 255, 0.08)',
+      borderColor: '#35516F',
+      cellPaddingBlock: 12,
+      cellPaddingInline: 16
+    },
+    Modal: {
+      contentBg: '#102238',
+      headerBg: '#102238',
+      footerBg: '#102238',
+      titleColor: '#F4F7FC'
+    },
+    Drawer: {
+      colorBgElevated: '#102238'
+    },
+    Tabs: {
+      cardBg: '#102238',
+      itemColor: '#C4D0DE',
+      itemSelectedColor: '#52A0FF',
+      inkBarColor: '#2F80FF'
+    }
+  }
 }
 
 provide(ComponentsEnum.Permission, { hasPermission })

@@ -1,18 +1,32 @@
-@set: {
-  0: #ffffff;
-  50: #F8F9FA;
-  200: #EFF0F1;
-  300: #E4E6E7;
-  400: #C3C7CB;
-  500: #8D9399;
-  600: #646C73;
-  900: #1F2429;
+@text-set: {
+  0: @app-text;
+  50: #DCE7F3;
+  200: @app-text-secondary;
+  300: #9EADC0;
+  400: @app-text-tertiary;
+  500: #8799AD;
+  600: #61738A;
+  900: @app-border;
 }
 
-each(@set, {
+@surface-set: {
+  0: @app-surface;
+  50: @app-elevated;
+  200: #162941;
+  300: @app-hover;
+  400: @app-border;
+  500: @app-border-strong;
+  600: #456887;
+  900: @app-bg;
+}
+
+each(@text-set, {
   .text-color-@{key} {
     color: @value;
   }
+})
+
+each(@surface-set, {
   .bg-color-@{key} {
     background-color: @value;
   }
@@ -21,21 +35,21 @@ each(@set, {
   }
 })
 
-
-// ======= antdv 4 引起的样式问题 =======
-
 body {
   margin: 0;
+  color: @app-text;
+  background: @app-bg;
 }
 
 hr {
   box-sizing: content-box;
   height: 0;
-  overflow: visible
+  overflow: visible;
+  border-color: @app-border;
 }
 
-h1,h2,h3,h4,h5,h6 {
-  color: #000000d9;
+h1, h2, h3, h4, h5, h6 {
+  color: @app-text;
   font-weight: 500;
   margin-bottom: .5em;
   margin-top: 0;
@@ -43,13 +57,10 @@ h1,h2,h3,h4,h5,h6 {
 
 p {
   margin-bottom: 1em;
-  margin-top: 0
+  margin-top: 0;
 }
 
 .card-list-img-80 {
   width: 80px;
   height: 80px;
 }
-
-// ====== end antdv 4 ========
-

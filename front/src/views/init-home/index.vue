@@ -163,7 +163,7 @@ onBeforeMount(() => {
     .container-title {
       position: relative;
       padding-left: 10px;
-      color: rgba(0, 0, 0, 0.8);
+      color: var(--app-text-secondary);
       font-weight: 600;
       line-height: 1;
 
@@ -184,7 +184,7 @@ onBeforeMount(() => {
     width: 100%;
     height: 100%;
     padding: 24px;
-    background: #fff;
+    background: var(--app-surface);
 
     .container-main {
       display: flex;
@@ -203,7 +203,7 @@ onBeforeMount(() => {
         .sub-title {
           margin-top: 2px;
           margin-left: 8px;
-          color: #666;
+          color: var(--app-text-secondary);
           font-size: 12px;
           opacity: 0.85;
         }
@@ -221,13 +221,13 @@ onBeforeMount(() => {
           .upload-image-border-logo {
             position: relative;
             overflow: hidden;
-            border: 1px dashed #d9d9d9;
+            border: 1px dashed var(--app-border);
             transition: all 0.3s;
             width: 160px;
             height: 150px;
 
             &:hover {
-              border: 1px dashed #1890ff;
+              border: 1px dashed var(--app-primary);
               display: flex;
             }
 
@@ -240,7 +240,7 @@ onBeforeMount(() => {
               width: 160px;
               height: 150px;
               padding: 8px;
-              background-color: rgba(0, 0, 0, 0.06);
+              background-color: var(--app-highlight-bg);
               cursor: pointer;
 
               .loading-logo {
@@ -296,13 +296,13 @@ onBeforeMount(() => {
           .upload-image-border-back {
             position: relative;
             overflow: hidden;
-            border: 1px dashed #d9d9d9;
+            border: 1px dashed var(--app-border);
             transition: all 0.3s;
             width: 570px;
             height: 415px;
 
             &:hover {
-              border: 1px dashed #1890ff;
+              border: 1px dashed var(--app-primary);
               display: flex;
             }
 
@@ -315,7 +315,7 @@ onBeforeMount(() => {
               width: 570px;
               height: 415px;
               padding: 8px;
-              background-color: rgba(0, 0, 0, 0.06);
+              background-color: var(--app-highlight-bg);
               cursor: pointer;
 
               .loading-back {
@@ -352,7 +352,7 @@ onBeforeMount(() => {
         }
 
         .upload-tips {
-          color: rgba(0, 0, 0, 0.45);
+          color: var(--app-text-secondary);
           font-size: 14px;
           line-height: 1.5715;
         }
@@ -380,7 +380,7 @@ onBeforeMount(() => {
   /* 滚动槽 */
 
   ::-webkit-scrollbar-track {
-    background: #f2f2f2;
+    background: var(--app-elevated);
     border-radius: 8px;
   }
 

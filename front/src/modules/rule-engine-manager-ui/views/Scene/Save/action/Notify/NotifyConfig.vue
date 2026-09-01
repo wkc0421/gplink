@@ -11,7 +11,7 @@
             :columns="columns"
             :request="query"
             mode="CARD"
-            :bodyStyle="{
+            :bodystyle="{
                 padding: 0,
             }"
             :params="params"

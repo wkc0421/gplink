@@ -13,7 +13,7 @@
                 <a-col :span="6">
                     <TopCard
                         :title="$t('DashBoard.index.954313-1')"
-                        :img="device.deviceNumber"
+                        :img="device.deviceCard"
                         :footer="deviceFooter"
                         :value="deviceTotal"
                     ></TopCard
@@ -328,7 +328,7 @@ const setOnlineChartOption = (x: Array<any>, y: Array<number>): void => {
                             },
                             {
                                 offset: 1,
-                                color: '#FFFFFF', //   0% 处的颜色
+                                color: 'rgba(7, 16, 29, 0)', // 深色背景上的透明渐变终点
                             },
                         ],
                         global: false, // 缺省为 false
@@ -382,7 +382,7 @@ const setTodayDevChartOption = (x: Array<any>, y: Array<number>): void => {
                             },
                             {
                                 offset: 1,
-                                color: '#FFFFFF', //   0% 处的颜色
+                                color: 'rgba(7, 16, 29, 0)', // 深色背景上的透明渐变终点
                             },
                         ],
                         global: false, // 缺省为 false
@@ -441,7 +441,7 @@ const setDevMesChartOption = (
             //     //       },
             //     //       {
             //     //         offset: 1,
-            //     //         color: '#FFFFFF', //   0% 处的颜色
+            //     //         color: 'rgba(7, 16, 29, 0)', // 深色背景上的透明渐变终点
             //     //       },
             //     //     ],
             //     //     global: false, // 缺省为 false
@@ -470,7 +470,7 @@ const setDevMesChartOption = (
                             },
                             {
                                 offset: 1,
-                                color: '#FFFFFF', //   0% 处的颜色
+                                color: 'rgba(7, 16, 29, 0)', // 深色背景上的透明渐变终点
                             },
                         ],
                         global: false, // 缺省为 false
@@ -613,11 +613,16 @@ getDevice();
 
 </script>
 <style lang="less" scoped>
+.DashBoardBox {
+    color: var(--app-text);
+    background-color: var(--app-bg) !important;
+}
+
 .message-card,
 .device-position {
     margin-top: 24px;
     padding: 24px;
-    background-color: white;
+    background-color: var(--app-surface);
 }
 .message-chart {
     width: 100%;

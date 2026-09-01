@@ -30,7 +30,7 @@ const props = defineProps({
     .title-content {
         position: relative;
         padding-left: 10px;
-        color: rgba(0, 0, 0, 0.8);
+        color: @app-text;
         font-weight: 600;
         line-height: 1;
 
@@ -40,7 +40,7 @@ const props = defineProps({
             left: 0;
             width: 4px;
             height: 100%;
-            background-color: #1890ff;
+            background-color: @app-primary;
             border-radius: 0 3px 3px 0;
             content: ' ';
         }

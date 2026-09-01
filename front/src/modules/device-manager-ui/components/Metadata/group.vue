@@ -33,7 +33,7 @@
                 :get-popup-container="popContainer"
               >
                 <template #title>
-                  <span style="color: #1d2129">{{ $t('Metadata.group.497268-2') }}</span>
+                  <span style="color: var(--app-text)">{{ $t('Metadata.group.497268-2') }}</span>
                 </template>
                 <div class="table-group-error-target"></div>
               </a-tooltip>
@@ -53,7 +53,7 @@
               :getContainer="popContainer"
             >
               <template #title>
-                <span style="color: #1d2129">{{ $t('Metadata.group.497268-2') }}</span>
+                <span style="color: var(--app-text)">{{ $t('Metadata.group.497268-2') }}</span>
               </template>
               <div class="table-group-error-target"></div>
             </a-tooltip>
@@ -287,7 +287,7 @@ watch(() => props.activeKey, (val) => {
 }
 
 .table-group-error-warp {
-  color: #1a1a1a !important;
+  color: var(--app-text) !important;
 
   .table-group-error-target {
     position: absolute;

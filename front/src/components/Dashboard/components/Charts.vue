@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import * as echarts from 'echarts';
+import { withDarkEchartsTheme } from '@/utils/echartsTheme';
 
 const {proxy} = <any>getCurrentInstance();
 
@@ -30,7 +31,7 @@ const emits = defineEmits(['subTitleClick'])
 const createChart = () => {
   nextTick(() => {
     const myChart = echarts.init(proxy.$refs.chart);
-    myChart.setOption(props.options);
+        myChart.setOption(withDarkEchartsTheme(props.options));
     myChart.on('click', function (params) {
       if (params.componentType === 'title') {
         emits('subTitleClick')

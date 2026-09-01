@@ -403,7 +403,7 @@ provide('mode', props.mode)
   .form-left {
     padding-right: 12px;
     width: 45%;
-    border-right: 1px solid #f0f0f0;
+    border-right: 1px solid var(--app-border);
   }
 
   .form-right {
@@ -422,15 +422,15 @@ provide('mode', props.mode)
     margin: 0 0 16px 0;
     font-size: 16px;
     font-weight: 500;
-    color: #262626;
-    border-bottom: 1px solid #f0f0f0;
+    color: var(--app-text);
+    border-bottom: 1px solid var(--app-border);
     padding-bottom: 8px;
   }
 }
 
 .permission-display {
   .empty-text {
-    color: #999;
+    color: var(--app-text-secondary);
     font-style: italic;
   }
 }
@@ -450,7 +450,7 @@ provide('mode', props.mode)
     }
 
     .result-desc {
-      color: #666;
+      color: var(--app-text-secondary);
       margin-bottom: 32px;
     }
 
@@ -468,7 +468,7 @@ provide('mode', props.mode)
           cursor: pointer;
 
           &:hover {
-            background: #f0f0f0;
+            background: var(--app-elevated);
           }
         }
       }

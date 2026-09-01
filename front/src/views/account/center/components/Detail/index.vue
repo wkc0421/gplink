@@ -1,7 +1,7 @@
 <template>
     <a-modal visible @cancel="emit('close')" :closable="false">
         <div style="padding: 30px;">
-            <div style="display: flex; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid #E4E7F6">
+            <div style="display: flex; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--app-border)">
                 <a-avatar :size="100" :src="userInfo.avatar"></a-avatar>
                 <div style="margin-left: 24px;  max-width: 280px;" >
                     <div class="name"><j-ellipsis>{{ userInfo.name }}</j-ellipsis></div>
@@ -11,13 +11,13 @@
             </div>
             <a-descriptions
                 :column="1"
-                :labelStyle="{
-                    color: 'rgba(0, 0, 0, 0.6)',
+                :labelstyle="{
+                    color: 'var(--app-text-secondary)',
                     maxWidth: '120px',
                     whiteSpace: 'nowrap'
                 }"
-                :contentStyle="{
-                    color: '#333333',
+                :contentstyle="{
+                    color: 'var(--app-text)',
                 }"
             >
                 <a-descriptions-item :label="$t('Detail.index.153077-1')">
@@ -80,13 +80,13 @@ const pos = computed(() => {
 
 <style lang="less" scoped>
 .name {
-    color: #1D2129;
+    color: var(--app-text);
     font-weight: 500;
     font-size: 26px;
     margin: 15px 0 10px 0;
 }
 
 .subTitle {
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--app-text-secondary);
 }
 </style>

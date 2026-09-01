@@ -2,7 +2,7 @@
   <a-form-item :name="name" :rules="rules" :validate-first="true">
     <template #label>
       {{ $t('Enum.Item.997342-0') }}
-      <span style="color: #ff4d4f; padding-right: 4px; padding-top: 2px">*</span>
+      <span style="color: var(--app-text-secondary); padding-right: 4px; padding-top: 2px">*</span>
     </template>
     <Content ref="tableRef" v-model:value="dataSource" @change="change" />
   </a-form-item>

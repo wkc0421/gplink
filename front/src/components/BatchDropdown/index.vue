@@ -14,7 +14,7 @@
                 ><AIcon type="RedoOutlined" />{{ $t('BatchDropdown.index.755305-0') }}</a-button
             >
         </a-space>
-        <a-dropdown :overlayStyle="{ zIndex: 1000 }" v-else>
+        <a-dropdown :overlaystyle="{ zIndex: 1000 }" v-else>
             <a-button>{{ $t('BatchDropdown.index.755305-1') }} <AIcon type="DownOutlined" /></a-button>
             <template #overlay>
                 <a-menu @click="handleMenuClick">

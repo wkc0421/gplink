@@ -15,7 +15,7 @@
     :gridColumn="2"
     :gridColumns="[2, 2, 2]"
     :params="params"
-    :bodyStyle="{
+    :bodystyle="{
       paddingRight: 0,
       paddingLeft: 0,
     }"

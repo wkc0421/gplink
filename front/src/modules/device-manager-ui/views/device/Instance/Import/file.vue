@@ -52,7 +52,7 @@
                 </div>
                 <div>{{ $t('Import.file.677857-7') }}{{ count }} {{ $t('Import.file.677857-8') }}</div>
                 <div>
-                    {{ $t('Import.file.677857-9') }}<span style="color: #ff595e">{{ errCount }}</span>
+                    {{ $t('Import.file.677857-9') }}<span style="color: var(--app-text-secondary)">{{ errCount }}</span>
                     {{ $t('Import.file.677857-8') }}<a
                         v-if="errMessage && !flag && errCount > 0"
                         style="margin-left: 20px"
@@ -216,9 +216,9 @@ const uploadChange = async (info: Record<string, any>) => {
         gap: 16px;
         .btn {
             border: none;
-            background-color: #ECECF0;
+            background-color: var(--app-elevated);
             width: 152px;
-            color: #666666;
+            color: var(--app-text-secondary);
         }
     }
 
@@ -226,7 +226,7 @@ const uploadChange = async (info: Record<string, any>) => {
       margin: 46px 0;
       display: flex;
       flex-direction: column;
-      color: #666666;
+      color: var(--app-text-secondary);
       align-items: center;
       .icon {
         font-size: 30px;
@@ -237,7 +237,7 @@ const uploadChange = async (info: Record<string, any>) => {
     .result {
         div {
             margin: 5px 0;
-            color: #605e5c;
+            color: var(--app-text);
         }
     }
 
@@ -245,14 +245,14 @@ const uploadChange = async (info: Record<string, any>) => {
         height: 40px;
         width: 100%;
         padding: 0 20px 0 10px;
-        color: rgba(0, 0, 0, 0.55);
+        color: var(--app-text-secondary);
         line-height: 40px;
-        background-color: #f6f6f6;
+        background-color: var(--app-elevated);
     }
 
     :deep(.ant-form-item) {
         .ant-upload.ant-upload-drag {
-            background: #F8F9FC;
+            background: var(--app-elevated);
             border: 1px dashed rgba(212, 219, 243, 0.7);
         }
     }

@@ -166,7 +166,7 @@ const formData = reactive({
   secretKey: "", // 高德web key
   'base-path': `${window.location.origin}/api`,  // base-path
   logo: "/images/login/logo.png",  // 系统logo
-  ico: "/favicon.ico",  // 浏览器页签
+  ico: "/favicon.svg?theme=gp-v7",  // 浏览器页签
   background: "/images/login/login.png"  // 登录背景图
 })
 
@@ -220,7 +220,7 @@ const getDetails = async () => {
     title: configInfo.front?.title,
     headerTheme: configInfo.front?.headerTheme || 'light',
     logo: configInfo.front?.logo || '/logo.png',
-    ico: configInfo.front?.ico || '/favicon.ico',
+    ico: configInfo.front?.ico || '/favicon.svg?theme=gp-v7',
     showRecordNumber: configInfo.front?.showRecordNumber || false,
     recordNumber: configInfo.front?.recordNumber,
     background: configInfo.front?.background || '/images/login.png',

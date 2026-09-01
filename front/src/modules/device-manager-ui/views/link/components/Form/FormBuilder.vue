@@ -12,7 +12,7 @@
             :name='item.name'
             :required='item.required'
             :rules='item.rules'
-            :noStyle='item.noStyle'
+            :nostyle='item.noStyle'
           >
             <template #label>
               <span>{{ item.title }}</span>

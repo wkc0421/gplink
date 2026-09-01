@@ -111,22 +111,22 @@ onMounted(() => {
 <style lang="less" scoped>
 .alert {
   padding-left: 10px;
-  color: #999999;
+  color: var(--app-text-secondary);
   margin-bottom: 16px;
 }
 
 .content-collapse {
   :deep(.ant-collapse) {
-    border-color: #ebeef3;
-    background-color: #fff;
+    border-color: var(--app-border);
+    background-color: var(--app-surface);
 
     .ant-collapse-item {
-      border: 1px solid #ebeef3;
+      border: 1px solid var(--app-border);
       margin-bottom: 24px;
     }
 
     .ant-collapse-header {
-      background-color: #f7f8fa;
+      background-color: var(--app-elevated);
       height: 42px;
     }
 

@@ -11,7 +11,7 @@
       type="TREE"
       :columns="columns"
       :request="getTreeData_api"
-      :bodyStyle="{padding: 0}"
+      :bodystyle="{padding: 0}"
       :params="params"
       :alertShow="false"
       :height="300"

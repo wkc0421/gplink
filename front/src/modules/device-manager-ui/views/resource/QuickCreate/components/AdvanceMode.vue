@@ -469,7 +469,7 @@ const submitDada = async() => {
   border: 1px solid #bebfbf;
   border-radius: 8px;
   padding: 20px;
-  background-color: #f9fafc;
+  background-color: var(--app-elevated);
 
   .accessInfo {
     display: flex;
@@ -493,7 +493,7 @@ const submitDada = async() => {
     border: 1px solid #949494;
     border-radius: 8px;
     padding: 20px;
-    background-color: #fff;
+    background-color: var(--app-surface);
   }
 
   .protocolCard {
@@ -501,7 +501,7 @@ const submitDada = async() => {
   }
 
   .selected {
-    border-color: #2f54eb;
+    border-color: var(--app-primary);
   }
 
   .operation {
@@ -515,7 +515,7 @@ const submitDada = async() => {
     padding: 20px;
     text-align: center;
     font-size: 18px;
-    color: #7f7f7f;
+    color: var(--app-text);
     margin-bottom: 12px;
   }
 }

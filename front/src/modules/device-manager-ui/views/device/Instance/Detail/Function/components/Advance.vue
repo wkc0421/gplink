@@ -4,7 +4,7 @@
             <a-tabs
                 v-model="activeKey"
                 tab-position="left"
-                :tabBarStyle="{ width: '100%' }"
+                :tabBarstyle="{ width: '100%' }"
                 @change="onTabChange"
             >
                 <a-tab-pane v-for="func in newFunctions" :key="func.id">
@@ -192,7 +192,7 @@ const handleClear = () => {
     }
     .execute-result {
         display: inline-block;
-        border: 1px solid #d9d9d9;
+        border: 1px solid var(--app-border);
         border-radius: 2px;
         padding: 4px 11px;
         min-height: 140px;
@@ -203,11 +203,11 @@ const handleClear = () => {
     .description {
         margin-bottom: 10px;
         padding: 8px 11px;
-        border: 1px solid #d9d9d9;
+        border: 1px solid var(--app-border);
         border-radius: 2px;
         display: flex;
         .description-title {
-            color: #777777;
+            color: var(--app-text-secondary);
             margin-right: 24px;
         }
     }

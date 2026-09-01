@@ -529,9 +529,9 @@ watch(() => JSON.stringify(props.data), (val) => {
     .alert {
       height: 40px;
       padding-left: 10px;
-      color: rgba(0, 0, 0, 0.55);
+      color: var(--app-text-secondary);
       line-height: 40px;
-      background-color: #f6f6f6;
+      background-color: var(--app-elevated);
     }
     .search {
       display: flex;
@@ -558,7 +558,7 @@ watch(() => JSON.stringify(props.data), (val) => {
             font-style: normal;
             font-weight: 400;
             font-size: 12px;
-            color: rgba(0, 0, 0, 0.75);
+            color: var(--app-text-secondary);
             opacity: 0.75;
         }
     }
@@ -566,7 +566,7 @@ watch(() => JSON.stringify(props.data), (val) => {
         // font-style: normal;
         font-size: 12px;
         // line-height: 20px;
-        color: #666666;
+        color: var(--app-text-secondary);
         // overflow: hidden; //超出的文本隐藏
         // text-overflow: ellipsis; //溢出用省略号显示
         // white-space: nowrap; //溢出不换行

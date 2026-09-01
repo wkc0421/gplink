@@ -6,7 +6,7 @@
     :arrowPointAtCenter="true"
   >
     <template #title>
-      <span style="color: #1d2129">{{errorMap.message}}</span>
+      <span style="color: var(--app-text)">{{errorMap.message}}</span>
     </template>
     <div class="table-form-error-target" ></div>
   </a-tooltip>

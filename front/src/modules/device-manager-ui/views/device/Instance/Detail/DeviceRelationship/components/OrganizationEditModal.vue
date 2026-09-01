@@ -252,10 +252,10 @@ watch(checkedKeys, (newKeys) => {
         gap: 8px;
         margin-bottom: 12px;
         padding: 6px 12px;
-        background-color: #F5F5F5;
+        background-color: var(--app-elevated);
         border-radius: 6px;
         border: 1px solid #cccccc;
-        color: #1A1A1A;
+        color: var(--app-text);
 
         .anticon {
           color: @primary-color;
@@ -269,7 +269,7 @@ watch(checkedKeys, (newKeys) => {
         font-size: 14px;
 
         span {
-          color: #000;
+          color: var(--app-text);
           font-weight: 500;
         }
       }
@@ -308,9 +308,9 @@ watch(checkedKeys, (newKeys) => {
             justify-content: space-between;
             padding: 12px;
             margin-bottom: 8px;
-            background: #f8f9fa;
+            background: var(--app-elevated);
             border-radius: 4px;
-            border: 1px solid #e8e9ea;
+            border: 1px solid var(--app-border);
 
             .item-actions {
               display: flex;
@@ -333,7 +333,7 @@ watch(checkedKeys, (newKeys) => {
 
     &.ant-checkbox-wrapper-checked {
       .ant-checkbox-wrapper span:last-child {
-        color: #1890ff;
+        color: var(--app-primary);
       }
     }
   }

@@ -194,7 +194,7 @@ watch(
 
 .hint {
   margin-left: 8px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--app-text-secondary);
 }
 
 fieldset {

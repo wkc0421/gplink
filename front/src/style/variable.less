@@ -1,9 +1,52 @@
-@font-gray-900: #1F2429;
-@font-gray-600: #646C73;
-@font-gray-500: #8D9399;
-@font-gray-400: #C3C7CB;
-@font-gray-300: #E4E6E7;
-@font-gray-200: #EFF0F1;
-@font-gray-50: #F8F9FA;
-@font-gray-0: #fffff;
-@border-base-color: #D9D9D9;
+// Shared application tokens for legacy Less styles.
+// Slightly lifted navy surfaces reduce eye strain while preserving a dark
+// product canvas and enough separation between page, card and hover layers.
+@app-bg: #0A1422;
+@app-surface: #102238;
+@app-elevated: #172F49;
+@app-hover: #1D3A59;
+@app-nav: #0B192A;
+// Border tones are intentionally brighter than the page surfaces so cards,
+// tables and nested panels remain scannable at a glance in dark mode.
+@app-border: #35516F;
+@app-border-strong: #4B6F95;
+@app-text: #F4F7FC;
+@app-text-value: #E2EBF5;
+@app-text-secondary: #C4D0DE;
+@app-text-tertiary: #96A9BD;
+@app-text-disabled: #8799AD;
+@app-text-table-header: #B9C7D8;
+@app-primary: #2F80FF;
+@app-primary-hover: #52A0FF;
+@app-success: #35D07F;
+@app-warning: #FFB454;
+@app-error: #FF6474;
+@app-radius-control: 8px;
+@app-radius-card: 10px;
+
+// Typography tokens. Keep the system stack first so Chinese and Latin glyphs
+// are rendered by the platform font instead of synthetic weights on the
+// regular-only Alibaba font asset.
+@app-font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", AliRegular, sans-serif;
+@app-font-size-base: 14px;
+@app-line-height-base: 22px;
+@app-font-weight-regular: 400;
+@app-font-weight-medium: 500;
+@app-font-weight-semibold: 600;
+@app-font-weight-bold: 700;
+@app-title-size: 20px;
+@app-title-line-height: 28px;
+@app-section-size: 16px;
+@app-section-line-height: 24px;
+@app-label-size: 12px;
+@app-label-line-height: 20px;
+
+@font-gray-900: @app-text;
+@font-gray-600: @app-text-secondary;
+@font-gray-500: @app-text-tertiary;
+@font-gray-400: @app-text-disabled;
+@font-gray-300: @app-border-strong;
+@font-gray-200: @app-border;
+@font-gray-50: @app-surface;
+@font-gray-0: @app-text;
+@border-base-color: @app-border;

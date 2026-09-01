@@ -49,7 +49,8 @@ watch(
     width: 100%;
     height: calc(100vh - 150px);
     padding: 20px;
-    background-color: white;
+    background-color: @app-surface;
+    border: 1px solid @app-border;
 
     .title {
         margin-top: 28px;

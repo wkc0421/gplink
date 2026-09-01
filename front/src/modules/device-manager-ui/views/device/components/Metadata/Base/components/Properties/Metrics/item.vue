@@ -39,7 +39,7 @@
         :placeholder="$t('DeviceAccess.index.594346-12')"
         v-model:value="myValue"
         style="width: 100%"
-        :dropdownStyle="{
+        :dropdownstyle="{
           zIndex: 1071
         }"
         :options="options"
@@ -52,7 +52,7 @@
         show-time
         format="YYYY-MM-DD HH:mm:ss"
         style="width: 100%;z-index: 1071"
-        :popupStyle="{ zIndex: 1072}"
+        :popupstyle="{ zIndex: 1072}"
         :placeholder="$t('DeviceAccess.index.594346-12')"
         :get-popup-container="(node) => tableWrapperRef || node"
         valueFormat="YYYY-MM-DD HH:mm:ss"

@@ -515,9 +515,9 @@ watch(
 .alert {
   height: 40px;
   padding-left: 10px;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--app-text-secondary);
   line-height: 40px;
-  background-color: #f6f6f6;
+  background-color: var(--app-elevated);
   margin-bottom: 10px;
 }
 </style>

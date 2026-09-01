@@ -28,7 +28,7 @@ const props = defineProps<guideProps>();
     justify-content: space-between;
     margin-bottom: 12px;
     padding-left: 18px;
-    font-weight: 700;
+    font-weight: 600;
     font-size: 18px;
     &::after {
         position: absolute;
@@ -53,7 +53,7 @@ const props = defineProps<guideProps>();
     .home-title-english {
         position: absolute;
         top: 30px;
-        color: rgba(0, 0, 0, 0.3);
+        color: @app-text-tertiary;
         font-size: 12px;
     }
 }

@@ -11,7 +11,7 @@
             :columns="columns"
             :request="(e) => handleData(e)"
             mode="CARD"
-            :bodyStyle="{
+            :bodystyle="{
                 padding: 0,
             }"
             ref="tableRef"

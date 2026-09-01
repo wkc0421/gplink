@@ -270,7 +270,7 @@ watch(
   .role-table {
     flex: 1 1 0;
     min-height: 0;
-    background-color: #e50012;
+    background-color: var(--app-surface);
   }
   :deep(.ant-table-cell) {
     .ant-btn-link {

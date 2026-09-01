@@ -50,7 +50,7 @@
     @cancel='importCancel'
     @ok='importCancel'
   >
-    <a-icon type='CheckOutlined' style='color: #2F54EB;' /> {{ $t('Import.modal.422832-7') }} <span style='color: #2F54EB;'>{{count}}</span>
+    <a-icon type='CheckOutlined' style='color: var(--app-primary);' /> {{ $t('Import.modal.422832-7') }} <span style='color: var(--app-primary);'>{{count}}</span>
   </a-modal>
 </template>
 

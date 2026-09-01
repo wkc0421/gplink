@@ -87,7 +87,7 @@ watch(() => props.value, (val) => {
     cursor: pointer;
     max-width: 150px;
     margin-bottom: 8px;
-    color: #1F2429;
+    color: var(--app-text);
 
     &:hover {
       color: @primary-color;

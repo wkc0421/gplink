@@ -1,7 +1,7 @@
 <template>
     <div style="margin-top: 20px" v-if="config.length || gatewaysDetail?.length">
         <div style="display: flex; margin-bottom: 20px; align-items: center">
-            <div style="font-size: 16px; font-weight: 700">{{ $t('Config.index.926765-0') }}</div>
+            <div style="font-size: 16px; font-weight: 600">{{ $t('Config.index.926765-0') }}</div>
             <a-space>
                 <j-permission-button
                     type="link"
@@ -48,7 +48,7 @@
                         {{ providers?.find(i => i.id === item.provider)?.description }}
                     </template>
                     <template v-if="item.transportDetail?.allConfig?.length">
-                        <a-descriptions :labelStyle="{width: '150px'}" bordered v-for="i in item.transportDetail.allConfig" :key="i.name">
+                        <a-descriptions :labelstyle="{width: '150px'}" bordered v-for="i in item.transportDetail.allConfig" :key="i.name">
                             <template #title><h4 style="font-size: 15px">{{ i.name }}</h4></template>
                             <a-descriptions-item
                                 v-for="item in i.properties"
@@ -127,7 +127,7 @@
             </a-collapse>
         </template>
         <template v-else>
-            <a-descriptions :labelStyle="{width: '150px'}" bordered v-for="i in config" :key="i.name">
+            <a-descriptions :labelstyle="{width: '150px'}" bordered v-for="i in config" :key="i.name">
                 <template #title><h4 style="font-size: 15px">{{ i.name }}</h4></template>
                 <a-descriptions-item
                     v-for="item in i.properties"

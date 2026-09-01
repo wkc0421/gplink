@@ -6,11 +6,11 @@
           <FullPage>
             <div class="alarm-level">
               <a-card
-                :headStyle="{
+                :headstyle="{
                   borderBottom: 'none',
                   padding: 0,
                 }"
-                :bodyStyle="{ padding: 0 }"
+                :bodystyle="{ padding: 0 }"
                 :bordered="false"
               >
                 <template #title>
@@ -112,13 +112,13 @@ const onTabChange = (e: string) => {
 <style lang="less" scoped>
 .alarm-level {
   padding: 24px;
-  background-color: white;
+  background-color: var(--app-surface);
   height: 700px;
 }
 .alarmLevelTitle {
   position: relative;
   padding-left: 10px;
-  color: rgba(0, 0, 0, 0.8);
+  color: var(--app-text-secondary);
   font-weight: 600;
   line-height: 1;
   margin-bottom: 16px;
@@ -140,13 +140,13 @@ const onTabChange = (e: string) => {
   height: 100%;
   padding: 24px;
   overflow-y: auto;
-  color: rgba(#000, 0.8);
+  color: var(--app-text-secondary);
   font-size: 14px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   h1 {
     margin: 16px 0;
-    color: rgba(#000, 0.85);
-    font-weight: bold;
+    color: var(--app-text-secondary);
+    font-weight: 600;
     font-size: 14px;
   }
 }

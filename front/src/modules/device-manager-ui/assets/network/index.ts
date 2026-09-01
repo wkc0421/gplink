@@ -11,9 +11,10 @@ import network8 from './08.png'
 import network9 from './09.png'
 import icon from '../network.png'
 import CTWing from './CTWing.jpg'
+import darkNetworkIcon from '../../../../assets/theme-icons/device-card.svg'
 
 export const network = {
-    icon,
+    icon: darkNetworkIcon,
     network1,
     network2,
     network3,

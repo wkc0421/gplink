@@ -11,7 +11,7 @@
                 <AIcon type="ReloadOutlined" />
         </j-permission-button>
     </div>
-    <JsonViewer :value="data" style="background-color: #fafafa" :expanded="true" :expandDepth="10" deep="4"></JsonViewer>
+    <JsonViewer :value="data" style="background-color: var(--app-elevated)" :expanded="true" :expandDepth="10" deep="4"></JsonViewer>
 </template>
 
 <script setup lang="ts" name="Shadow">

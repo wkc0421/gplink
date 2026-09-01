@@ -191,7 +191,7 @@ onUnmounted(() => {
 }
 
 .field-label {
-    color: rgba(0, 0, 0, 0.85);
+    color: @app-text-secondary;
 }
 
 .line-input {
@@ -220,8 +220,8 @@ onUnmounted(() => {
     height: 100%;
     min-height: 360px;
     overflow: auto;
-    border: 1px solid #d9d9d9;
-    background: #0f1720;
+    border: 1px solid @app-border-strong;
+    background: #08111D;
 }
 
 .log-content {
@@ -238,7 +238,7 @@ onUnmounted(() => {
 
 .empty {
     padding-top: 120px;
-    background: #fff;
+    background: @app-surface;
     min-height: 360px;
 }
 </style>

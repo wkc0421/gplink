@@ -15,7 +15,7 @@
     :request="deviceQuery"
     :gridColumn="2"
     :gridColumns="[2]"
-    :bodyStyle="{
+    :bodystyle="{
       paddingRight: 0,
       paddingLeft: 0,
     }"

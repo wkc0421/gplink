@@ -134,7 +134,7 @@ const params = ref();
 <style lang="less" scoped>
 .deviceId {
     cursor: pointer;
-    color:#4096FF;
+    color:var(--app-text-secondary);
 }
 </style>
 

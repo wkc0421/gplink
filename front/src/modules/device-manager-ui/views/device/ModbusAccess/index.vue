@@ -1774,7 +1774,7 @@ onMounted(() => {
 .modbus-access-page {
     min-height: 100%;
     padding: 24px;
-    background: #f5f7fb;
+    background: var(--app-info-bg);
 }
 
 .page-head,
@@ -1795,7 +1795,7 @@ onMounted(() => {
 }
 
 .page-title {
-    color: #1f2937;
+    color: var(--app-text);
     font-weight: 600;
     font-size: 22px;
     line-height: 30px;
@@ -1803,23 +1803,23 @@ onMounted(() => {
 
 .page-subtitle,
 .toolbar-note {
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     font-size: 13px;
 }
 
 .steps-wrap {
     padding: 18px 24px;
     margin-bottom: 16px;
-    background: #fff;
-    border: 1px solid #edf0f5;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
     border-radius: 6px;
 }
 
 .guide-panel {
     padding: 16px 20px;
     margin-bottom: 16px;
-    background: #f8fbff;
-    border: 1px solid #dbeafe;
+    background: var(--app-info-bg);
+    border: 1px solid var(--app-border);
     border-radius: 6px;
 }
 
@@ -1832,13 +1832,13 @@ onMounted(() => {
 
 .guide-label {
     margin-bottom: 4px;
-    color: #2563eb;
+    color: var(--app-text);
     font-size: 12px;
     font-weight: 600;
 }
 
 .guide-title {
-    color: #1f2937;
+    color: var(--app-text);
     font-size: 16px;
     font-weight: 600;
     line-height: 24px;
@@ -1846,7 +1846,7 @@ onMounted(() => {
 
 .guide-summary {
     margin-top: 6px;
-    color: rgba(0, 0, 0, 0.65);
+    color: var(--app-text-secondary);
     line-height: 22px;
 }
 
@@ -1857,7 +1857,7 @@ onMounted(() => {
 .guide-list {
     margin: 0;
     padding-left: 20px;
-    color: #374151;
+    color: var(--app-text);
     line-height: 24px;
 }
 
@@ -1870,27 +1870,27 @@ onMounted(() => {
 }
 
 .guide-example {
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
 }
 
 .guide-example-label {
     margin-right: 8px;
-    color: #2563eb;
+    color: var(--app-text);
     font-weight: 600;
 }
 
 .guide-next {
-    color: #166534;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
+    color: var(--app-text);
+    background: var(--app-success-bg);
+    border: 1px solid var(--app-border);
 }
 
 .content-panel {
     min-height: 560px;
     padding: 24px;
-    background: #fff;
-    border: 1px solid #edf0f5;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
     border-radius: 6px;
 }
 
@@ -1900,7 +1900,7 @@ onMounted(() => {
 
 .section-title {
     margin-bottom: 16px;
-    color: #1f2937;
+    color: var(--app-text);
     font-weight: 600;
     font-size: 16px;
 }

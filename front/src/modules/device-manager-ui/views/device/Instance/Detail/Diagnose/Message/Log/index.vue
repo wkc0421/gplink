@@ -70,11 +70,11 @@ watch(() => props.isCollapse, (val) => {
     .log-card {
         display: flex;
         width: 100%;
-        background-color: #fff;
+        background-color: var(--app-surface);
 
         .log-icon {
             margin-right: 10px;
-            color: rgba(0, 0, 0, 0.75);
+            color: var(--app-text-secondary);
             font-weight: 500;
             font-size: 12px;
         }
@@ -86,13 +86,13 @@ watch(() => props.isCollapse, (val) => {
 
             .log-header {
                 .log-title {
-                    color: rgba(0, 0, 0, 0.75);
+                    color: var(--app-text-secondary);
                     font-weight: 700;
                     font-size: 14px;
                 }
 
                 .log-time {
-                    color: rgba(0, 0, 0, 0.65);
+                    color: var(--app-text-secondary);
                     font-size: 12px;
                 }
             }
@@ -100,11 +100,11 @@ watch(() => props.isCollapse, (val) => {
             .log-editor {
                 width: 100%;
                 margin-top: 10px;
-                color: rgba(0, 0, 0, 0.75);
+                color: var(--app-text-secondary);
 
                 textarea {
-                    color: black !important;
-                    background-color: #fafafa !important;
+                    color: var(--app-text) !important;
+                    background-color: var(--app-elevated) !important;
                 }
 
                 textarea::-webkit-scrollbar {

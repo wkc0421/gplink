@@ -343,7 +343,7 @@ defineExpose({
 }
 .modal-style {
     .data-content {
-        background: rgb(236, 237, 238);
+        background: var(--app-elevated);
         .data-p-style {
             padding: 10px;
         }

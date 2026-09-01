@@ -165,7 +165,7 @@ export const topOptionsSeries = {
         distance: -20,
         lineStyle: {
             width: 1,
-            color: 'rgba(0,0,0,0.15)',
+            color: 'rgba(183, 196, 212, 0.22)',
         },
     },
     splitLine: {
@@ -173,7 +173,7 @@ export const topOptionsSeries = {
         length: 9,
         lineStyle: {
             width: 1,
-            color: '#000',
+            color: '#35516F',
         },
     },
     pointer: {
@@ -189,7 +189,7 @@ export const topOptionsSeries = {
         size: 20,
         itemStyle: {
             borderWidth: 3,
-            borderColor: '#fff',
+            borderColor: '#52A0FF',
             shadowBlur: 20,
             shadowColor: 'rgba(0, 0, 0, .25)',
             color: 'auto',

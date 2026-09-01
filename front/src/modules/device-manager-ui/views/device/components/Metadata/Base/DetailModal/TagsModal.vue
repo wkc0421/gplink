@@ -9,7 +9,7 @@
   >
     <a-descriptions
         :column="1"
-        :labelStyle="{
+        :labelstyle="{
           width: '72px',
           textAlign: 'right',
           justifyContent: 'end'

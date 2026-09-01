@@ -5,7 +5,7 @@
     :maskClosable="false"
     :footer="null"
     :width="1020"
-    :bodyStyle="{padding: 0}"
+    :bodystyle="{padding: 0}"
     @cancel="onCancel"
   >
     <template #closeIcon>
@@ -19,13 +19,13 @@
           <div>
             <img :width="280" :src="'/images/relogin.png'" />
           </div>
-          <div style="font-size: 16px; color: #1A1A1A">{{ $t('relogin.419974-1') }}</div>
-          <div style="font-size: 12px; color: #777777;">{{ $t('relogin.419974-2') }}</div>
+          <div style="font-size: 16px; color: var(--app-text)">{{ $t('relogin.419974-1') }}</div>
+          <div style="font-size: 12px; color: var(--app-text-secondary);">{{ $t('relogin.419974-2') }}</div>
         </div>
       </div>
       <div class="right">
         <Right
-            :logo="systemInfo?.front?.logo"
+            :logo="gpMonogram"
             :title="layout?.title"
             :bindings="[]"
             v-model:loading="loading"
@@ -44,9 +44,10 @@ import {storeToRefs} from "pinia";
 import {jumpLogin} from "@/router";
 import i18n from "@/locales";
 import { Modal, Button } from 'ant-design-vue'
+import gpMonogram from '@/assets/theme-icons/gp-monogram.svg'
 
 const systemStore = useSystemStore();
-const { systemInfo, layout } = storeToRefs(systemStore);
+const { layout } = storeToRefs(systemStore);
 const loading = ref(false)
 const $t = i18n.global.t
 
@@ -102,7 +103,7 @@ defineExpose({ open })
 
 .left {
   height: 100%;
-  background-color: #F1F7FF;
+  background-color: var(--app-info-bg);
   display: flex;
   justify-content: center;
   width: 466px;

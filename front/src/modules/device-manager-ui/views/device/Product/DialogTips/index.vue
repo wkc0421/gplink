@@ -90,7 +90,7 @@ defineExpose({
 .product-tips {
     .product-icon {
         .icon-style {
-            color: #52c41a;
+            color: var(--app-text-secondary);
             font-size: 25px;
         }
     }
@@ -108,10 +108,10 @@ defineExpose({
     }
     .product-btn {
         margin: 10px 0px 10px 0;
-        color: #0297d7;
+        color: var(--app-text-secondary);
     }
     .product-text {
-        color: #757575;
+        color: var(--app-text);
     }
     .product-main {
         font-weight: 600;

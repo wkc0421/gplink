@@ -58,7 +58,7 @@ const props = defineProps({
   .item-options-warp {
     display: inline-flex;
     height: 48px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
 
     .item-options-type {
@@ -66,7 +66,7 @@ const props = defineProps({
       align-items: center;
       justify-content: center;
       width: 48px;
-      background-color: #f0f0f0;
+      background-color: var(--app-elevated);
       border-radius: 6px 0 0 6px;
       cursor: pointer;
       font-size: 22px;
@@ -76,26 +76,26 @@ const props = defineProps({
       display: flex;
       align-items: center;
       padding: 0 8px;
-      background: #fafafa;
+      background: var(--app-elevated);
       border-radius: 0 6px 6px 0;
       cursor: pointer;
 
       div {
         padding: 6px 10px;
-        color: #333;
+        color: var(--app-text);
         font-size: 14px;
         line-height: 22px;
-        background-color: #fff;
+        background-color: var(--app-surface);
         border-radius: 22px;
 
         .notify-text-highlight {
           margin-left: 5px;
-          font-weight: bold;
+          font-weight: 600;
         }
 
         .notify-img-highlight {
           margin: 0 10px;
-          color: rgba(0, 0, 0, 0.8);
+          color: var(--app-text-secondary);
         }
       }
     }
@@ -105,7 +105,7 @@ const props = defineProps({
     position: absolute;
     top: 0;
     left: 16px;
-    font-weight: 800;
+    font-weight: 600;
     transform: translateY(-50%);
   }
 }
@@ -128,11 +128,11 @@ const props = defineProps({
     top: 0;
     left: 16px;
     z-index: 2;
-    color: rgba(0, 0, 0, 0.55);
-    font-weight: 800;
+    color: var(--app-text-secondary);
+    font-weight: 600;
     font-size: 14px;
     line-height: 1;
-    background-color: #fff;
+    background-color: var(--app-surface);
     transform: translateY(-50%);
   }
 
@@ -146,7 +146,7 @@ const props = defineProps({
 
   .filter-add-button {
     width: 100%;
-    color: rgba(0, 0, 0, 0.3);
+    color: var(--app-text-secondary);
     text-align: center;
     cursor: pointer;
   }

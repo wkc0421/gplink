@@ -37,8 +37,8 @@ const click = () => {
 .rule-button-warp {
   display: inline-block;
   padding: 14px 16px;
-  background-color: #fafafa;
-  border: 1px solid #f0f0f0;
+  background-color: var(--app-elevated);
+  border: 1px solid var(--app-border);
   border-radius: 2px;
   cursor: pointer;
 
@@ -49,17 +49,17 @@ const click = () => {
 }
   .add-circular {
     padding: 6px 20px;
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
+    background-color: var(--app-surface);
+    border: 1px solid var(--app-border);
     border-radius: 22px;
   }
 
 .add-button {
-  color: #777;
+  color: var(--app-text-secondary);
 
 &:hover,
 &:active {
-   border-color: #d0d0d0;
+   border-color: var(--app-border);
  }
 }
 }

@@ -60,7 +60,7 @@ watch(() => props.value, () => {
     text-align: center;
     height: 100%;
     border-radius: 2px;
-    background-color: #f5f5f5;
+    background-color: var(--app-elevated);
     cursor: pointer;
 
     &.active {

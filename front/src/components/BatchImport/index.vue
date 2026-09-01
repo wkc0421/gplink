@@ -3,7 +3,7 @@
     <slot name="alert">
       <div class="alert" v-if="message">
         <div>
-          <AIcon type="InfoCircleFilled" style="color: #2F54EB; margin-right: 10px;"/>
+          <AIcon type="InfoCircleFilled" style="color: var(--app-primary); margin-right: 10px;"/>
         </div>
         <span v-html="message"></span>
       </div>
@@ -41,7 +41,7 @@
       </div>
       <div>{{ $t('BatchImport.index.250528-7') }}{{ result.success }}</div>
       <div>
-        {{ $t('BatchImport.index.250528-8') }}<span style="color: #ff595e">{{ result.error }}</span>
+        {{ $t('BatchImport.index.250528-8') }}<span style="color: var(--app-text-secondary)">{{ result.error }}</span>
         <a
             v-if="result.errMessage && result.error > 0"
             style="margin-left: 20px"
@@ -206,7 +206,7 @@ const downTemplate = async (type) => {
   border: 1px solid #CCCCCC;
   border-radius: 4px;
   margin-bottom: 16px;
-  background-color: #F5F5F5;
+  background-color: var(--app-elevated);
   display: flex;
   align-items: center;
 }
@@ -215,7 +215,7 @@ const downTemplate = async (type) => {
   margin: 46px 0;
   display: flex;
   flex-direction: column;
-  color: #666666;
+  color: var(--app-text-secondary);
   align-items: center;
   .icon {
     font-size: 30px;

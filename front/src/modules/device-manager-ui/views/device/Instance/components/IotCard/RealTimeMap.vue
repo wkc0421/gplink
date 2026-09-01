@@ -170,11 +170,11 @@ defineExpose({onRefresh})
 <style lang="less" scoped>
 .windowBox {
   width: 400px;
-  background-color: rgba(255, 255, 255, 0.65);
+  background-color: var(--app-elevated);
   border-radius: 6px;
   overflow: hidden;
   padding: 16px;
-  border: 1px solid #ffffff;
+  border: 1px solid var(--app-border);
   backdrop-filter: blur(8px);
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08),0 3px 6px -4px rgba(0, 0, 0, 0.12),0px 9px 28px 8px rgba(0, 0, 0, 0.05);
 
@@ -202,9 +202,9 @@ defineExpose({onRefresh})
 }
 
 .items-list {
-  background-color: #ffffff;
+  background-color: var(--app-surface);
   border-radius: 6px;
-  border: 1px solid #e6e6e6;
+  border: 1px solid var(--app-border);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -223,7 +223,7 @@ defineExpose({onRefresh})
 }
 
 .label {
-  color: #777777;
+  color: var(--app-text-secondary);
 }
 </style>
 

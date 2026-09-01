@@ -560,6 +560,6 @@ onMounted(() => {
 </style>
 <style>
 .heightLightRow {
-  background-color: #e6f4ff;
+  background-color: var(--app-info-bg);
 }
 </style>

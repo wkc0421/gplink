@@ -208,9 +208,9 @@ onMounted(() => {
   gap: 8px;
 
   .tag-blue {
-    background: #e6f7ff;
+    background: var(--app-info-bg);
     border-color: #91d5ff;
-    color: #096dd9;
+    color: var(--app-text);
   }
 
   :deep(.ant-select-selection-overflow-item){

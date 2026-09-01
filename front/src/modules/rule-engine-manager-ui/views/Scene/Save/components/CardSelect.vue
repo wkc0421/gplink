@@ -74,7 +74,7 @@ const onSelect = (record: any) => {
         border-radius: 2px;
         cursor: pointer;
         transition: all 0.3s;
-        background-color: #F5F5F5;
+        background-color: var(--app-elevated);
         gap: 16px;
         align-items: center;
 
@@ -88,7 +88,7 @@ const onSelect = (record: any) => {
             }
 
             div {
-                color: #777;
+                color: var(--app-text-secondary);
                 font-size: 12px;
             }
         }

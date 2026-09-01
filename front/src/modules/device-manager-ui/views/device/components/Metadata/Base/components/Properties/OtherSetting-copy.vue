@@ -49,11 +49,11 @@
                                         placement="topRight"
                                     >
                                         <template #title>
-                                            <div style="color: #1A1A1A; padding: 12px">
+                                            <div style="color: var(--app-text); padding: 12px">
                                               {{ $t('Properties.OtherSetting.237457-0') }}
                                               <div style="display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 8px">
                                                 <div
-                                                    style="background-color: #F0F0F0; padding: 4px 8px; border-radius: 4px;color: #777777;"
+                                                    style="background-color: var(--app-elevated); padding: 4px 8px; border-radius: 4px;color: var(--app-text-secondary);"
                                                     v-for="item in conflictData" :key="item">
                                                 {{item}}
                                               </div>

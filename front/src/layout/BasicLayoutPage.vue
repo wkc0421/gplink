@@ -35,6 +35,7 @@ import { useSystemStore } from '@/store/system'
 import { useMenuStore } from '@/store/menu'
 import { User, Notice, Language, Resource, AiChat } from './components'
 import { storeToRefs } from 'pinia'
+import gpMonogram from '@/assets/theme-icons/gp-monogram.svg'
 
 const router = useRouter();
 const route = useRoute();
@@ -46,6 +47,8 @@ const { theme, layout, language, systemInfo } = storeToRefs(systemStore)
 
 const config = computed(() => ({
   ...layout.value,
+  // Keep the deployed brand mark independent from backend logo settings.
+  logo: gpMonogram,
   theme: theme.value,
   menuData: menuStore.siderMenus,
   splitMenus: layout.value.layout === 'mix'
@@ -101,5 +104,31 @@ watchEffect(() => {
   display: flex;
   align-items: center;
   gap: 24px;
+}
+
+/* Keep the GP mark and the platform name optically centered in the 48px bar.
+   The shared layout's top-nav rule uses inline vertical-align for the title,
+   which leaves Chinese glyphs visibly above the mark on the dark header. */
+:deep(.ant-pro-global-header-logo a),
+:deep(.ant-pro-top-nav-header-logo a) {
+  display: flex !important;
+  align-items: center !important;
+  height: 100%;
+}
+
+:deep(.ant-pro-global-header-logo img),
+:deep(.ant-pro-top-nav-header-logo img) {
+  display: block !important;
+  flex: 0 0 auto;
+}
+
+:deep(.ant-pro-global-header-logo h1),
+:deep(.ant-pro-top-nav-header-logo h1) {
+  display: flex !important;
+  align-items: center !important;
+  height: 32px !important;
+  margin: 0 0 0 12px !important;
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
 }
 </style>

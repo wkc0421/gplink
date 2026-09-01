@@ -28,6 +28,18 @@ export const convertMetadata = (direction: 'from' | 'to', type: string, data: an
 export const modify = (id: string, data: any) => request.put(`/device-product/${id}`, data)
 
 /**
+ * 导入产品属性物模型文件并直接更新产品物模型
+ * @param productId 产品ID
+ * @param fileUrl 已上传文件的访问地址
+ */
+export const importProductPropertyMetadata = (productId: string, fileUrl: string) =>
+  request.post(
+    `/v1/product/${encodeURIComponent(productId)}/property-metadata/import`,
+    {},
+    { params: { fileUrl } },
+  )
+
+/**
  *
  * @returns
  */
@@ -221,7 +233,12 @@ export const saveProductVirtualProperty = (productId: string, data: any[]) => re
 
 export const queryProductVirtualProperty = (productId: string, propertyId: string) => request.get(`/virtual/property/product/${productId}/${propertyId}`)
 
-export const getTemplate = (id: string, format: string) => `${BASE_API}/device/product/${id}/property-metadata/template.${format}`
+/**
+ * 下载产品属性物模型导入模板。
+ * 产品模板接口不需要 productId，仅支持 xlsx/csv 两种格式。
+ */
+export const getTemplate = (_id: string, format: 'xlsx' | 'csv') =>
+  `${BASE_API}/v1/product/property-metadata/properties_template.${format}`
 
 export const getFileType = () => request.get(`/file/media/types`)
 

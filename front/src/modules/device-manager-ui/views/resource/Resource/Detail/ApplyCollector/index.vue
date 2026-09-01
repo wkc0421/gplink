@@ -14,7 +14,7 @@
                     <span style="font-size: 18px">{{ $t('ApplyCollector.index.312040-1') }}</span>
                     <span @click="handleClick"
                         >{{ $t('ApplyCollector.index.312040-2') }}
-                        <span style="color: #1890ff">{{
+                        <span style="color: var(--app-primary)">{{
                             _dataSource.length
                         }}</span></span
                     >
@@ -82,13 +82,13 @@ onMounted(() => {
         max-height: 60vh;
         padding: 12px;
         border-radius: 6px;
-        background-color: #eee;
+        background-color: var(--app-elevated);
         overflow-y: auto;
         overflow-x: hidden;
         margin: 12px 0;
 
         .item {
-            background-color: #fff;
+            background-color: var(--app-surface);
             border-radius: 6px;
             padding: 12px;
             margin-bottom: 12px;

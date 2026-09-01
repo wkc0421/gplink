@@ -189,13 +189,13 @@ onMounted(() => {
     }
     .firmwareDes {
         height: 22px;
-        color: #777777;
+        color: var(--app-text-secondary);
         margin: 8px 0;
     }
     .firmwareFoot {
         justify-content: space-between;
         .firmwareFootTitle{
-            color:#A3A3A3
+            color:var(--app-text-secondary)
         }
     }
 }

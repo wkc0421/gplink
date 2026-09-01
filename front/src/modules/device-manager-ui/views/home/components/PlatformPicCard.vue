@@ -27,13 +27,14 @@ const props = defineProps({
     position: relative;
     width: 100%;
     overflow: hidden;
-    background-color: #fff;
-    border-bottom: 1px solid #2f54eb;
+    background-color: @app-surface;
+    border: 1px solid @app-border;
+    border-bottom-color: @app-primary;
     height: 458px;
 
     .plaid {
-      background: repeating-linear-gradient(90deg, transparent, transparent 35px, rgba(#000, .1) 36px),
-              repeating-linear-gradient(0deg, transparent, transparent 35px, rgba(#000, .1) 36px);
+      background: repeating-linear-gradient(90deg, transparent, transparent 35px, rgba(143, 160, 180, .1) 36px),
+              repeating-linear-gradient(0deg, transparent, transparent 35px, rgba(143, 160, 180, .1) 36px);
       position: absolute;
       top: 0;
       left: 0;
@@ -80,8 +81,8 @@ const props = defineProps({
             left: 24px;
             width: 8px;
             height: 8px;
-            background-color: #1d39c4;
-            border: 1px solid #b4c0da;
+            background-color: @app-primary;
+            border: 1px solid @app-border-strong;
             transform: translateY(-50%);
             content: ' ';
         }

@@ -5,11 +5,11 @@
                 <div class="card">
                     <h3 style="margin: 0 0 24px 0">{{ $t('View.index.700449-0') }}</h3>
                     <p>
-                        <span style="font-weight: bold">clientId: </span>
+                        <span style="font-weight: 500">clientId: </span>
                         <span>{{ clientId }}</span>
                     </p>
                     <p>
-                        <span style="font-weight: bold">secureKey:</span>
+                        <span style="font-weight: 500">secureKey:</span>
                         <span>{{ secureKey }}</span>
                     </p>
                 </div>
@@ -35,7 +35,7 @@ getAppInfo_api(clientId).then((resp: any) => {
 
 <style lang="less" scoped>
 .card {
-    background-color: #fff;
+    background-color: var(--app-surface);
     padding: 24px;
     margin-bottom: 24px;
 

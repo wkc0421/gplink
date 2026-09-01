@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import * as echarts from 'echarts';
+import { withDarkEchartsTheme } from '@/utils/echartsTheme';
 
 const { proxy } = <any>getCurrentInstance();
 
@@ -21,7 +22,7 @@ const props = defineProps({
 const createChart = () => {
     nextTick(() => {
         const myChart = echarts.init(proxy.$refs.chart);
-        myChart.setOption(props.options);
+        myChart.setOption(withDarkEchartsTheme(props.options));
         window.addEventListener('resize', function () {
             myChart.resize();
         });

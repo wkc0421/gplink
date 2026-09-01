@@ -281,7 +281,7 @@ watch(
 <style lang="less" scoped>
 .device-select {
   :deep(.ant-form-item-label) > label:before {
-    color: #ff4d4f;
+    color: var(--app-text-secondary);
     content: "*";
     font-family: SimSun, sans-serif;
     font-size: 14px;

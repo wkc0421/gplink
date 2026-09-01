@@ -28,7 +28,7 @@
                             <div
                                 v-if="list.length < 12"
                                 style="
-                                    color: #666666;
+                                    color: var(--app-text-secondary);
                                     text-align: center;
                                     padding: 8px;
                                 "
@@ -172,7 +172,7 @@ onMounted(async () => {
 <style lang="less" scoped>
 .notice-info-container {
     width: 336px;
-    background-color: #fff;
+    background-color: var(--app-surface);
     border-radius: 4px;
     box-shadow: 0 6px 16px -8px rgb(0 0 0 / 8%), 0 9px 28px 0 rgb(0 0 0 / 5%),
         0 12px 48px 16px rgb(0 0 0 / 3%);
@@ -185,7 +185,7 @@ onMounted(async () => {
     .no-data {
         width: 100%;
         padding: 73px 0 88px;
-        color: rgba(0, 0, 0, 0.45);
+        color: var(--app-text-secondary);
         text-align: center;
 
         img {

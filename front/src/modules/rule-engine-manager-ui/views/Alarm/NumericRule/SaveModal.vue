@@ -559,7 +559,7 @@ initialize();
 }
 
 .range-separator {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--app-text-secondary);
 }
 
 .shake-limit {

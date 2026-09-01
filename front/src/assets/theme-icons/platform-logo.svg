@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 128" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">GP monogram</title>
+  <desc id="desc">A geometric blue GP monogram for the GPLink dark theme.</desc>
+  <defs>
+    <linearGradient id="surface" x1="18" y1="8" x2="142" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#142A43"/>
+      <stop offset="1" stop-color="#0B1728"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="24" y1="24" x2="136" y2="103" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7DE3FF"/>
+      <stop offset="0.48" stop-color="#52A0FF"/>
+      <stop offset="1" stop-color="#2F80FF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="74" y1="30" x2="112" y2="91" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9F8FF"/>
+      <stop offset="1" stop-color="#52A0FF"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-30%" width="140%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="152" height="120" rx="28" fill="url(#surface)" stroke="#29405C" stroke-width="2"/>
+  <path d="M21 27 80 11l59 16" stroke="#2F80FF" stroke-opacity=".16" stroke-width="2"/>
+  <path d="M21 101 80 117l59-16" stroke="#52A0FF" stroke-opacity=".12" stroke-width="2"/>
+  <g stroke="url(#stroke)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <path d="M67 39c-5.5-6.4-12.5-9.6-21-9.6-15.8 0-27 12-27 29.2 0 17.2 11.2 29.2 27 29.2 10.6 0 19-4.8 24.7-14.3H48"/>
+    <path d="M84 88V29h23c13.8 0 22 7.1 22 19.8 0 12.6-8.2 19.8-22 19.8H84m0-19.8h23"/>
+  </g>
+  <circle cx="67" cy="73.5" r="4.5" fill="url(#accent)" stroke="#0A1422" stroke-width="2"/>
+  <circle cx="84" cy="29" r="3.5" fill="#7DE3FF"/>
+</svg>

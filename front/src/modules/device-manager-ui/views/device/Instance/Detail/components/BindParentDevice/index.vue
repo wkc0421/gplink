@@ -22,7 +22,7 @@
             :columns="columns"
             :request="query"
             mode="TABLE"
-            :bodyStyle="{ padding: '0 0 0 24px' }"
+            :bodystyle="{ padding: '0 0 0 24px' }"
             :defaultParams="defaultParams"
             :rowSelection="{
                 selectedRowKeys: _selectedRowKeys,

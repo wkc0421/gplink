@@ -3,7 +3,7 @@ import router from '@/router'
 import { cloneDeep } from 'lodash-es'
 import { setParamsValue } from '@jetlinks-web/hooks'
 import { onlyMessage } from '@jetlinks-web/utils'
-import { handleMenus, modules } from '@/utils'
+import { handleMenus, modules, normalizeMenuPresentation } from '@/utils'
 import { getOwnMenuThree } from '@/api/system/menu'
 import { getDefaultModules, getGlobModules } from '@/router/globModules'
 import { getExtraRouters } from '@/router/extraMenu'
@@ -47,6 +47,40 @@ const defaultOwnParams = [
     ]
   }
 ]
+
+// Resolve the authenticated entry from the generated, permission-filtered
+// menu tree. The dashboard is preferred, while tenants without that menu
+// permission still receive the first visible leaf instead of a blank root.
+const DEFAULT_ENTRY_ROUTE = 'device/DashBoard'
+
+const findRouteByName = (
+  routes: RouteRecordRaw[],
+  name: string
+): RouteRecordRaw | undefined => {
+  for (const route of routes) {
+    if (route.name === name && !route.meta?.hideInMenu) return route
+    if (route.children?.length) {
+      const found = findRouteByName(route.children as RouteRecordRaw[], name)
+      if (found) return found
+    }
+  }
+  return undefined
+}
+
+const findFirstVisibleLeaf = (routes: RouteRecordRaw[]): RouteRecordRaw | undefined => {
+  for (const route of routes) {
+    if (route.meta?.hideInMenu) continue
+    if (route.children?.length) {
+      const found = findFirstVisibleLeaf(route.children as RouteRecordRaw[])
+      if (found) return found
+    } else if (route.path && route.path !== '/') {
+      return route
+    }
+  }
+  return undefined
+}
+
+const normalizeEntryPath = (path?: string) => path?.replace('/:page*', '')
 
 export const useMenuStore = defineStore('menu', () => {
   const menusMap = ref<Map<string, any>>(new Map())
@@ -122,10 +156,15 @@ export const useMenuStore = defineStore('menu', () => {
     menuRoutes.push(USER_CENTER_ROUTE) // 添加个人中心
     menuRoutes.push(INIT_HOME)
 
-    if (menuRoutes.length) {
+    const defaultRoute =
+      findRouteByName(menuRoutes, DEFAULT_ENTRY_ROUTE) ||
+      findFirstVisibleLeaf(menuRoutes)
+    const defaultPath = normalizeEntryPath(defaultRoute?.path || menuRoutes[0]?.path)
+
+    if (defaultPath) {
       menuRoutes.push({
         path: '/',
-        redirect: menuRoutes[0].path
+        redirect: defaultPath
       })
     }
 
@@ -150,7 +189,7 @@ export const useMenuStore = defineStore('menu', () => {
       sorts: [{ name: 'sortIndex', order: 'asc' }]
     })
 
-    let menuResult = resp.result
+    let menuResult = normalizeMenuPresentation(resp.result)
     menuResultCache.value = JSON.parse(JSON.stringify(resp.result))
 
     //  遍历树节点，处理子应用页面

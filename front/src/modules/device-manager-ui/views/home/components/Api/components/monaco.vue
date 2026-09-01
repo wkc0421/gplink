@@ -53,7 +53,7 @@ const init = (editor) => {
     bottom: 0;
     right: 0;
     pointer-events: none;
-    color: #608b4e;
+    color: var(--app-text);
 
     .tips-line {
       height: 19px;

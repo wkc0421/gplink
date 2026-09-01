@@ -103,8 +103,8 @@ const handleRadio = (item: any) => {
     gap: 24px;
     .disabled {
         >div {
-          color: rgba(0, 0, 0, 0.25);
-          border-color: #f5f5f5;
+          color: var(--app-text-secondary);
+          border-color: var(--app-border);
           cursor: not-allowed;
         }
 
@@ -114,7 +114,7 @@ const handleRadio = (item: any) => {
         height: 70px;
         padding: 10px 15px;
         margin-bottom: 12px;
-        border: 1px solid #d9d9d9;
+        border: 1px solid var(--app-border);
         border-radius: 2px;
         display: flex;
         align-items: center;
@@ -142,7 +142,7 @@ const handleRadio = (item: any) => {
     width: 18px;
     height: 18px;
     color: #fff;
-    border: #2f54eb 18px solid;
+    border: var(--app-primary) 18px solid;
     border-left-color: transparent;
     border-top-color: transparent;
 
@@ -152,8 +152,8 @@ const handleRadio = (item: any) => {
 }
 .checked {
     position: relative;
-    color: #2f54eb;
-    border-color: #2f54eb;
+    color: var(--app-primary);
+    border-color: var(--app-primary);
 
     .checked-icon {
         display: block;
@@ -169,8 +169,8 @@ const handleRadio = (item: any) => {
 //    border: 1px #d9d9d9 solid !important;
 //}
 .checked-icon-disabled {
-    color: rgba(0, 0, 0, 0.25) !important;
-    border-color: #e6e6e6 !important;
+    color: var(--app-text-secondary) !important;
+    border-color: var(--app-border) !important;
     border-left-color: transparent !important;
     border-top-color: transparent !important;
     cursor: not-allowed;
@@ -191,7 +191,7 @@ const handleRadio = (item: any) => {
         width: 140px;
         height: 140px;
         padding: 10px 16px;
-        border: 1px solid #d9d9d9;
+        border: 1px solid var(--app-border);
         border-radius: 2px;
         display: flex;
         flex-direction: column;

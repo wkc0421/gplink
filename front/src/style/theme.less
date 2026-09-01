@@ -1,0 +1,802 @@
+// Ant Design and JetLinks shared dark surface overrides.
+.ant-layout-header,
+.ant-layout-footer {
+  color: @app-text;
+  background: @app-nav;
+}
+
+.ant-layout-sider {
+  background: @app-nav;
+}
+
+/* ProTable's card mode is rendered by the shared component package and has
+   its own white defaults.  These wrappers must remain transparent so the
+   page canvas and CardBox surfaces establish the visual hierarchy. */
+.jtable-body-spin,
+.jtable-box,
+.jtable-card,
+.jtable-card-items,
+.jtable-card-item {
+  color: @app-text;
+  background: @app-bg !important;
+}
+
+.full-page-warp {
+  color: @app-text;
+  background: @app-bg !important;
+}
+
+/* The shared advanced search component (JSearch) ships with a light card
+   surface of its own. Keep its controls on the same elevated surface as the
+   page while retaining the existing search layout and spacing. */
+.JSearch-warp {
+  color: @app-text;
+  background: @app-surface !important;
+  border: 1px solid @app-border;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+}
+
+.JSearch-warp .JSearch-item--label,
+.JSearch-warp .JSearch-item--type,
+.JSearch-warp .JSearch-item--column,
+.JSearch-warp .JSearch-item--termType {
+  color: @app-text-secondary;
+}
+
+.JSearch-warp .JSearch-footer--btns,
+.JSearch-warp .more-text,
+.JSearch-warp .more-icon {
+  color: @app-text-secondary;
+}
+
+.search-history-empty,
+.search-history-items {
+  color: @app-text-secondary;
+  background: @app-elevated !important;
+}
+
+.search-history-items .search-history-item:hover {
+  background: rgba(47, 128, 255, .14) !important;
+}
+
+.jtable-body-header {
+  color: @app-text;
+  background: @app-bg !important;
+  border-color: @app-border;
+}
+
+.jtable-body-header-left,
+.jtable-body-header-right,
+.jtable-pagination {
+  color: @app-text-secondary;
+}
+
+/* The action row is a lightweight control strip; keep its buttons visible
+   without drawing an additional container outline around them. */
+.jtable-body-header-right-button .right-button-icon {
+  color: @app-text-secondary !important;
+}
+
+.jtable-card .j-table-empty,
+.jtable-card .ant-empty {
+  color: @app-text-secondary;
+}
+
+.ant-page-header,
+.ant-page-header-heading-title,
+.ant-page-header-heading-sub-title {
+  color: @app-text;
+}
+
+.ant-card,
+.ant-card-bordered,
+.ant-list,
+.ant-list-bordered,
+.ant-pro-table,
+.ant-pro-table-list-toolbar,
+.ant-pro-table-search {
+  color: @app-text;
+  background: @app-surface;
+  border-color: @app-border;
+}
+
+.ant-card-head,
+.ant-card-head-title {
+  color: @app-text;
+  border-color: @app-border;
+}
+
+.ant-table,
+.ant-table-container,
+.ant-table-content,
+.ant-table-body {
+  color: @app-text-secondary;
+  background: @app-surface;
+}
+
+.ant-table-thead > tr > th {
+  color: @app-text-tertiary;
+  background: @app-elevated !important;
+  border-bottom-color: @app-border !important;
+}
+
+.ant-table-tbody > tr > td {
+  color: @app-text-secondary;
+  background: @app-surface;
+  border-bottom-color: @app-border !important;
+}
+
+.ant-table-tbody > tr:hover > td,
+.ant-table-tbody > tr.ant-table-row-selected > td {
+  background: rgba(47, 128, 255, .08) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker,
+.ant-input-group-addon {
+  color: @app-text;
+  background: @app-bg !important;
+  border-color: @app-border-strong !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder,
+.ant-select-selection-placeholder,
+.ant-picker-input input::placeholder {
+  color: @app-text-tertiary;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input-number:hover,
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.ant-picker:hover {
+  border-color: @app-primary !important;
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  border-color: @app-primary !important;
+  box-shadow: 0 0 0 2px rgba(47, 128, 255, .16) !important;
+}
+
+.ant-btn-default,
+.ant-btn-dashed,
+.ant-btn-text,
+.ant-btn-link {
+  color: @app-text-secondary;
+}
+
+.ant-btn-default,
+.ant-btn-dashed {
+  background: @app-surface;
+  border-color: @app-border-strong;
+}
+
+.ant-btn-default:hover,
+.ant-btn-dashed:hover,
+.ant-btn-text:hover {
+  color: @app-primary-hover;
+  border-color: @app-primary;
+}
+
+.ant-btn-primary {
+  background: @app-primary;
+  border-color: @app-primary;
+}
+
+.ant-tabs-tab,
+.ant-tabs-tab-btn {
+  color: @app-text-secondary;
+}
+
+.ant-tabs-tab:hover,
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: @app-primary-hover;
+}
+
+.ant-tabs-ink-bar {
+  background: @app-primary;
+}
+
+.ant-modal-content,
+.ant-modal-header,
+.ant-modal-footer,
+.ant-drawer-content,
+.ant-drawer-header,
+.ant-drawer-body,
+.ant-popover-inner,
+.ant-dropdown,
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-tooltip-inner {
+  color: @app-text;
+  background: @app-elevated;
+  border-color: @app-border;
+}
+
+.ant-modal-header,
+.ant-drawer-header {
+  border-bottom-color: @app-border;
+}
+
+.ant-modal-footer {
+  border-top-color: @app-border;
+}
+
+.ant-dropdown-menu,
+.ant-select-item,
+.ant-picker-panel-container {
+  color: @app-text-secondary;
+  background: @app-elevated;
+}
+
+.ant-dropdown-menu-item:hover,
+.ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
+  color: @app-text;
+  background: rgba(47, 128, 255, .2);
+}
+
+.ant-empty-description,
+.ant-form-item-label > label,
+.ant-pagination,
+.ant-pagination-item a {
+  color: @app-text-secondary;
+}
+
+.ant-pagination-item {
+  background: @app-surface;
+  border-color: @app-border;
+}
+
+.ant-pagination-item-active {
+  border-color: @app-primary;
+}
+
+.ant-spin-dot-item {
+  background-color: @app-primary;
+}
+
+/* Visual hierarchy pass: the rules above establish compatibility with the
+   legacy components; these final overrides define the stronger dark product
+   presentation used by every runtime page. */
+body,
+#app,
+.ant-layout,
+.ant-layout-content {
+  color: @app-text;
+  background: @app-bg !important;
+}
+
+.ant-card,
+.ant-list,
+.ant-pro-table,
+.ant-pro-table-list-toolbar,
+.ant-pro-table-search,
+.jtable-body,
+.jtable-card {
+  background: @app-surface !important;
+  border-color: @app-border !important;
+  border-radius: @app-radius-card;
+}
+
+/* Strong outer edges make elevated surfaces readable against the page canvas;
+   the brighter tone is reserved for boundaries, not large filled areas.  The
+   card grid itself is handled separately below so it does not draw a second
+   frame around every CardBox. */
+.ant-card,
+.ant-card-bordered,
+.ant-list-bordered,
+.ant-pro-table,
+.ant-pro-table-list-toolbar,
+.ant-pro-table-search,
+.jtable-body,
+.jtable-card,
+.top-card,
+.message-card,
+.device-position,
+.alarm-card {
+  border: 1px solid @app-border-strong !important;
+}
+
+/* The action row is a control strip rather than a card. Remove the shared
+   ProTable body frame in every mode so list and card pages do not alternate
+   between framed and frameless toolbars. The nested table wrapper keeps its
+   own boundary around the data area. */
+.jtable-body {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.jtable-card:has(.a-table-card-box),
+.jtable-card-item:has(.a-table-card-box) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.ant-table-wrapper {
+  border: 1px solid @app-border-strong !important;
+  border-radius: @app-radius-card;
+}
+
+.ant-table-thead > tr > th {
+  border-bottom: 1px solid @app-border-strong !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid @app-border !important;
+}
+
+/* Dashboard modules keep a configurable background on their root nodes. The
+   legacy configuration may contain a light color, so the product surface is
+   enforced here while the dashboard data, layout and chart options remain
+   unchanged. */
+.ant-pro-page-container-children-content,
+.ant-pro-page-container-warp,
+.DashBoardBox,
+.dash-board,
+.top-card,
+.message-card,
+.device-position,
+.alarm-card,
+.iot-home-container,
+.device-home-container,
+.comprehensive-home-conatiner,
+.api-page-container {
+  color: @app-text;
+  background: @app-surface !important;
+  border-color: @app-border !important;
+}
+
+.DashBoardBox,
+.iot-home-container,
+.device-home-container,
+.comprehensive-home-conatiner {
+  background: @app-bg !important;
+}
+
+.ant-card,
+.ant-list-bordered,
+.ant-pro-table,
+.JSearch-warp {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .16);
+}
+
+.ant-card-head,
+.ant-list-header,
+.jtable-body-header {
+  background: linear-gradient(135deg, @app-surface 0%, #102238 100%) !important;
+  border-bottom-color: @app-border !important;
+}
+
+.ant-card-head-title,
+.ant-page-header-heading-title,
+.ant-pro-page-container .ant-page-header-heading-title {
+  color: @app-text !important;
+  font-weight: 700;
+}
+
+.ant-page-header-heading-sub-title,
+.ant-form-item-label > label,
+.ant-table-tbody > tr > td,
+.ant-empty-description,
+.ant-pagination,
+.ant-pagination-item a,
+.jtable-body-header-left,
+.jtable-body-header-right,
+.jtable-pagination {
+  color: @app-text-secondary !important;
+}
+
+.ant-table,
+.ant-table-container,
+.ant-table-content,
+.ant-table-body,
+.ant-table-tbody > tr > td {
+  background: @app-surface !important;
+}
+
+.ant-table-thead > tr > th {
+  color: @app-text-table-header !important;
+  background: @app-elevated !important;
+  border-bottom: 1px solid @app-border !important;
+  font-weight: 700;
+}
+
+.ant-table-tbody > tr:hover > td,
+.ant-table-tbody > tr.ant-table-row-selected > td {
+  background: rgba(47, 128, 255, .12) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker,
+.ant-input-group-addon {
+  color: @app-text !important;
+  background: #081524 !important;
+  border-color: @app-border-strong !important;
+  border-radius: @app-radius-control !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder,
+.ant-select-selection-placeholder,
+.ant-picker-input input::placeholder {
+  color: @app-text-tertiary !important;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input-number:hover,
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.ant-picker:hover {
+  border-color: @app-primary-hover !important;
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  border-color: @app-primary !important;
+  box-shadow: 0 0 0 3px rgba(47, 128, 255, .2) !important;
+}
+
+.ant-btn {
+  border-radius: @app-radius-control;
+  font-weight: 600;
+  transition: color .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.ant-btn-default,
+.ant-btn-dashed {
+  color: @app-text-secondary;
+  background: @app-elevated;
+  border-color: @app-border-strong;
+}
+
+.ant-btn-default:hover,
+.ant-btn-dashed:hover,
+.ant-btn-text:hover {
+  color: @app-primary-hover;
+  background: @app-hover;
+  border-color: @app-primary;
+}
+
+.ant-btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, @app-primary 0%, @app-primary-hover 100%);
+  border-color: @app-primary;
+  box-shadow: 0 6px 16px rgba(47, 128, 255, .24);
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, @app-primary-hover 0%, #6BB4FF 100%);
+  border-color: @app-primary-hover;
+  box-shadow: 0 8px 20px rgba(47, 128, 255, .34);
+}
+
+.ant-tabs-nav,
+.ant-tabs-tab,
+.ant-tabs-tab-btn {
+  color: @app-text-secondary !important;
+}
+
+.ant-tabs-tab:hover,
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: @app-primary-hover !important;
+}
+
+.ant-tabs-ink-bar {
+  height: 3px;
+  background: linear-gradient(90deg, @app-primary, @app-primary-hover) !important;
+  border-radius: 3px;
+}
+
+.ant-modal-content,
+.ant-drawer-content,
+.ant-popover-inner,
+.ant-dropdown,
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-tooltip-inner {
+  color: @app-text;
+  background: @app-elevated !important;
+  border: 1px solid @app-border;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .34);
+}
+
+.ant-modal-header,
+.ant-modal-footer,
+.ant-drawer-header {
+  background: @app-elevated !important;
+  border-color: @app-border !important;
+}
+
+.ant-dropdown-menu,
+.ant-select-item,
+.ant-picker-panel-container {
+  color: @app-text-secondary;
+  background: @app-elevated !important;
+}
+
+.ant-dropdown-menu-item:hover,
+.ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
+  color: @app-text !important;
+  background: rgba(47, 128, 255, .2) !important;
+}
+
+.ant-pagination-item {
+  background: @app-surface !important;
+  border-color: @app-border !important;
+}
+
+.ant-pagination-item-active {
+  background: rgba(47, 128, 255, .16) !important;
+  border-color: @app-primary !important;
+}
+
+.ant-pagination-item-active a {
+  color: @app-primary-hover !important;
+}
+
+.ant-empty-image svg path {
+  fill: @app-text-tertiary;
+}
+
+/* Empty states should remain visible without bringing the light-theme
+   illustration back into dark pages. Some JetLinks versions render paths,
+   strokes and groups instead of a single path, so keep the whole image at a
+   calm contrast level and let the description carry the semantic emphasis. */
+.ant-empty-image svg {
+  opacity: .72;
+  filter: saturate(.7) brightness(.86);
+}
+
+.ant-empty-image svg [fill]:not([fill="none"]) {
+  fill: @app-text-tertiary;
+}
+
+.ant-empty-image svg [stroke]:not([stroke="none"]) {
+  stroke: @app-text-tertiary;
+}
+
+/* Typography pass: use a calmer system-first stack and reserve the brightest
+   weight for actual hierarchy. This is intentionally global so legacy views
+   receive the same treatment without changing their templates or behavior. */
+html,
+body,
+#app,
+button,
+input,
+textarea,
+select,
+.ant-layout,
+.ant-modal,
+.ant-drawer,
+.ant-dropdown,
+.ant-popover,
+.ant-table,
+.ant-form {
+  font-family: @app-font-family;
+  font-synthesis: none;
+}
+
+body,
+#app {
+  font-size: @app-font-size-base;
+  line-height: @app-line-height-base;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.ant-page-header-heading-title,
+.ant-card-head-title,
+.ant-modal-title,
+.ant-drawer-title {
+  color: @app-text !important;
+  font-weight: @app-font-weight-semibold !important;
+  line-height: @app-title-line-height;
+}
+
+h1,
+.ant-page-header-heading-title {
+  font-size: @app-title-size;
+}
+
+h2,
+h3,
+.ant-card-head-title,
+.ant-modal-title,
+.ant-drawer-title {
+  font-size: @app-section-size;
+}
+
+.ant-page-header-heading-sub-title,
+.ant-form-item-label > label,
+.ant-table-thead > tr > th,
+.ant-pagination,
+.jtable-body-header-left,
+.jtable-body-header-right,
+.jtable-pagination {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ant-form-item-label > label {
+  color: @app-text-secondary !important;
+  font-weight: @app-font-weight-medium;
+}
+
+.ant-table-thead > tr > th {
+  color: @app-text-table-header !important;
+  font-weight: @app-font-weight-semibold;
+}
+
+.ant-table-tbody > tr > td,
+.ant-table-tbody .ant-table-cell,
+.ant-list-item,
+.ant-select-item,
+.ant-dropdown-menu-item,
+.ant-pagination-item a {
+  color: @app-text-value;
+  font-size: @app-font-size-base;
+  font-weight: @app-font-weight-regular;
+  line-height: @app-line-height-base;
+}
+
+.ant-btn {
+  font-size: 13px;
+  font-weight: @app-font-weight-medium;
+  line-height: 20px;
+}
+
+.ant-btn-primary {
+  font-weight: @app-font-weight-semibold;
+}
+
+.ant-empty-description,
+.ant-form-item-explain,
+.ant-form-item-extra,
+.ant-page-header-heading-sub-title {
+  color: @app-text-tertiary !important;
+  font-size: @app-label-size;
+  line-height: @app-label-line-height;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number-input,
+.ant-select-selection-item,
+.ant-picker-input > input {
+  font-size: @app-font-size-base;
+  line-height: @app-line-height-base;
+}
+
+.ant-tabs-tab-btn {
+  font-weight: @app-font-weight-medium;
+}
+
+.ant-card-head-title,
+.ant-page-header-heading-title,
+.ant-pro-page-container .ant-page-header-heading-title {
+  font-weight: @app-font-weight-semibold !important;
+}
+
+.ant-card-head-title {
+  letter-spacing: .01em;
+}
+
+/* JPageContainer's canvas wrappers are not content cards.  Keep them on the
+   page background globally so a light runtime token cannot flash through
+   during route changes or while a dashboard is loading. */
+.ant-pro-page-container-grid-content,
+.ant-pro-page-container-main,
+.ant-pro-page-container-content {
+  color: @app-text;
+  background: @app-bg !important;
+}
+
+/* Dashboard canvas guard: JPageContainer has an additional grid-content
+   wrapper which is styled by JetLinks at runtime.  That wrapper can retain
+   the light token when a dashboard is mounted after the theme provider,
+   leaving a large white canvas around the cards.  Scope the override to
+   dashboard routes so list/detail pages keep their elevated content surface. */
+.ant-pro-page-container:has(.DashBoardBox),
+.ant-pro-page-container:has(.dash-board) {
+  background: @app-bg !important;
+
+  .ant-pro-page-container-warp,
+  .ant-pro-page-container-grid-content,
+  .ant-pro-page-container-children-content,
+  .ant-pro-page-container-ghost,
+  .ant-pro-page-container-main,
+  .ant-pro-page-container-content {
+    color: @app-text !important;
+    background: @app-bg !important;
+  }
+
+  .DashBoardBox,
+  .dash-board {
+    color: @app-text !important;
+    background: @app-bg !important;
+  }
+
+  .DashBoardBox .ant-row,
+  .DashBoardBox .ant-col,
+  .dash-board .ant-row,
+  .dash-board .ant-col {
+    background: transparent !important;
+  }
+}
+
+/* The basic layout content is a sibling of JPageContainer in some JetLinks
+   releases.  Keep it dark when it contains one of the dashboard roots. */
+.ant-pro-basicLayout-content:has(.DashBoardBox),
+.ant-pro-basicLayout-content:has(.dash-board),
+.ant-pro-basicLayout-content > .ant-layout:has(.DashBoardBox),
+.ant-pro-basicLayout-content > .ant-layout:has(.dash-board) {
+  color: @app-text !important;
+  background: @app-bg !important;
+}
+
+/* Keep the table action row borderless after all component surface rules. */
+.jtable-body-header {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* At 1024/1280px the legacy fixed table layout compresses URL, description
+   and operation columns into unreadable slivers. Let the table scroll inside
+   its own surface while preserving every column and existing actions. */
+@media (max-width: 1280px) {
+  .ant-table-wrapper {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .ant-table-wrapper .ant-table-content,
+  .ant-table-wrapper .ant-table-body,
+  .jtable-box .ant-table-content,
+  .jtable-box .ant-table-body {
+    max-width: 100%;
+    overflow-x: auto !important;
+  }
+
+  .ant-table-wrapper .ant-table-content > table,
+  .jtable-box .ant-table-content > table {
+    min-width: 900px;
+    table-layout: auto !important;
+  }
+
+  .JSearch-warp {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .department-container,
+  .dictionary_contain {
+    min-width: 0;
+    max-width: 100%;
+  }
+}

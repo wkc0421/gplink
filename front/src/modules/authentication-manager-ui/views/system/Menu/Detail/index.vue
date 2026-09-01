@@ -54,12 +54,12 @@ const onRefresh = () => {
 <style lang="less" scoped>
 .menu-detail-container {
   :deep(.ant-tabs-nav) {
-    background-color: #fff;
+    background-color: var(--app-surface);
     padding-left: 24px;
     margin-bottom: 0;
   }
   .ant-tabs-tabpane {
-    background-color: #f0f2f5;
+    background-color: var(--app-elevated);
     padding-top: 24px;
   }
 }

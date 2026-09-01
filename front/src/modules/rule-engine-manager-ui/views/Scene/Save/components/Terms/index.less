@@ -4,9 +4,9 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  color: rgba(0, 0, 0, 0.3);
-  background-color: #fff;
-  border: 1px dashed rgba(0, 0, 0, 0.3);
+  color: var(--app-text-secondary);
+  background-color: var(--app-surface);
+  border: 1px dashed var(--app-border);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -17,10 +17,10 @@
   right: -10px;
   width: 20px;
   height: 20px;
-  color: #999;
+  color: var(--app-text-secondary);
   line-height: 20px;
   text-align: center;
-  background-color: #f1f1f1;
+  background-color: var(--app-elevated);
   border-radius: 50%;
   cursor: pointer;
 
@@ -29,7 +29,7 @@
   }
 
   &:hover {
-    background-color: #f3f3f3;
+    background-color: var(--app-elevated);
   }
 }
 
@@ -37,7 +37,7 @@
   .deleteBtn();
 
   &.danger {
-    color: #e50012;
+    color: var(--app-text);
     background-color: rgba(229, 0, 18, 0.1);
   }
 
@@ -58,7 +58,7 @@
       top: -14px;
       z-index: 2;
       cursor: pointer;
-      color: #e50012;
+      color: var(--app-text);
     }
 
     &.first-children,
@@ -78,7 +78,7 @@
       min-width: 40px;
       margin-right: 16px;
       padding-top: 16px;
-      color: #6968be;
+      color: var(--app-text);
       font-weight: 800;
       font-size: 16px;
     }
@@ -137,7 +137,7 @@
     position: relative;
     display: flex;
     padding: 8px 8px 0px 8px;
-    border: 1px dashed #e0e0e0;
+    border: 1px dashed var(--app-border);
     border-radius: 6px;
     row-gap: 16px;
     .terms-params-item {
@@ -162,9 +162,9 @@
   .terms-group-add {
     margin-left: 16px;
     padding: 2px 8px;
-    color: rgba(0, 0, 0, 0.3);
-    background: #fff;
-    border: 1px dashed rgba(0, 0, 0, 0.3);
+    color: var(--app-text-secondary);
+    background: var(--app-surface);
+    border: 1px dashed var(--app-border);
     border-radius: 30px;
     cursor: pointer;
 
@@ -188,7 +188,7 @@
 
   &.filter-group {
     .terms-params-content {
-      background-color: #fafafa;
+      background-color: var(--app-elevated);
       border: none;
     }
 
@@ -201,7 +201,7 @@
 .terms-params-item {
   .params-button {
     padding: 6px 8px;
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--app-border);
     border-radius: 8px;
     cursor: pointer;
   }

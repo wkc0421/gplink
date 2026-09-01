@@ -80,7 +80,7 @@ onMounted(async () => {
       flex-direction: column;
       align-items: center;
       gap: 12px;
-      color: #666;
+      color: var(--app-text-secondary);
 
       span {
         font-size: 14px;

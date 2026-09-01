@@ -63,7 +63,7 @@ watchEffect(() => {
         cursor: pointer;
         width: 30%;
         border-radius: 14px;
-        color: #333333;
+        color: var(--app-text);
         overflow: hidden;
 
         img {

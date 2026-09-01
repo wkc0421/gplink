@@ -74,7 +74,7 @@ const handleClick = (type: string) => {
     display: flex;
     justify-content: space-between;
     padding: 16px;
-    border: 1px solid #e0e4e8;
+    border: 1px solid var(--app-border);
     border-radius: 2px;
     cursor: pointer;
     transition: all 0.3s;
@@ -88,7 +88,7 @@ const handleClick = (type: string) => {
       }
 
       span {
-        color: rgba(#000, 0.35);
+        color: var(--app-text-secondary);
         font-size: 12px;
       }
     }
@@ -128,7 +128,7 @@ const handleClick = (type: string) => {
   }
 
   &.disabled {
-    color: rgba(#000, .8);
+    color: var(--app-text-secondary);
     .way-item-image {
       opacity: 0.6;
     }

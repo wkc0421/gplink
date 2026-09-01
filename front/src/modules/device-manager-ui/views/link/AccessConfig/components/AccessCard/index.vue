@@ -61,21 +61,21 @@ const checkedChange = (id: string) => {
     // background: url('/public/images/access.png') no-repeat;
     // background-size: 100% 100%;
     height: 140px;
-    background: #fafafa;
-    border: 1px solid #e6e6e6;
+    background: var(--app-elevated);
+    border: 1px solid var(--app-border);
     .title {
         font-style: normal;
         font-weight: 800;
         font-size: 16px;
         line-height: 22px;
-        color: rgba(0, 0, 0, 0.85);
+        color: var(--app-text-secondary);
         opacity: 0.85;
     }
 
     .desc {
         width: 100%;
         margin-top: 10px;
-        color: rgba(0, 0, 0, 0.55);
+        color: var(--app-text-secondary);
         font-weight: 400;
         font-size: 13px;
         overflow: hidden;

@@ -99,10 +99,12 @@ const onChangeTabs = (id) => {
 <style lang="less" scoped>
 .department-container {
   display: flex;
-  background-color: #fff;
+  background-color: var(--app-surface);
   padding: 24px;
   height: 100%;
   position: relative;
+  min-width: 0;
+  box-sizing: border-box;
 
   .left {
     position: absolute;
@@ -114,6 +116,8 @@ const onChangeTabs = (id) => {
   .right {
     width: calc(100% - 316px);
     margin-left: 316px;
+    min-width: 0;
+    overflow: hidden;
     :deep(.ant-tabs-nav-wrap) {
       padding-left: 24px;
     }

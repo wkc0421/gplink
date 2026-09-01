@@ -226,7 +226,7 @@ const deleteGroup = () => {
 <style scoped lang='less'>
 .when-add {
   font-size: 14px;
-  color: #2F54EB;
+  color: var(--app-primary);
   cursor: pointer;
 }
 </style>

@@ -188,7 +188,7 @@ watch(
   height: 100%;
 
   .api-page-content {
-    background-color: #fff;
+    background-color: var(--app-surface);
     margin: 0 !important;
 
     .api-page-body {
@@ -200,7 +200,7 @@ watch(
         height: calc(100vh - 230px);
         width: 280px;
         overflow-y: auto;
-        border-right: 1px solid #e9e9e9;
+        border-right: 1px solid var(--app-border);
       }
 
       .api-page-detail {

@@ -66,22 +66,22 @@ const onResize = ({ width }: { width: number }) => {
     overflow: hidden;
 
     .tag {
-        background-color: #f7f8fa;
+        background-color: var(--app-elevated);
         border-radius: 32px;
         margin-right: 8px;
         padding: 0 14px;
-        color: #333333;
+        color: var(--app-text);
         white-space: nowrap;
     }
     .tag-ellipsis {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        background-color: #f7f8fa;
+        background-color: var(--app-elevated);
         border-radius: 32px;
         margin-right: 8px;
         padding: 0 14px;
-        color: #333333;
+        color: var(--app-text);
         text-align: center;
     }
 }

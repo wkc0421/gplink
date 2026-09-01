@@ -1,17 +1,60 @@
-@font-face {
-  font-family: AliRegular;
-  src: url("/fonts/AlibabaPuHuiTi-2-55-Regular.woff2") format("woff2"),
-      url("/fonts/AlibabaPuHuiTi-2-55-Regular.woff") format("woff");
-}
-
-body {
-  font-family: 'AliRegular' !important;
-}
-
 *, :after, :before {
   box-sizing: border-box;
 }
 
+:root {
+  --app-bg: #0A1422;
+  --app-surface: #102238;
+  --app-elevated: #172F49;
+  --app-hover: #1D3A59;
+  --app-nav: #0B192A;
+  --app-border: #35516F;
+  --app-border-strong: #4B6F95;
+  --app-text: #F4F7FC;
+  --app-text-value: #E2EBF5;
+  --app-text-secondary: #C4D0DE;
+  --app-text-tertiary: #96A9BD;
+  --app-text-disabled: #8799AD;
+  --app-primary: #2F80FF;
+  --app-primary-hover: #52A0FF;
+  --app-success: #35D07F;
+  --app-warning: #FFB454;
+  --app-error: #FF6474;
+  --app-font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", AliRegular, sans-serif;
+  --app-font-size-base: 14px;
+  --app-line-height-base: 22px;
+  --app-font-weight-regular: 400;
+  --app-font-weight-medium: 500;
+  --app-font-weight-semibold: 600;
+  --app-font-weight-bold: 700;
+  --app-title-size: 20px;
+  --app-title-line-height: 28px;
+  --app-section-size: 16px;
+  --app-section-line-height: 24px;
+  --app-label-size: 12px;
+  --app-label-line-height: 20px;
+  --app-error-bg: rgba(255, 100, 116, .14);
+  --app-warning-bg: rgba(255, 180, 84, .14);
+  --app-info-bg: rgba(47, 128, 255, .14);
+  --app-success-bg: rgba(53, 208, 127, .14);
+  --app-purple-bg: rgba(168, 120, 255, .14);
+  --app-highlight-bg: rgba(255, 255, 255, .06);
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
 body {
-  margin: 0
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size-base);
+  line-height: var(--app-line-height-base);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

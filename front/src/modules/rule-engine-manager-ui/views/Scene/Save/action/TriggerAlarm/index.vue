@@ -29,7 +29,7 @@
         mode="TABLE"
         :columns="columns"
         :request="queryData"
-        :bodyStyle="{ padding: 0 }"
+        :bodystyle="{ padding: 0 }"
         :defaultParams="{
           sorts: [{ name: 'createTime', order: 'desc' }],
           terms: [
@@ -256,16 +256,16 @@ const queryData = async (terms: any) => {
 
   .related-alarms-total {
     font-size: 16px;
-    color: #1a1a1a;
+    color: var(--app-text);
 
     > span {
-      color: #1677ff;
+      color: var(--app-primary);
     }
   }
 
   .related-alarms-tip {
     font-size: 12px;
-    color: #777;
+    color: var(--app-text-secondary);
     margin-bottom: 12px;
   }
 }

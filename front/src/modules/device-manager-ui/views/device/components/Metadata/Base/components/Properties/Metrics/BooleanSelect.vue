@@ -5,7 +5,7 @@
           { label: $t('Metrics.BooleanSelect.959643-0'), value: 'false' },
           { label: $t('Metrics.BooleanSelect.959643-1'), value: 'true' },
       ]"
-      :dropdownStyle="{
+      :dropdownstyle="{
         zIndex: 1071
       }"
       :getPopupContainer="(node) => tableWrapperRef || node"

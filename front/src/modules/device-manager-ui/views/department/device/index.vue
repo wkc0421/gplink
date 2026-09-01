@@ -621,14 +621,14 @@ watchEffect(() => {
     .card-warp {
       &.active {
         .card-item-content-value {
-          color: #2f54eb;
+          color: var(--app-primary);
         }
       }
     }
 
     .card-tools {
       span {
-        color: #252525;
+        color: var(--app-text);
       }
     }
   }

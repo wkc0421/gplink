@@ -24,7 +24,7 @@
             button
           </template>
         </permission-button>
-          <div style="padding: 12px;background-color: #fff;margin-top: 16px">
+          <div style="padding: 12px;background-color: var(--app-surface);margin-top: 16px">
             <component v-if="_component" :is="_component" data="12312321"> 12312</component>
             <RemoteComponent
               remoteName="authentication-manager-ui"

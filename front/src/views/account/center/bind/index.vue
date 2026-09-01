@@ -375,13 +375,13 @@ onMounted(() => {
     box-sizing: border-box;
     width: 928px;
     min-height: 510px;
-    background: #fff;
+    background: var(--app-surface);
     border-radius: 22px;
     padding: 40px;
 
     .title {
       margin-bottom: 30px;
-      color: #333333;
+      color: var(--app-text);
       font-weight: 400;
       font-size: 22px;
       font-family: "PingFang SC";
@@ -410,10 +410,10 @@ onMounted(() => {
 
         &-item {
           display: flex;
-          color: #333333;
+          color: var(--app-text);
 
           span {
-            color: #666666;
+            color: var(--app-text-secondary);
             white-space: nowrap;
           }
         }

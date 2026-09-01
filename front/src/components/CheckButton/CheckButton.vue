@@ -147,29 +147,29 @@ watch(
     min-width: 0;
     padding: 8px;
     border-radius: 20px;
-    background-color: #F8F9FA;
+    background-color: var(--app-elevated);
     transition: all 0.3s;
-    color: #333;
+    color: var(--app-text);
     text-align: center;
     cursor: pointer;
-    border: 1px solid #F8F9FA;
+    border: 1px solid var(--app-border);
 
     &:hover {
-      background-color: #F1F7FF;
+      background-color: var(--app-info-bg);
       color: @primary-color;
       opacity: 0.85;
     }
 
     &.selected {
-      background-color: #F1F7FF;
+      background-color: var(--app-info-bg);
       border-color: @primary-color;
       color: @primary-color;
     }
 
     &.disabled {
       cursor: not-allowed;
-      color: #00000040;
-      background-color: #e6e6e6;
+      color: var(--app-text-secondary);
+      background-color: var(--app-elevated);
       opacity: 1
     }
   }

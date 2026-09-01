@@ -14,7 +14,7 @@
         :columns="columns"
         :request="query"
         :height="240"
-        :bodyStyle='{ padding: 0, margin: 0}'
+        :bodystyle='{ padding: 0, margin: 0}'
         :expandable='{
       expandedRowKeys: openKeys,
       onExpandedRowsChange: expandedRowChange,

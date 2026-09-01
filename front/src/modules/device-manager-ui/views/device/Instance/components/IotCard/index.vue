@@ -823,7 +823,7 @@ onMounted(async () => {
 <style scoped lang="less">
 .card {
   padding: 24px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   .card-head {
     display: flex;
     justify-content: space-between;
@@ -837,8 +837,8 @@ onMounted(async () => {
   justify-content: space-around;
   .data-statistics-item {
     height: 140px;
-    background: #fcfcfc;
-    border: 1px solid #e0e4e8;
+    background: var(--app-elevated);
+    border: 1px solid var(--app-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -849,7 +849,7 @@ onMounted(async () => {
       width: 28%;
       .label {
         font-size: 14px;
-        color: rgba(0, 0, 0, 0.64);
+        color: var(--app-text-secondary);
       }
       .value {
         font-size: 32px;
@@ -869,7 +869,7 @@ onMounted(async () => {
   position: absolute;
   top: 24px;
   left: 24px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   width: 124px;
   height: 32px;
 }

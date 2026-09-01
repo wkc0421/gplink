@@ -135,7 +135,7 @@ onMounted(() => {
         cursor: pointer;
 
         &.active {
-          background-color: #E7F1FF;
+          background-color: var(--app-info-bg);
           color: @primary-color;
         }
       }
@@ -147,7 +147,7 @@ onMounted(() => {
     margin-top: 16px;
 
     .wrap-item {
-      background-color: #FFFFFF;
+      background-color: var(--app-surface);
       border-radius: 6px;
       border: 1px solid @font-gray-200;
       padding: 12px 16px;

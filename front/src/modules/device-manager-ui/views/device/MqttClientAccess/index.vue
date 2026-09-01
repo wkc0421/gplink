@@ -1087,7 +1087,7 @@ onMounted(loadBaseData)
 .mqtt-client-access-page {
   min-height: 100%;
   padding: 24px;
-  background: #f5f7fb;
+  background: var(--app-info-bg);
 }
 
 .page-head,
@@ -1107,7 +1107,7 @@ onMounted(loadBaseData)
 }
 
 .page-title {
-  color: #1f2937;
+  color: var(--app-text);
   font-size: 24px;
   font-weight: 600;
   line-height: 1.35;
@@ -1115,16 +1115,16 @@ onMounted(loadBaseData)
 
 .page-subtitle {
   margin-top: 6px;
-  color: #6b7280;
+  color: var(--app-text);
   line-height: 1.7;
 }
 
 .steps-wrap,
 .guide-panel,
 .content-panel {
-  border: 1px solid #e7ebf2;
+  border: 1px solid var(--app-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: 0 4px 18px rgb(31 41 55 / 4%);
 }
 
@@ -1136,8 +1136,8 @@ onMounted(loadBaseData)
 .guide-panel {
   padding: 18px 22px;
   margin-bottom: 16px;
-  border-color: #d8e8ff;
-  background: linear-gradient(135deg, #f7fbff 0%, #fff 70%);
+  border-color: var(--app-border);
+  background: linear-gradient(135deg, var(--app-elevated) 0%, var(--app-surface) 70%);
 }
 
 .guide-head {
@@ -1148,7 +1148,7 @@ onMounted(loadBaseData)
 }
 
 .guide-label {
-  color: #1677ff;
+  color: var(--app-primary);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1156,27 +1156,27 @@ onMounted(loadBaseData)
 
 .guide-title {
   margin-top: 3px;
-  color: #1f2937;
+  color: var(--app-text);
   font-size: 17px;
   font-weight: 600;
 }
 
 .guide-summary {
   margin-top: 9px;
-  color: #4b5563;
+  color: var(--app-text);
   line-height: 1.7;
 }
 
 .guide-body {
   padding-top: 12px;
   margin-top: 12px;
-  border-top: 1px dashed #cdddf2;
+  border-top: 1px dashed var(--app-border);
 }
 
 .guide-list {
   padding-left: 20px;
   margin: 0;
-  color: #4b5563;
+  color: var(--app-text);
   line-height: 1.9;
 }
 
@@ -1187,13 +1187,13 @@ onMounted(loadBaseData)
   padding: 9px 12px;
   margin-top: 10px;
   border-radius: 6px;
-  color: #475569;
-  background: #f3f7fc;
+  color: var(--app-text);
+  background: var(--app-info-bg);
 }
 
 .guide-example-label {
   flex: 0 0 auto;
-  color: #1677ff;
+  color: var(--app-primary);
   font-weight: 600;
 }
 
@@ -1208,8 +1208,8 @@ onMounted(loadBaseData)
 .section-title {
   padding-left: 10px;
   margin-bottom: 18px;
-  border-left: 3px solid #1677ff;
-  color: #1f2937;
+  border-left: 3px solid var(--app-primary);
+  color: var(--app-text);
   font-size: 17px;
   font-weight: 600;
 }
@@ -1234,12 +1234,12 @@ onMounted(loadBaseData)
 
 .label-help {
   margin-left: 5px;
-  color: #8c8c8c;
+  color: var(--app-text-secondary);
 }
 
 .switch-tip {
   margin-left: 10px;
-  color: #6b7280;
+  color: var(--app-text);
 }
 
 .review-table {
@@ -1256,7 +1256,7 @@ onMounted(loadBaseData)
   gap: 10px;
   padding-top: 20px;
   margin-top: 22px;
-  border-top: 1px solid #eef0f4;
+  border-top: 1px solid var(--app-border);
 }
 
 .error-item + .error-item {

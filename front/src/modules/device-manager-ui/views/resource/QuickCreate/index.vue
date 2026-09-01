@@ -84,7 +84,7 @@
                         </div>
                         <div
                             style="
-                                                        color: #8e8e8e;
+                                                        color: var(--app-text-secondary);
                                                         margin-top: 20px;
                                                     "
                         >
@@ -319,9 +319,9 @@ onMounted(() => {
 }
 
 .header {
-  background-color: #fff;
+  background-color: var(--app-surface);
   padding: 5px 10px;
-  color: #7f7f7f;
+  color: var(--app-text);
 }
 
 .classificationType {
@@ -334,14 +334,14 @@ onMounted(() => {
   .header-button {
     width: 100px;
     height: 40px;
-    background-color: #fff;
+    background-color: var(--app-surface);
     border-radius: 4px;
     margin-right: 12px;
     text-align: center;
     line-height: 40px;
 
     &.active {
-      color: #1d39c4;
+      color: var(--app-text);
       border-bottom: 3px solid #3b5af5;
     }
   }

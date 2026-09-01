@@ -284,14 +284,14 @@ onMounted(() => {
           width: 100%;
           padding: 4px 8px;
           min-height: 32px;
-          background-color: #F0F0F0;
-          border: 1px solid #F0F0F0;
+          background-color: var(--app-elevated);
+          border: 1px solid var(--app-border);
           &.bind {
-            border: 1px solid #BAE0FF;
-            background-color: #F1F7FF;
+            border: 1px solid var(--app-border);
+            background-color: var(--app-info-bg);
           }
           .node-name {
-            color: #333;
+            color: var(--app-text);
             font-size: 14px;
             flex: 1;
           }
@@ -308,8 +308,8 @@ onMounted(() => {
       :deep(.ant-tree-treenode) {
         &[data-level="2"] {
           .tree-node-content {
-            background: #f0f8ff;
-            border-left: 3px solid #1890ff;
+            background: var(--app-info-bg);
+            border-left: 3px solid var(--app-primary);
             margin: 2px 0;
             border-radius: 0 4px 4px 0;
           }
@@ -327,15 +327,15 @@ onMounted(() => {
         justify-content: space-between;
         padding: 8px;
         min-height: 32px;
-        background-color: #F0F0F0;
+        background-color: var(--app-elevated);
         margin-bottom: 8px;
         &:last-child {
           border-bottom: none;
         }
 
         &.sub-sub-item {
-          background-color: #F1F7FF;
-          border: 1px solid #BAE0FF;
+          background-color: var(--app-info-bg);
+          border: 1px solid var(--app-border);
         }
 
         .item-content {
@@ -344,7 +344,7 @@ onMounted(() => {
           flex: 1;
 
           .item-name {
-            color: #333;
+            color: var(--app-text);
             font-size: 14px;
           }
         }
@@ -362,7 +362,7 @@ onMounted(() => {
       align-items: center;
       justify-content: center;
       height: 100px;
-      color: #999;
+      color: var(--app-text-secondary);
 
       .empty-text {
         font-size: 14px;

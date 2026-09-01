@@ -77,7 +77,7 @@
                 :request="queryRoleList"
                 mode="CARD"
                 :params="params"
-                :bodyStyle="{ padding: 0 }"
+                :bodystyle="{ padding: 0 }"
                 :gridColumn="gridColumn"
                 :alertShow="false"
                 :defaultParams="{
@@ -241,7 +241,7 @@ const onSelectAll = (e: any) => {
 }
 .card {
     width: 100%;
-    background-color: #f8f9fc;
+    background-color: var(--app-elevated);
     padding: 10px 16px;
 }
 </style>

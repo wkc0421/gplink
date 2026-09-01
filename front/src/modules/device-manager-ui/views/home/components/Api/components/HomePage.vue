@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <h1>{{ $t("components.HomePage.726029-0") }}</h1>
-    <div style="color: #666666">
+    <div style="color: var(--app-text-secondary)">
       {{ $t("components.HomePage.726029-1") }}
       {{ $t("components.HomePage.726029-2") }}
     </div>
@@ -13,7 +13,7 @@
     <div
       style="
         display: flex;
-        border: 1px solid #e6e6e6;
+        border: 1px solid var(--app-border);
         padding: 15px;
         justify-content: space-between;
       "
@@ -207,7 +207,7 @@ const javaStr =
   }
 
   .h2-text {
-    color: #999;
+    color: @app-text-tertiary;
   }
 
   h3 {
@@ -219,16 +219,16 @@ const javaStr =
   .h3-text {
     max-width: 530px;
     margin-top: 3px;
-    color: #999;
+    color: @app-text-tertiary;
   }
 
   p {
-    color: #666;
+    color: @app-text-secondary;
   }
 
   .div-border {
     padding: 10px;
-    border-left: 10px solid #eee;
+    border-left: 10px solid @app-border;
   }
 }
 </style>

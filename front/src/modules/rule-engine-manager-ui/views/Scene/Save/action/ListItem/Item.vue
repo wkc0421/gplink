@@ -369,10 +369,10 @@ const rules = [
   display: none;
   width: 20px;
   height: 20px;
-  color: #999;
+  color: var(--app-text-secondary);
   line-height: 20px;
   text-align: center;
-  background-color: #f1f1f1;
+  background-color: var(--app-elevated);
   border-radius: 50%;
   cursor: pointer;
 
@@ -381,7 +381,7 @@ const rules = [
   }
 
   &:hover {
-    background-color: #f3f3f3;
+    background-color: var(--app-elevated);
   }
 }
 
@@ -395,7 +395,7 @@ const rules = [
   .item-options-warp {
     display: inline-flex;
     height: 48px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
 
     .item-options-type {
@@ -403,7 +403,7 @@ const rules = [
       align-items: center;
       justify-content: center;
       width: 48px;
-      background-color: #f0f0f0;
+      background-color: var(--app-elevated);
       border-radius: 6px 0 0 6px;
       cursor: pointer;
     }
@@ -412,16 +412,16 @@ const rules = [
       display: flex;
       align-items: center;
       padding: 0 8px;
-      background: #fafafa;
+      background: var(--app-elevated);
       border-radius: 0 6px 6px 0;
       cursor: pointer;
 
       div {
         padding: 6px 10px;
-        color: #333;
+        color: var(--app-text);
         font-size: 14px;
         line-height: 22px;
-        background-color: #fff;
+        background-color: var(--app-surface);
         border-radius: 22px;
 
         .notify-text-highlight {
@@ -431,7 +431,7 @@ const rules = [
 
         .notify-img-highlight {
           margin: 0 10px;
-          color: rgba(0, 0, 0, 0.8);
+          color: var(--app-text-secondary);
         }
       }
     }
@@ -463,11 +463,11 @@ const rules = [
     top: 0;
     left: 16px;
     z-index: 2;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     font-weight: 800;
     font-size: 14px;
     line-height: 1;
-    background-color: #fff;
+    background-color: var(--app-surface);
     transform: translateY(-50%);
   }
 
@@ -481,7 +481,7 @@ const rules = [
 
   .filter-add-button {
     width: 100%;
-    color: rgba(0, 0, 0, 0.3);
+    color: var(--app-text-secondary);
     text-align: center;
     cursor: pointer;
   }
@@ -524,7 +524,7 @@ const rules = [
   justify-content: center;
   width: 32px;
   height: 32px;
-  color: #e50012;
+  color: var(--app-text);
   background-color: rgba(229, 0, 18, 0.1);
   border-radius: 50%;
   transform: translate(50%, -50%);

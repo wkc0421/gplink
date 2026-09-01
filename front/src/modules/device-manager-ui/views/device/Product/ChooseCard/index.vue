@@ -59,7 +59,7 @@ const handleClick = () => {
 <style lang="less" scoped>
 .card {
   width: 100%;
-  background-color: #fff;
+  background-color: var(--app-surface);
   .checked-icon {
     position: absolute;
     right: -22px;
@@ -87,7 +87,7 @@ const handleClick = () => {
 
   .card-warp {
     position: relative;
-    border: 1px solid #e6e6e6;
+    border: 1px solid var(--app-border);
     height: 66px;
 
     &.hover {
@@ -97,7 +97,7 @@ const handleClick = () => {
 
     &.active {
       position: relative;
-      border: 1px solid #2f54eb;
+      border: 1px solid var(--app-primary);
     }
 
     .card-content {
@@ -192,14 +192,14 @@ const handleClick = () => {
 
   &.item-active {
     position: relative;
-    color: #2f54eb;
+    color: var(--app-primary);
 
     .checked-icon {
       display: block;
     }
 
     .card-warp {
-      border: 1px solid #2f54eb;
+      border: 1px solid var(--app-primary);
     }
   }
 
@@ -219,9 +219,9 @@ const handleClick = () => {
       :deep(button) {
         width: 100%;
         border-radius: 0;
-        background: #f6f6f6;
-        border: 1px solid #e6e6e6;
-        color: #2f54eb;
+        background: var(--app-elevated);
+        border: 1px solid var(--app-border);
+        color: var(--app-primary);
 
         &:hover {
           background-color: @primary-color-hover;

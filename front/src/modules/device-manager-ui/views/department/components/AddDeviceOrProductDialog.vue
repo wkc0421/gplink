@@ -513,7 +513,7 @@ const search = (query: any) => {
     h5 {
         padding: 12px;
         padding-left: 24px;
-        background-color: #f6f6f6;
+        background-color: var(--app-elevated);
         font-size: 14px;
     }
 

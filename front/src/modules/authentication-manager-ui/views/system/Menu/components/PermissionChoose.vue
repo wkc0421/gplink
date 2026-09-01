@@ -193,16 +193,16 @@ watch(
 <style lang="less" scoped>
 .permission-choose-container {
   .ant-input-affix-wrapper {
-    border-color: #d9d9d9 !important;
+    border-color: var(--app-border) !important;
   }
   .permission-table {
     margin-top: 12px;
     font-size: 14px;
-    border: 1px solid #d9d9d9;
-    color: rgba(0, 0, 0, 0.85);
+    border: 1px solid var(--app-border);
+    color: var(--app-text-secondary);
     .table-head {
       padding: 12px;
-      background-color: #d9d9d9;
+      background-color: var(--app-elevated);
       margin: 0 !important;
     }
     .table-body {
@@ -210,7 +210,7 @@ watch(
       .row {
         margin: 0 !important;
 
-        border-bottom: 1px solid #d9d9d9;
+        border-bottom: 1px solid var(--app-border);
 
         > div {
           padding: 8px 12px;
@@ -218,7 +218,7 @@ watch(
         .item-name {
           display: flex;
           align-items: center;
-          border-right: 1px solid #d9d9d9;
+          border-right: 1px solid var(--app-border);
         }
       }
     }

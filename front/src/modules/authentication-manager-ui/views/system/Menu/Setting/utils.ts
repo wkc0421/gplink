@@ -412,5 +412,16 @@ export const handleMergeTree = (treeA: any[], treeB: any[]) => {
 }
 
 export const handleMenuFilterMessage = (menus: any[] = []) => {
-    return menus.filter(item => ![USER_CENTER_MENU_CODE, messageSubscribe].includes(item.code))
+    // The legacy subscription-management entry is retired from the product
+    // navigation. Keep the route itself available for compatibility, but do
+    // not show it in the menu editor or allow it to be reintroduced by merge.
+    const hidden = [USER_CENTER_MENU_CODE, messageSubscribe, 'system/NoticeRule']
+    return menus
+        .filter(item => !hidden.includes(item.code))
+        .map(item => ({
+            ...item,
+            children: Array.isArray(item.children)
+                ? handleMenuFilterMessage(item.children)
+                : item.children,
+        }))
 }

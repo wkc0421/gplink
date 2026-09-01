@@ -457,7 +457,7 @@ onUnmounted(() => {
 .search-params {
   position: absolute;
   top: 20px;
-  background-color: #fff;
+  background-color: @app-elevated;
   width: 100%;
   transition: all 0.5s;
   opacity: 0;
@@ -466,7 +466,7 @@ onUnmounted(() => {
   box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.16);
 
   .search-params-top {
-    background-color: #F8F9FA;
+    background-color: @app-surface;
     padding: 16px;
   }
 
@@ -512,12 +512,12 @@ onUnmounted(() => {
     justify-content: flex-end;
 
     .tag-all {
-      color: #646C73;
+      color: @app-text-tertiary;
       white-space: nowrap;
     }
 
     .tag-text {
-      color: #1F2429;
+      color: @app-text;
 
       .tag-text-item {
         &:not(:last-child)::after {

@@ -70,24 +70,24 @@
               </slot>
             </template>
             <template #content>
-              <j-ellipsis style="width: calc(100% - 100px); margin-bottom: 18px"
-                ><span style="font-weight: 600; font-size: 16px">
+              <j-ellipsis class="product-card-title-wrap">
+                <span class="product-card-title">
                   {{ slotProps.name }}
-                </span></j-ellipsis
-              >
+                </span>
+              </j-ellipsis>
               <a-row>
                 <a-col :span="12">
                   <div class="card-item-content-text">
                     {{ $t("Product.index.660348-4") }}
                   </div>
-                  <div>{{ slotProps?.deviceType?.text }}</div>
+                  <div class="product-card-value">{{ slotProps?.deviceType?.text }}</div>
                 </a-col>
                 <a-col :span="12">
                   <div class="card-item-content-text">
                     {{ $t("Product.index.660348-5") }}
                   </div>
                   <j-ellipsis>
-                    <div>
+                    <div class="product-card-value">
                       {{
                         slotProps?.accessName
                           ? slotProps?.accessName
@@ -763,12 +763,35 @@ onMounted(() => {
 <style lang="less" scoped>
 .box {
   padding: 20px;
-  background: #f0f2f5;
+  background: @app-bg;
 }
 
 .productImg {
   width: 80px;
   height: 80px;
+}
+
+.product-card-title-wrap {
+  width: calc(100% - 100px);
+  margin-bottom: 10px;
+  color: @app-text;
+  font-size: @app-section-size;
+  font-weight: @app-font-weight-semibold;
+  line-height: @app-section-line-height;
+}
+
+.product-card-title {
+  color: @app-text;
+  font-size: @app-section-size;
+  font-weight: @app-font-weight-semibold;
+  line-height: @app-section-line-height;
+}
+
+.product-card-value {
+  color: @app-text-value;
+  font-size: @app-font-size-base;
+  font-weight: @app-font-weight-medium;
+  line-height: @app-line-height-base;
 }
 
 .productName {

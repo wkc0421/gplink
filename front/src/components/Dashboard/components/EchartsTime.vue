@@ -5,6 +5,7 @@
 <script lang="ts" name="Echarts" setup>
 import * as echarts from 'echarts';
 import {onUnmounted, watch} from "vue";
+import { withDarkEchartsTheme } from '@/utils/echartsTheme';
 
 const props = defineProps({
  options: {
@@ -20,9 +21,9 @@ const echartsRender = () => {
  if (!echartsDom.value) return
  if (!myChart.value) {
    myChart.value = echarts.init(echartsDom.value)
-   toRaw(myChart.value).setOption(props.options);
+   toRaw(myChart.value).setOption(withDarkEchartsTheme(props.options));
  } else {
-   toRaw(myChart.value).setOption(props.options, true);
+   toRaw(myChart.value).setOption(withDarkEchartsTheme(props.options), true);
  }
 }
 

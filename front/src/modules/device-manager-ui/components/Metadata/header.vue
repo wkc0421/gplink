@@ -10,7 +10,7 @@
             <AIcon
               v-if="item.filter"
               type="SearchOutlined"
-              style="color: rgba(0,0,0, 0.25)"
+              style="color: var(--app-text-secondary)"
               @click="() => {showFilter(item.filter.key || item.dataIndex)}"
             />
             <Sort
@@ -115,7 +115,7 @@ const sortClick = () => {
         width: 1px;
         height: 1.6em;
         pointer-events: none;
-        background-color: rgba(0,0,0,.06);
+        background-color: var(--app-highlight-bg);
         transform: translateY(-50%);
         transition: background-color .3s;
         content: "";

@@ -62,7 +62,7 @@
                 </div>
             </div>
             <a-modal :width="1100" v-model:open="visible" :title="$t('Access.index.480752-0')">
-                <a-descriptions :labelStyle="{width: '200px'}" :data="descriptionsData" title="" bordered :column="2">
+                <a-descriptions :labelstyle="{width: '200px'}" :data="descriptionsData" title="" bordered :column="2">
                     <a-descriptions-item label="URL">
                         {{ descriptionsData?.url }}
                     </a-descriptions-item>
@@ -276,8 +276,8 @@ const handleSearch = (e: any) => {
 </script>
 <style scoped lang="less">
 .userName{
-    color: #1677FF;
-    background: #f0f5ff;
+    color: var(--app-primary);
+    background: var(--app-info-bg);
     list-style: none;
     font-feature-settings: 'tnum';
     display: inline-block;
@@ -286,7 +286,7 @@ const handleSearch = (e: any) => {
     padding: 0 7px;
     font-size: 12px;
     line-height: 20px;
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--app-border);
     border-radius: 2px;
     opacity: 1;
 }

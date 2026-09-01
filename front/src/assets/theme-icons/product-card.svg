@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <defs>
+    <linearGradient id="productPanel" x1="22" y1="15" x2="61" y2="67" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1C466D"/>
+      <stop offset="1" stop-color="#102842"/>
+    </linearGradient>
+    <linearGradient id="productTile" x1="29" y1="24" x2="52" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9F8FF"/>
+      <stop offset="1" stop-color="#52A0FF"/>
+    </linearGradient>
+  </defs>
+  <path d="m40 5 30 17v35L40 75 10 57V22L40 5Z" stroke="#3E78AD" stroke-width="1.5" opacity=".85"/>
+  <path d="m10 22 30 18 30-18M40 40v35" stroke="#52A0FF" stroke-width="1.5" opacity=".65"/>
+  <rect x="23" y="16" width="34" height="47" rx="7" fill="url(#productPanel)" stroke="#7DDFFF" stroke-width="2"/>
+  <rect x="30" y="24" width="9" height="9" rx="2" fill="url(#productTile)"/>
+  <rect x="41" y="24" width="9" height="9" rx="2" fill="#52A0FF" opacity=".82"/>
+  <rect x="30" y="36" width="9" height="9" rx="2" fill="#52A0FF" opacity=".82"/>
+  <rect x="41" y="36" width="9" height="9" rx="2" fill="url(#productTile)"/>
+  <path d="M30 52h20" stroke="#B9EFFF" stroke-width="2" stroke-linecap="round"/>
+</svg>

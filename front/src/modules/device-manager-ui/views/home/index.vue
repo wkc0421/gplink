@@ -112,7 +112,9 @@ onUnmounted(() => {
 <style lang="less" scoped>
 .iot-home-container {
     .card {
-        background-color: #fff;
+        background-color: @app-surface;
+        border: 1px solid @app-border;
+        color: @app-text;
         padding: 24px;
         margin-bottom: 24px;
 

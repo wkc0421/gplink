@@ -173,7 +173,7 @@ const sceneCancel = () => {
 </script>
 <style lang="less" scoped>
 .subTitle {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--app-text-secondary);
   font-size: 14px;
   margin-top: 10px;
 }

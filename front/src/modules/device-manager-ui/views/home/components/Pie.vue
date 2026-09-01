@@ -39,7 +39,7 @@ const options = computed(() => ({
             },
             data: [100 - (props.value || 0), props.value],
             itemStyle: {
-                borderColor: '#fff',
+                borderColor: '#102238',
                 borderWidth: 2,
             },
         },

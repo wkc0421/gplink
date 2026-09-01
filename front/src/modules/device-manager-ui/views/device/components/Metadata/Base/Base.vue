@@ -33,7 +33,7 @@
               />
               <span v-if="searchData.show">
                 {{ $t("Base.Base.640395-0") }}
-                <span style="color: #ff7875">{{ searchData.len }}</span>
+                <span style="color: var(--app-text-secondary)">{{ searchData.len }}</span>
                 {{ $t("Base.Base.640395-1") }}
               </span>
             </a-space>
@@ -125,6 +125,86 @@
           />
         </EditTableFormItem>
       </template>
+      <template #sortsIndex="{ record, index }">
+        <EditTableFormItem :name="[index, 'sortsIndex']" @change="metadataChange">
+          <a-input-number
+            v-model:value="record.sortsIndex"
+            :min="0"
+            style="width: 100%"
+            :disabled="record.expands?.isProduct"
+          />
+        </EditTableFormItem>
+      </template>
+      <template #registerAddr="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands', 'registerAddr']" @change="metadataChange">
+          <a-input v-model:value="record.expands.registerAddr" :disabled="record.expands?.isProduct" />
+        </EditTableFormItem>
+      </template>
+      <template #registerNum="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands', 'registerNum']" @change="metadataChange">
+          <a-input v-model:value="record.expands.registerNum" :disabled="record.expands?.isProduct" />
+        </EditTableFormItem>
+      </template>
+      <template #parseMethod="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands', 'parseMethod']" @change="metadataChange">
+          <a-select
+            v-model:value="record.expands.parseMethod"
+            :options="parseMethodOptions"
+            allow-clear
+            show-search
+            style="width: 100%"
+            :disabled="record.expands?.isProduct"
+          />
+        </EditTableFormItem>
+      </template>
+      <template #functionCode="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands', 'functionCode']" @change="metadataChange">
+          <a-input v-model:value="record.expands.functionCode" :disabled="record.expands?.isProduct" />
+        </EditTableFormItem>
+      </template>
+      <template #source="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands']" @change="metadataChange">
+          <Source
+            v-model:value="record.expands"
+            :isProduct="record.expands?.isProduct"
+            :target="target"
+            :record="record"
+            :disabled="record.expands?.isProduct"
+          />
+        </EditTableFormItem>
+      </template>
+      <template #operationType="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands', 'type']" @change="metadataChange">
+          <a-select
+            v-model:value="record.expands.type"
+            mode="multiple"
+            :options="operationTypeOptions"
+            style="width: 100%"
+            :disabled="record.expands?.isProduct"
+          />
+        </EditTableFormItem>
+      </template>
+      <template #scale="{ record, index }">
+        <EditTableFormItem :name="[index, 'valueType', 'scale']" @change="metadataChange">
+          <a-input-number
+            v-model:value="record.valueType.scale"
+            :min="0"
+            :max="99"
+            style="width: 100%"
+            :disabled="record.expands?.isProduct"
+          />
+        </EditTableFormItem>
+      </template>
+      <template #unit="{ record, index }">
+        <EditTableFormItem :name="[index, 'valueType', 'unit']" @change="metadataChange">
+          <UnitSelect v-model:value="record.valueType.unit" :disabled="record.expands?.isProduct" />
+        </EditTableFormItem>
+      </template>
+      <template #formula="{ record, index }">
+        <EditTableFormItem :name="[index, 'expands', 'formula']" @change="metadataChange">
+          <a-input v-model:value="record.expands.formula" :disabled="record.expands?.isProduct" />
+        </EditTableFormItem>
+      </template>
       <template #valueType="{ record, index }">
         <EditTableFormItem
           :name="[index, 'valueType']"
@@ -141,37 +221,37 @@
               @valueChange="onTypeChange(index)"
             />
             <IntegerParams
-              v-if="['int', 'long'].includes(record.valueType.type)"
+              v-if="type !== 'properties' && ['int', 'long'].includes(record.valueType.type)"
               v-model:value="record.valueType.unit"
               :disabled="record.expands?.isProduct"
             />
             <DoubleParams
-              v-else-if="['float', 'double'].includes(record.valueType.type)"
+              v-else-if="type !== 'properties' && ['float', 'double'].includes(record.valueType.type)"
               v-model:value="record.valueType"
               :disabled="record.expands?.isProduct"
             />
             <StringParams
-              v-else-if="['string', 'password'].includes(record.valueType.type)"
+              v-else-if="type !== 'properties' && ['string', 'password'].includes(record.valueType.type)"
               v-model:value="record.valueType"
               :disabled="record.expands?.isProduct"
             />
             <DateParams
-              v-else-if="record.valueType.type === 'date'"
+              v-else-if="type !== 'properties' && record.valueType.type === 'date'"
               v-model:value="record.valueType.format"
               :disabled="record.expands?.isProduct"
             />
             <FileParams
-              v-else-if="record.valueType.type === 'file'"
+              v-else-if="type !== 'properties' && record.valueType.type === 'file'"
               v-model:value="record.valueType"
               :disabled="record.expands?.isProduct"
             />
             <EnumParams
-              v-else-if="record.valueType.type === 'enum'"
+              v-else-if="type !== 'properties' && record.valueType.type === 'enum'"
               v-model:value="record.valueType.elements"
               :disabled="record.expands?.isProduct"
             />
             <BooleanParams
-              v-else-if="record.valueType.type === 'boolean'"
+              v-else-if="type !== 'properties' && record.valueType.type === 'boolean'"
               v-model:falseText="record.valueType.falseText"
               v-model:falseValue="record.valueType.falseValue"
               v-model:trueText="record.valueType.trueText"
@@ -179,13 +259,13 @@
               :disabled="record.expands?.isProduct"
             />
             <ObjectParams
-              v-else-if="record.valueType.type === 'object'"
+              v-else-if="type !== 'properties' && record.valueType.type === 'object'"
               v-model:value="record.valueType.properties"
               :disabled="record.expands?.isProduct"
               :level="2"
             />
             <ArrayParams
-              v-else-if="record.valueType.type === 'array'"
+              v-else-if="type !== 'properties' && record.valueType.type === 'array'"
               v-model:value="record.valueType.elementType"
               :disabled="record.expands?.isProduct"
               :level="2"
@@ -430,7 +510,7 @@ import type { PropType } from "vue";
 import type { DeviceInstance } from "../../../Instance/typings";
 import { useRouter, onBeforeRouteUpdate } from "vue-router";
 import { useMetadata, useOperateLimits, useGroup } from "./hooks";
-import { useColumns, useSaveUnit } from "./columns";
+import { useColumns, useSaveUnit, parseMethodOptions, operationTypeOptions } from "./columns";
 import { getMetadataItemByType, limitsMap } from "./utils";
 import { Source, OtherSetting } from "./components";
 import {saveProductVirtualProperty} from "../../../../../api/product";
@@ -465,6 +545,7 @@ import {
   GroupSelect,
   EditTableFormItem,
   BooleanSelect,
+  UnitSelect,
 } from "../../../../../components/Metadata";
 import { EventLevel } from "../../../data";
 import { message } from "ant-design-vue";
@@ -914,7 +995,7 @@ const onTypeChange = (index) => {
   width: 300px;
   justify-content: space-between;
   padding: 8px 24px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   box-shadow:
     0 6px 16px 0 rgba(0, 0, 0, 0.08),
     0 3px 6px -4px rgba(0, 0, 0, 0.12),
@@ -924,7 +1005,7 @@ const onTypeChange = (index) => {
 
   .extra-copy-tip-icon {
     font-size: 12px;
-    color: rgba(0, 0, 0, 0.45);
+    color: var(--app-text-secondary);
   }
 
   .extra-copy-tip-context {
@@ -942,7 +1023,7 @@ const onTypeChange = (index) => {
   right: 0;
   bottom: 0;
   font-size: 22px;
-  color: #6f6f6f;
+  color: var(--app-text);
   justify-content: center;
   align-items: center;
   pointer-events: none;

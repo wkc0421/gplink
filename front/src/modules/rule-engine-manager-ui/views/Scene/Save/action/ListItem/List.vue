@@ -129,7 +129,7 @@ const _update = () => {
 
     .filter-add-button {
         width: 100%;
-        color: rgba(0, 0, 0, 0.3);
+        color: var(--app-text-secondary);
         text-align: center;
         cursor: pointer;
     }

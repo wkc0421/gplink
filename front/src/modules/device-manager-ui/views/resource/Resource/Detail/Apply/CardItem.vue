@@ -192,9 +192,9 @@ watch(
     display: flex;
     align-items: center;
     padding: 12px;
-    border: 1px solid #eee;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
-    background-color: #fff;
+    background-color: var(--app-surface);
     justify-content: space-between;
     gap: 20px;
     .left {
@@ -206,13 +206,13 @@ watch(
             gap: 8px;
             align-items: center;
             .right-item {
-                border: 1px solid #eee;
+                border: 1px solid var(--app-border);
                 padding: 6px 12px;
                 border-radius: 6px;
                 cursor: pointer;
                 &.active {
                     border: 1px solid #188fffde;
-                    color: #1890ff;
+                    color: var(--app-primary);
                 }
                 &.expand {
                     display: none;

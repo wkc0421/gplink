@@ -448,7 +448,7 @@ defineExpose({
 
 <style scoped lang="less">
 .metadata-edit-table-wrapper {
-  background: #fff;
+  background: @app-surface;
   height: 100%;
   position: relative;
 
@@ -461,7 +461,7 @@ defineExpose({
     flex-direction: column;
     flex-grow: 0;
     flex-shrink: 0;
-    background: #fafafa;
+    background: @app-bg;
     transition: background-color .3s ease;
 
     .metadata-edit-table-header {
@@ -470,7 +470,7 @@ defineExpose({
     }
 
     .metadata-edit-table-body {
-      background-color: #fff;
+      background-color: @app-surface;
       overflow-y: hidden;
       position: relative;
       height: 100%;

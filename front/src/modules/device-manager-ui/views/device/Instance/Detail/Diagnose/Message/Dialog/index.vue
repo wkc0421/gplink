@@ -98,14 +98,14 @@ const getDetail = (item: any) => {
         flex-direction: column;
         width: 60%;
         padding: 24px;
-        background-color: #fff;
+        background-color: var(--app-surface);
 
         .dialog-list {
             display: flex;
 
             .dialog-icon {
                 margin-right: 10px;
-                color: rgba(0, 0, 0, 0.75);
+                color: var(--app-text-secondary);
                 font-weight: 500;
                 font-size: 12px;
             }
@@ -117,13 +117,13 @@ const getDetail = (item: any) => {
 
                 .dialog-header {
                     .dialog-title {
-                        color: rgba(0, 0, 0, 0.75);
+                        color: var(--app-text-secondary);
                         font-weight: 700;
                         font-size: 14px;
                     }
 
                     .dialog-time {
-                        color: rgba(0, 0, 0, 0.65);
+                        color: var(--app-text-secondary);
                         font-size: 12px;
                     }
                 }
@@ -131,7 +131,7 @@ const getDetail = (item: any) => {
                 .dialog-editor {
                     width: 100%;
                     margin-top: 10px;
-                    color: rgba(0, 0, 0, 0.75);
+                    color: var(--app-text-secondary);
 
                     textarea::-webkit-scrollbar {
                         width: 5px !important;

@@ -15,7 +15,7 @@
     >
       <div>
         <div class="label">{{ $t('components.ViewDialog.411617-1') }}</div>
-        <div style="padding: 10px; background-color: #fafafa">
+        <div style="padding: 10px; background-color: var(--app-elevated)">
           <j-scrollbar height="200px">
             <JsonViewer :value="data" />
           </j-scrollbar>
@@ -36,11 +36,11 @@
     >
       <a-descriptions
         :column="2"
-        :contentStyle="{
-          color: '#333333',
+        :contentstyle="{
+          color: 'var(--app-text)',
         }"
-        :labelStyle="{
-          color: 'rgba(0, 0, 0, 0.6)',
+        :labelstyle="{
+          color: 'var(--app-text-secondary)',
           width: '72px',
         }"
       >
@@ -77,11 +77,11 @@
     <template v-else>
       <a-descriptions
         :column="2"
-        :contentStyle="{
-          color: '#333333',
+        :contentstyle="{
+          color: 'var(--app-text)',
         }"
-        :labelStyle="{
-          color: 'rgba(0, 0, 0, 0.6)',
+        :labelstyle="{
+          color: 'var(--app-text-secondary)',
           width: '72px',
         }"
       >
@@ -114,10 +114,10 @@
       </a-descriptions>
       <div>
         <div class="label">{{ $t('components.ViewDialog.411617-14') }}</div>
-        <div style="padding: 10px; background-color: #fafafa">
+        <div style="padding: 10px; background-color: var(--app-elevated)">
           <j-scrollbar height="200px">
             <JsonViewer
-              style="background-color: #fafafa"
+              style="background-color: var(--app-elevated)"
               :value="JSON.parse(_data?.alarmInfo || '{}')"
             />
           </j-scrollbar>
@@ -216,12 +216,12 @@ onMounted(() => {
 .view-dialog-container {
   .label {
     width: 100%;
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--app-text-secondary);
     margin-bottom: 8px;
   }
 
   .value {
-    color: #333333;
+    color: var(--app-text);
   }
 }
 </style>

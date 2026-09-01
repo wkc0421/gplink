@@ -29,7 +29,7 @@
          sorts: [{ name: 'createTime', order: 'desc' }]
       }"
       :gridColumns='[2,2,2]'
-      :bodyStyle='{
+      :bodystyle='{
         paddingRight: 0,
         paddingLeft: 0
       }'
@@ -186,8 +186,8 @@ const handleClick = (detail: any) => {
     height: 40px;
     padding-left: 10px;
     margin-bottom: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     line-height: 40px;
-    background-color: #f6f6f6;
+    background-color: var(--app-elevated);
 }
 </style>

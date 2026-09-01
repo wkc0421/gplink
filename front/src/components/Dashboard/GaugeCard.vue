@@ -130,8 +130,9 @@ const getOptions = () => {
         max: max.value || 100,
         axisLabel: {
           distance: -22,
-          color: 'auto',
+          color: '#C4D0DE',
           fontSize: 12,
+          fontWeight: 500,
           width: 30,
           padding: [6, 10, 0, 10],
           formatter: (value) => {
@@ -188,9 +189,9 @@ defineExpose({ refreshManual })
   display: flex;
   height: 150px;
   padding: 16px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   // box-shadow: 0px 2.73036px 5.46071px rgba(31, 89, 245, 0.2);
-  border: 1px solid #e0e4e8;
+  border: 1px solid var(--app-border);
   border-radius: 2px;
   .echarts-item-left {
     display: flex;
@@ -204,18 +205,21 @@ defineExpose({ refreshManual })
 
   .echarts-item-title {
     margin-bottom: 8px;
-    color: rgba(#000, 0.6);
+    color: var(--app-text-secondary);
     font-size: 16px;
+    line-height: 22px;
+    white-space: nowrap;
   }
 
   .echarts-item-value {
     font-weight: bold;
-    font-size: 36px;
+    font-size: clamp(26px, 2.1vw, 36px);
+    line-height: 42px;
+    min-height: 42px;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
     white-space: nowrap;
     text-align: left;
-    text-overflow: ellipsis;
   }
 
   .echarts-item-bottom {
@@ -224,8 +228,14 @@ defineExpose({ refreshManual })
     flex-direction: column;
     flex-grow: 1;
     justify-content: center;
-    height: 0;
+    height: auto;
+    min-height: 20px;
     padding-left: 12px;
+    color: var(--app-text-value);
+    font-size: 13px;
+    line-height: 20px;
+    white-space: nowrap;
+    overflow: visible;
 
     &::before {
       position: absolute;

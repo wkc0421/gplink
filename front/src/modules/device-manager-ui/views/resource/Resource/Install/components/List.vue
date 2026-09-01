@@ -192,7 +192,7 @@ watch(
   display: flex;
   margin-bottom: 16px;
   text-align: start;
-  background-color: rgb(242, 242, 242);
+  background-color: var(--app-elevated);
   padding: 8px;
   border-radius: 8px;
 
@@ -202,16 +202,16 @@ watch(
     align-items: center;
 
     .fileType {
-      background-color: rgb(206, 234, 214);
+      background-color: var(--app-success-bg);
       margin-left: 6px;
       padding: 0 6px;
       border-radius: 6px;
-      color: rgb(23, 129, 60);
+      color: var(--app-success);
     }
   }
 
   .fileInfoFooter {
-    color: #878787;
+    color: var(--app-text-secondary);
     font-size: 12px;
 
     .install_container {
@@ -219,7 +219,7 @@ watch(
       vertical-align: middle;
 
       .installStatue {
-        color: black;
+        color: var(--app-text-secondary);
         margin-right: 6px;
       }
     }

@@ -35,6 +35,43 @@ const type = {
   report: i18n.global.t('Base.columns.448718-5'),
 };
 
+const parseMethodLabelKeys = [
+  'Base.columns.448718-58',
+  'Base.columns.448718-59',
+  'Base.columns.448718-60',
+  'Base.columns.448718-61',
+  'Base.columns.448718-62',
+  'Base.columns.448718-63',
+  'Base.columns.448718-64',
+  'Base.columns.448718-65',
+  'Base.columns.448718-66',
+  'Base.columns.448718-67',
+  'Base.columns.448718-68',
+  'Base.columns.448718-69',
+  'Base.columns.448718-70',
+  'Base.columns.448718-71',
+  'Base.columns.448718-72',
+  'Base.columns.448718-73',
+  'Base.columns.448718-74',
+  'Base.columns.448718-75',
+  'Base.columns.448718-76',
+  'Base.columns.448718-77',
+  'Base.columns.448718-78',
+  'Base.columns.448718-79',
+  'Base.columns.448718-80',
+] as const;
+
+export const parseMethodOptions = parseMethodLabelKeys.map((key, value) => ({
+  label: i18n.global.t(key),
+  value,
+}));
+
+export const operationTypeOptions = [
+  { label: type.read, value: 'read' },
+  { label: type.write, value: 'write' },
+  { label: type.report, value: 'report' },
+];
+
 const METADATA_UNIT = 'metadata-unit'
 
 export const validatorConfig = (value: any, _isObject: boolean = false) => {
@@ -238,7 +275,7 @@ export const useColumns = (dataSource: Ref<MetadataItem[]>, type?: MetadataType,
     },
   ];
 
-  const PropertyColumns: DataTableColumnProps[] = BaseColumns.concat([
+  const LegacyPropertyColumns: DataTableColumnProps[] = BaseColumns.concat([
     {
       title: i18n.global.t('Base.columns.448718-20'),
       dataIndex: 'valueType',
@@ -320,6 +357,55 @@ export const useColumns = (dataSource: Ref<MetadataItem[]>, type?: MetadataType,
       dataIndex: 'other',
       width: i18n.global.locale === 'zh' ? 110 : 170,
     },
+  ]);
+
+  const PropertyBaseColumns: DataTableColumnProps[] = BaseColumns.map((column, index) => ({
+    ...column,
+    title: i18n.global.t(index === 0 ? 'Base.columns.448718-46' : 'Base.columns.448718-47'),
+    width: 180,
+  }));
+
+  const PropertyColumns: DataTableColumnProps[] = PropertyBaseColumns.concat([
+    { title: i18n.global.t('Base.columns.448718-48'), dataIndex: 'sortsIndex', width: 100 },
+    { title: i18n.global.t('Base.columns.448718-49'), dataIndex: 'registerAddr', form: { field: ['expands', 'registerAddr'] }, width: 160 },
+    { title: i18n.global.t('Base.columns.448718-50'), dataIndex: 'registerNum', form: { field: ['expands', 'registerNum'] }, width: 130 },
+    { title: i18n.global.t('Base.columns.448718-51'), dataIndex: 'parseMethod', form: { field: ['expands', 'parseMethod'] }, width: 220 },
+    { title: i18n.global.t('Base.columns.448718-52'), dataIndex: 'functionCode', form: { field: ['expands', 'functionCode'] }, width: 120 },
+    {
+      title: i18n.global.t('Base.columns.448718-53'),
+      dataIndex: 'source',
+      form: {
+        field: 'expands',
+        required: true,
+        rules: [{
+          asyncValidator: async (_: any, value: any) => {
+            if (!value?.source) return Promise.reject(i18n.global.t('Base.columns.448718-24'));
+            if (value.source === 'device' && !value.type?.length) return Promise.reject(i18n.global.t('Base.columns.448718-23'));
+            return Promise.resolve();
+          },
+        }],
+      },
+      width: 170,
+    },
+    { title: i18n.global.t('Base.columns.448718-54'), dataIndex: 'operationType', form: { field: ['expands', 'type'] }, width: 180 },
+    {
+      title: i18n.global.t('Base.columns.448718-20'),
+      dataIndex: 'valueType',
+      form: {
+        required: true,
+        rules: [{
+          asyncValidator(_: any, value: any) {
+            if (!value?.type) return Promise.reject(i18n.global.t('Base.columns.448718-21'));
+            return validatorConfig(value, true);
+          },
+        }],
+      },
+      width: 200,
+    },
+    { title: i18n.global.t('Base.columns.448718-55'), dataIndex: 'scale', form: { field: ['valueType', 'scale'] }, width: 100 },
+    { title: i18n.global.t('Base.columns.448718-56'), dataIndex: 'unit', form: { field: ['valueType', 'unit'] }, width: 160 },
+    { title: i18n.global.t('Base.columns.448718-57'), dataIndex: 'formula', form: { field: ['expands', 'formula'] }, width: 180 },
+    { title: i18n.global.t('Base.columns.448718-25'), dataIndex: 'other', width: i18n.global.locale === 'zh' ? 110 : 170 },
   ]);
 
   const FunctionColumns: DataTableColumnProps[] = BaseColumns.concat([

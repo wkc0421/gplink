@@ -85,7 +85,7 @@ const onSelect = (_type: string, disabled: Boolean) => {
         min-width: 0;
         //width: 237px;
         padding: 12px 16px;
-        border: 1px solid #e0e4e8;
+        border: 1px solid var(--app-border);
         border-radius: 2px;
         cursor: pointer;
         transition: all 0.3s;
@@ -98,11 +98,11 @@ const onSelect = (_type: string, disabled: Boolean) => {
             }
             .way-item-label {
                 padding-right: 6px;
-                color: rgba(#000, 0.64);
+                color: var(--app-text-secondary);
             }
 
             .way-item-icon {
-                color: rgba(#000, 0.5);
+                color: var(--app-text-secondary);
                 padding-left: 8px;
             }
         }

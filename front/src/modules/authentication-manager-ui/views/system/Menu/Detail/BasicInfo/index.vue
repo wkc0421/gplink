@@ -113,7 +113,7 @@ const onSave = async () => {
   .card {
     margin-bottom: 24px;
     padding: 24px;
-    background-color: #fff;
+    background-color: var(--app-surface);
   }
 }
 </style>

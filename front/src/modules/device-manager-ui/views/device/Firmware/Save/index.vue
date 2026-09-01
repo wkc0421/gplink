@@ -449,7 +449,7 @@ watch(
     }
 }
 .formRef {
-    border: 1px dashed #d9d9d9;
+    border: 1px dashed var(--app-border);
     .formRef-title {
         display: flex;
         justify-content: space-between;

@@ -1,6 +1,6 @@
 <template>
     <div style="margin-top: 20px">
-        <a-descriptions bordered :labelStyle="{width: '150px'}">
+        <a-descriptions bordered :labelstyle="{width: '150px'}">
             <template #title>
                 {{$t('Operator.index.745665-15')}}
                 <j-permission-button

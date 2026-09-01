@@ -199,7 +199,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding: 6px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--app-border);
   border-radius: 4px;
   margin-bottom: 16px;
   background-color: rgba(#bfbfbf, .5);

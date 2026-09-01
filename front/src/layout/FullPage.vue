@@ -63,7 +63,9 @@ onMounted(() => {
 
 <style scoped lang="less">
 .full-page-warp {
-  background: #fff;
+  /* Keep page content on the same dark canvas as the shell.  Individual
+     cards and tables provide their own elevated surfaces. */
+  background: @app-bg;
 
   &.scroll {
     overflow-y: auto;

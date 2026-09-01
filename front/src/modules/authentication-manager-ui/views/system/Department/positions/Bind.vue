@@ -100,7 +100,7 @@ const onConfirm = () => {
           onSelectAll: onSelectAll,
           onSelectNone: cancelSelect,
         }"
-        :bodyStyle="{ padding: '0 24px' }"
+        :bodystyle="{ padding: '0 24px' }"
         :defaultParams="{
           sorts: [{ name: 'createTime', order: 'desc' }],
           terms: [

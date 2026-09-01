@@ -271,7 +271,7 @@ const getDashBoard = () => {
                   },
                   {
                     offset: 1,
-                    color: "#FFFFFF", //   0% 处的颜色
+                    color: "rgba(7, 16, 29, 0)", // 深色背景上的透明渐变终点
                   },
                 ],
                 global: false, // 缺省为 false
@@ -489,7 +489,7 @@ const selectChange = () => {
                     },
                     {
                       offset: 1,
-                      color: "#FFFFFF", //   0% 处的颜色
+                      color: "rgba(7, 16, 29, 0)", // 深色背景上的透明渐变终点
                     },
                   ],
                   global: false, // 缺省为 false
@@ -564,9 +564,16 @@ const jumpToDetail = async (id: string) => {
 };
 </script>
 <style scoped lang="less">
+.DashBoardBox {
+  color: @app-text;
+  background-color: @app-bg !important;
+}
+
 .alarm-card {
   width: 100%;
-  background-color: white;
+  background-color: @app-surface;
+  border: 1px solid @app-border;
+  border-radius: @app-radius-card;
   padding: 24px;
   margin-top: 24px;
 }
@@ -576,6 +583,10 @@ const jumpToDetail = async (id: string) => {
   .alarmStatistics-chart {
     width: 70%;
     height: 500px;
+    min-width: 0;
+    border: 1px solid @app-border;
+    border-radius: @app-radius-card;
+    padding: 8px;
   }
   .alarmRank {
     position: relative;
@@ -623,12 +634,12 @@ const jumpToDetail = async (id: string) => {
       font-size: 12px;
       line-height: 20px;
       text-align: center;
-      background-color: #edf0f3;
+      background-color: @app-elevated;
       border-radius: 20px;
 
       &.active {
         color: #fff;
-        background-color: #314659;
+        background-color: @app-primary;
       }
     }
 

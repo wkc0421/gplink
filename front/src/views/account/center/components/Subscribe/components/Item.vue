@@ -1,13 +1,13 @@
 <template>
   <div class="child-item">
     <div class="child-item-left">
-      <div style="color: #333333">
+      <div style="color: var(--app-text)">
         {{ data?.name }}
       </div>
       <div class="child-item-left-auth" v-if="data?.description">
         <a-tooltip :title="data.description">
           <AIcon
-            style="font-size: 16px; color: rgba(0, 0, 0, 0.3)"
+            style="font-size: 16px; color: var(--app-text-secondary)"
             type="ExclamationCircleOutlined"
           />
         </a-tooltip>
@@ -157,9 +157,9 @@ const onSave = (dt: any) => {
   justify-content: space-between;
   align-items: center;
   height: 68px;
-  background: linear-gradient(270deg, #ffffff 0%, #f1f6ff 99%);
+  background: linear-gradient(270deg, var(--app-surface) 0%, var(--app-info-bg) 99%);
   border-radius: 4px;
-  border: 1px solid #ebeef3;
+  border: 1px solid var(--app-border);
   margin-bottom: 10px;
 
   .child-item-left {

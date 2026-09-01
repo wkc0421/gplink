@@ -69,15 +69,15 @@ const onLeft = () => {
     .box-btn {
         .box-item-action {
             width: 12px;
-            background-color: #F7F8FA;
+            background-color: var(--app-elevated);
             padding: 15px 0;
             text-align: center;
             font-size: 12px;
-            color: #666666;
+            color: var(--app-text-secondary);
             cursor: pointer;
 
             &:hover {
-                background-color: #EFF2FE;
+                background-color: var(--app-info-bg);
                 color: @primary-color;
             }
         }

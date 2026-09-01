@@ -66,7 +66,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['closeEditTag', 'refresh']);
 const tagInfo = reactive({
-    color: '#000000',
+    color: '#000000', // dark-theme-allow: user-selected calendar text fallback
     name: '',
 });
 const form = ref();

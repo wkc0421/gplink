@@ -449,7 +449,7 @@ type optionType = {
     font-size: 16px;
     &::before{
         width: 2px;
-        background-color: rgb(184, 184, 184);
+        background-color: var(--app-border-strong);
         display: inline-block;
         height: 13px;
         margin-right: 3px;
@@ -458,7 +458,7 @@ type optionType = {
 }
 
 .tip {
-  color: rgba(0,0,0,.65);
+  color: var(--app-text-secondary);
   margin-top: 4px;
 }
 </style>

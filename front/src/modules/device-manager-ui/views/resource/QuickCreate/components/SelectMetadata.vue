@@ -164,14 +164,14 @@ onMounted(() => {
   .metadataItem {
     align-items: center;
     justify-content: space-between;
-    border: 1px solid #f6f6f6;
+    border: 1px solid var(--app-border);
     padding: 8px 20px;
     border-radius: 5px;
     margin-bottom: 18px;
   }
 
   .selected {
-    border-color: #2f54eb;
+    border-color: var(--app-primary);
   }
   .metadataItemContent{
     display: flex;

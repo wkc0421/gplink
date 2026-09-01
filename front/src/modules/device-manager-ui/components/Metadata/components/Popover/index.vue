@@ -7,7 +7,7 @@
       [warpClassNames]: true,
       'metadata-table-popover-warp': true
     }"
-    :overlayStyle="{
+    :overlaystyle="{
       'zIndex': 1070
     }"
     :getPopupContainer="(node) => tableWrapperRef || node"

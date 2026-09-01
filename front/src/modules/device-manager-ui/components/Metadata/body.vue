@@ -262,13 +262,13 @@ defineExpose({
       align-items: center;
       //position: absolute;
       transition: top .2s, height .2s, background-color .1s;
-      border-bottom: 1px solid #ebebeb;
+      border-bottom: 1px solid var(--app-border);
       .metadata-edit-table-cell{
         position:absolute;
         min-width: 0;;
       }
       &:hover {
-        background-color: rgb(248, 248, 248);
+        background-color: var(--app-hover);
       }
 
       &.metadata-edit-table-row-selected {

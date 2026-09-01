@@ -17,14 +17,14 @@
                             style="height: 24px; width: 24px"
                             alt=""
                         />
-                        <j-ellipsis style="max-width: 200px; color: #333; margin: 0 8px 0 6px">{{
+                        <j-ellipsis style="max-width: 200px; color: var(--app-text); margin: 0 8px 0 6px">{{
                             item?.name
                         }}</j-ellipsis>
                         <div>
-                            <span v-if="item.bound" style="color: #2BA245">{{ $t('BindThirdAccount.index.483756-0') }}</span>
-                            <span v-else style="color: #999">{{ $t('BindThirdAccount.index.483756-1') }}</span>
+                            <span v-if="item.bound" style="color: var(--app-text-secondary)">{{ $t('BindThirdAccount.index.483756-0') }}</span>
+                            <span v-else style="color: var(--app-text-secondary)">{{ $t('BindThirdAccount.index.483756-1') }}</span>
                         </div>
-                        <div v-if="item.others?.name" style="color: #666666">
+                        <div v-if="item.others?.name" style="color: var(--app-text-secondary)">
                             {{ item.others?.name }}{{ $t('BindThirdAccount.index.483756-2') }}
                         </div>
                     </div>
@@ -123,7 +123,7 @@ onMounted(() => {
             align-items: center;
             height: 60px;
             border-radius: 6px;
-            background: #f7f8fa;
+            background: var(--app-elevated);
 
             .content-item-left {
                 display: flex;

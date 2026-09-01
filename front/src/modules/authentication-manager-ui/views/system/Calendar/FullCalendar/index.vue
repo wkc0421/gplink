@@ -592,12 +592,12 @@ setTimeout(() => {
 </script>
 <style lang="less" scoped>
 :deep(.fc-header-toolbar) {
-    background-color: #edebeb;
+    background-color: var(--app-elevated);
 }
 .calendarContainer {
     position: relative;
     padding: 44px 24px 0;
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--app-border);
     border-radius: 12px;
     .compareTip {
         position: absolute;
@@ -623,14 +623,14 @@ setTimeout(() => {
         position: relative;
         height: 32px;
         padding: 6px;
-        color: #1a1a1a;
+        color: var(--app-text);
         display: flex;
 
         .closeBtn {
             position: absolute;
             right: 0;
             top: 0;
-            color: #777777;
+            color: var(--app-text-secondary);
             display: none;
             font-size: 16px;
         }
@@ -678,11 +678,11 @@ setTimeout(() => {
 }
 :deep(.fc) {
     .fc-col-header-cell-cushion {
-        color: #777777;
+        color: var(--app-text-secondary);
     }
     th {
         text-align: right;
-        color: #777777;
+        color: var(--app-text-secondary);
     }
     table {
         border-collapse: separate;
@@ -712,7 +712,7 @@ setTimeout(() => {
             max-height: 120px;
             overflow-y: auto;
             &::-webkit-scrollbar-thumb {
-                background-color: #d0d0d0; /* 滚动条拖动部分颜色 */
+                background-color: var(--app-border-strong); /* 滚动条拖动部分颜色 */
                 border-radius: 4px; /* 滚动条拖动部分圆角 */
             }
         }
@@ -720,10 +720,10 @@ setTimeout(() => {
     .fc-scroller {
         &::-webkit-scrollbar {
             width: 5px; /* 滚动条宽度 */
-            background-color: #fff; /* 滚动条背景色 */
+            background-color: var(--app-surface); /* 滚动条背景色 */
         }
         &::-webkit-scrollbar-thumb {
-            background-color: #d0d0d0; /* 滚动条拖动部分颜色 */
+            background-color: var(--app-border-strong); /* 滚动条拖动部分颜色 */
             border-radius: 4px; /* 滚动条拖动部分圆角 */
         }
     }
@@ -732,32 +732,32 @@ setTimeout(() => {
     border: none !important;
 }
 :deep(.fc-daygrid-day-number) {
-    color: #1a1a1a;
+    color: var(--app-text);
     font-weight: 600;
 }
 </style>
 <style>
 .calendarContainer {
     .fc-event {
-        background: #edf5ff !important;
+        background: var(--app-info-bg) !important;
     }
     .fc-daygrid-day-events {
         &::-webkit-scrollbar {
             width: 5px; /* 滚动条宽度 */
-            background-color: #fff; /* 滚动条背景色 */
+            background-color: var(--app-surface); /* 滚动条背景色 */
         }
     }
 }
 
 .selectedDate {
-    background-color: #edf5ff !important;
+    background-color: var(--app-info-bg) !important;
     .fc-event {
-        background: #fff !important;
+        background: var(--app-surface) !important;
     }
     .fc-daygrid-day-events {
         &::-webkit-scrollbar {
             width: 5px; /* 滚动条宽度 */
-            background-color: #edf5ff; /* 滚动条背景色 */
+            background-color: var(--app-info-bg); /* 滚动条背景色 */
         }
     }
 }

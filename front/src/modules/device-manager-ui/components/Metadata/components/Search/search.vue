@@ -4,7 +4,7 @@
     :height="modalHeight"
     :title="false"
     :dragRang="[600, 200]"
-    :bodyStyle="{
+    :bodystyle="{
       overflow: 'hidden'
     }"
     @heightChange="heightChange"

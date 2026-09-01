@@ -1,5 +1,5 @@
 <template>
-    <a-descriptions :labelStyle="{width: '150px'}" bordered>
+    <a-descriptions :labelstyle="{width: '150px'}" bordered>
         <template #title>
             {{ $t('Info.index.208636-0') }}
             <j-permission-button

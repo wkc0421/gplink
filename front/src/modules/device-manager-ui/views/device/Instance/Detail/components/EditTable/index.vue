@@ -1,6 +1,6 @@
 <template>
     <a-spin v-if="metadata.properties?.length" :spinning="loading">
-        <a-card :bordered="false" borderStyle="padding: 0">
+        <a-card :bordered="false" borderstyle="padding: 0">
             <template #extra>
                 <a-space>
                     <a-button @click="importVisible = true">导入</a-button>
@@ -136,7 +136,7 @@
             :metaData="modelRef.dataSource"
         />
     </a-spin>
-    <a-card v-else :bordered="false" borderStyle="padding: 0">
+    <a-card v-else :bordered="false" borderstyle="padding: 0">
         <JEmpty :description="$t('EditTable.index.478060-11')" style="margin: 10% 0" />
     </a-card>
     <BatchImport

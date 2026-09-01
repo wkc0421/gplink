@@ -212,7 +212,7 @@ onMounted(() => {
     left: 72px;
     display: inline-block;
     margin-right: 4px;
-    color: #ff4d4f;
+    color: var(--app-text-secondary);
     font-size: 14px;
     font-family: SimSun, sans-serif;
     line-height: 1;

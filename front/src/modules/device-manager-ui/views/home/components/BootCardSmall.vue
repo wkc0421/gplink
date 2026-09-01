@@ -56,7 +56,8 @@ const jumpPage = (item: bootConfig) => {
 
 <style lang="less" scoped>
 .boot-card-container {
-    background-color: #fff;
+    background-color: @app-surface;
+    border: 1px solid @app-border;
     padding: 24px 12px;
     .title {
         position: relative;
@@ -74,8 +75,8 @@ const jumpPage = (item: bootConfig) => {
             left: 0;
             width: 8px;
             height: 8px;
-            background-color: #1d39c4;
-            border: 1px solid #b4c0da;
+            background-color: @app-primary;
+            border: 1px solid @app-border-strong;
             transform: translateY(-50%);
             content: ' ';
         }
@@ -89,9 +90,9 @@ const jumpPage = (item: bootConfig) => {
             //border-style: solid;
             //border-color: rgb(238, 238, 238) rgb(238, 238, 238)
             //    rgb(238, 238, 238) rgb(133, 165, 255);
-            border: 1px solid #e6e6e6;
+            border: 1px solid @app-border;
             padding: 11px;
-            background: linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(135.62deg, rgba(47, 84, 235, 0.07) 22.27%, rgba(47, 84, 235, 0.01) 91.82%);
+            background: linear-gradient(0deg, @app-elevated, @app-elevated), linear-gradient(135.62deg, rgba(47, 128, 255, 0.12) 22.27%, rgba(47, 128, 255, 0.03) 91.82%);
             border-radius: 2px;
             box-shadow: -2px 0 #85A5FF;
             &:not(:first-child) {
@@ -102,7 +103,7 @@ const jumpPage = (item: bootConfig) => {
                 display: flex;
                 align-items: center;
                 .item-label {
-                    color: #252526;
+                    color: @app-text;
                     font-size: 18px;
                     font-weight: 700;
                 }

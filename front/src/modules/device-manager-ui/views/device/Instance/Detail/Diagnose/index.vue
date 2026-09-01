@@ -111,10 +111,10 @@ const tabList = [
 ];
 
 const activeStyle = {
-  background: '#FFFFFF',
-  border: '1px solid rgba(0, 0, 0, 0.09)',
+  background: '#172F49',
+        border: '1px solid #35516F',
   borderRadius: '2px 2px 0px 0px',
-  color: '#000000BF',
+  color: '#F4F7FC',
 };
 
 const topState = ref<'loading' | 'success' | 'error'>('loading');
@@ -208,13 +208,13 @@ onUnmounted(() => {
 
       .diagnose-text {
         .diagnose-title {
-          color: #000c;
+          color: var(--app-text);
           font-weight: 700;
           font-size: 25px;
         }
 
         .diagnose-desc {
-          color: rgba(0, 0, 0, 0.65);
+          color: var(--app-text-secondary);
           font-size: 14px;
         }
       }
@@ -234,10 +234,10 @@ onUnmounted(() => {
         height: 35px;
         padding: 0 10px;
         margin-right: 8px;
-        color: #00000073;
+        color: var(--app-text-secondary);
         line-height: 35px;
         text-align: center;
-        background: #f2f2f2;
+        background: var(--app-elevated);
         border-radius: 2px 2px 0 0;
         cursor: pointer;
 

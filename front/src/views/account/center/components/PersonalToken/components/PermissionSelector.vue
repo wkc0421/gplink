@@ -167,7 +167,7 @@ onMounted(() => {
   .permission-init {
     padding: 0 16px;
     .init-description {
-      color: #a6a6a6;
+      color: var(--app-text-secondary);
     }
     .init-options {
       display: grid;
@@ -175,19 +175,19 @@ onMounted(() => {
       gap: 12px;
 
       .init-option {
-        background-color: #f0f0f0;
+        background-color: var(--app-elevated);
         border-radius: 6px;
         padding: 16px;
         cursor: pointer;
         transition: all 0.3s;
 
         &:hover {
-          background: #f6f9ff;
+          background: var(--app-info-bg);
         }
 
         .option-icon {
           font-size: 28px;
-          color: #a6a6a6;
+          color: var(--app-text-secondary);
         }
 
         .option-header {
@@ -195,7 +195,7 @@ onMounted(() => {
         }
 
         .option-desc {
-          color: #a6a6a6;
+          color: var(--app-text-secondary);
           font-size: 12px;
         }
       }
@@ -222,7 +222,7 @@ onMounted(() => {
 
         .selection-info {
           font-size: 13px;
-          color: #666;
+          color: var(--app-text-secondary);
         }
       }
     }
@@ -230,11 +230,11 @@ onMounted(() => {
     .permission-tree {
       max-height: 400px;
       overflow-y: auto;
-      border: 1px solid #f0f0f0;
+      border: 1px solid var(--app-border);
       border-radius: 6px;
 
       .menu-item {
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--app-border);
 
         &:last-child {
           border-bottom: none;
@@ -242,11 +242,11 @@ onMounted(() => {
 
         .menu-header {
           padding: 12px 16px;
-          background: #fafafa;
+          background: var(--app-elevated);
           cursor: pointer;
 
           &:hover {
-            background: #f0f0f0;
+            background: var(--app-elevated);
           }
 
           .menu-title {

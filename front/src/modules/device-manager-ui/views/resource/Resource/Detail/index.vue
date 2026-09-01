@@ -384,7 +384,7 @@ watch(
 
 <style lang="less" scoped>
 .resource-detail-warp {
-  background-color: #fff;
+  background-color: var(--app-surface);
   min-height: 100%;
 
   .resource-detail-center {
@@ -398,7 +398,7 @@ watch(
   padding: 24px;
   height: 100%;
   overflow-y: auto;
-  background: #fff;
+  background: var(--app-surface);
 
   .detail-header {
     margin-bottom: 18px;
@@ -448,7 +448,7 @@ watch(
         padding: 4px 12px;
         border-radius: 4px;
         color: var(--ant-primary-color);
-        background-color: #e7f1ff;
+        background-color: var(--app-info-bg);
         max-width: 120px;
       }
     }
@@ -606,7 +606,7 @@ watch(
 
   .slick-slide {
     img, & video {
-      border: 1px solid #fff;
+      border: 1px solid var(--app-border);
       display: block;
       margin: auto;
     }

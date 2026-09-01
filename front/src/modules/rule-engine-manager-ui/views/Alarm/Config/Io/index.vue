@@ -28,8 +28,8 @@
             </template>
             <a-descriptions
               bordered
-              :labelStyle="{ width: 112 + 'px' }"
-              :contentStyle="{ minWidth: 100 + 'px' }"
+              :labelstyle="{ width: 112 + 'px' }"
+              :contentstyle="{ minWidth: 100 + 'px' }"
               :column="2"
             >
               <a-descriptions-item
@@ -79,8 +79,8 @@
             </template>
             <a-descriptions
               bordered
-              :labelStyle="{ width: 112 + 'px' }"
-              :contentStyle="{ minWidth: 150 + 'px' }"
+              :labelstyle="{ width: 112 + 'px' }"
+              :contentstyle="{ minWidth: 150 + 'px' }"
               :column="2"
             >
               <a-descriptions-item :label="$t('Io.index.945942-2')"
@@ -448,7 +448,7 @@ const saveOutput = () => {
   display: flex;
   position: relative;
   padding-left: 10px;
-  color: rgba(0, 0, 0, 0.8);
+  color: var(--app-text-secondary);
   font-weight: 600;
   margin-bottom: 16px;
   line-height: 30px;
@@ -466,7 +466,7 @@ const saveOutput = () => {
 .alarmFlow-left,
 .alarmFlow-right {
   height: 780px;
-  background-color: white;
+  background-color: var(--app-surface);
 }
 .alarmFlow-right {
   margin-left: 20px;
@@ -476,20 +476,20 @@ const saveOutput = () => {
   height: 100%;
   padding: 24px;
   overflow-y: auto;
-  color: rgba(#000, 0.8);
+  color: var(--app-text-secondary);
   font-size: 14px;
-  background-color: #fff;
+  background-color: var(--app-surface);
 
   .url {
     padding: 8px 16px;
-    color: #2f54eb;
+    color: var(--app-primary);
     background-color: rgba(#a7bdf7, 0.2);
   }
 
   h1 {
     margin: 16px 0;
-    color: rgba(#000, 0.85);
-    font-weight: bold;
+    color: var(--app-text-secondary);
+    font-weight: 600;
     font-size: 14px;
 
     &:first-child {
@@ -499,7 +499,7 @@ const saveOutput = () => {
 
   h2 {
     margin: 6px 10px;
-    color: rgba(0, 0, 0, 0.8);
+    color: var(--app-text-secondary);
     font-weight: 400;
     font-size: 14px;
   }
@@ -510,7 +510,7 @@ const saveOutput = () => {
 
   .code {
     padding: 16px;
-    background-color: #fafafa;
+    background-color: var(--app-elevated);
   }
 }
 </style>

@@ -54,7 +54,7 @@ const clickSave = () => {
       align-items: center;
       margin-bottom: 20px;
       padding: 4px 0 4px 12px;
-      font-weight: bold;
+      font-weight: 600;
       font-size: 16px;
 
       &::before {

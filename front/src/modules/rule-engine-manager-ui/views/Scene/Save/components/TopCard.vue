@@ -110,7 +110,7 @@ const click = (value: string, record: any) => {
     width: 237px;
     //width: 100%;
     padding: 12px 16px;
-    border: 1px solid #e0e4e8;
+    border: 1px solid var(--app-border);
     border-radius: 2px;
     cursor: pointer;
     transition: all 0.3s;
@@ -134,11 +134,11 @@ const click = (value: string, record: any) => {
       }
       .label {
         padding-right: 6px;
-        color: rgba(#000, 0.64);
+        color: var(--app-text-secondary);
       }
 
       .icon {
-        color: rgba(#000, 0.5);
+        color: var(--app-text-secondary);
       }
     }
 

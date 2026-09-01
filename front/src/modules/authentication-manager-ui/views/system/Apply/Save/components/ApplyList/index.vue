@@ -11,7 +11,7 @@
             <div v-if="type === 'edit'">
                 <MUpload
                     :defaultValue="defaultImg[item.value]"
-                    :borderStyle="{
+                    :borderstyle="{
                         width: '64px',
                         height: '64px',
                         border: 'none',
@@ -117,19 +117,19 @@ const onImgChange = (url: string, _key: string) => {
         cursor: pointer;
 
         span {
-            color: #333333;
+            color: var(--app-text);
             opacity: 0.85;
             margin-top: 8px;
         }
 
         &.active {
-            background: #f2f4f7;
+            background: var(--app-elevated);
             border: 1px solid #adb8c7;
         }
     }
 
     .radio-container-item:hover {
-        background-color: #f2f4f7;
+        background-color: var(--app-elevated);
     }
 }
 </style>

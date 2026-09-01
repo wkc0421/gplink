@@ -164,13 +164,25 @@ const echartsOptions = computed(() => {
       type: 'category',
       boundaryGap: false,
       data: arrayReverse(serverData.xAxis),
+      axisLabel: { color: '#C4D0DE', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#6F87A3' } },
     },
     tooltip: {
       trigger: 'axis',
+      backgroundColor: '#13243A',
+      borderColor: '#4B6F95',
+      textStyle: { color: '#F4F7FC' },
       valueFormatter: (value: any) => `${value}%`,
     },
     yAxis: {
       type: 'value',
+      axisLabel: { color: '#C4D0DE', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#6F87A3' } },
+      splitLine: { lineStyle: { color: 'rgba(170, 184, 202, 0.22)' } },
+    },
+    textStyle: {
+      color: '#C4D0DE',
+      fontFamily: 'Segoe UI, Microsoft YaHei, PingFang SC, sans-serif',
     },
     grid: {
       left: '50px',
@@ -219,9 +231,10 @@ watch(
     flex-direction: column;
     height: 100%;
     padding: 24px;
-    background-color: #fff;
+    background-color: var(--app-surface);
     // box-shadow: 0px 2.73036px 5.46071px rgba(31, 89, 245, 0.2);
-    border-radius: 2px;
+    border: 1px solid @app-border-strong;
+    border-radius: @app-radius-card;
 }
 .header {
     display: flex;

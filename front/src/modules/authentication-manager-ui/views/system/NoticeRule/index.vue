@@ -113,12 +113,12 @@ onMounted(() => {
   .btn {
     padding: 24px 0;
     width: 100%;
-    background-color: #fff;
+    background-color: var(--app-surface);
   }
 }
 .alert {
   padding-left: 10px;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--app-text-secondary);
 }
 
 .content-collapse {
@@ -127,16 +127,16 @@ onMounted(() => {
   min-height: 0;
 
   :deep(.ant-collapse) {
-    border-color: #ebeef3;
-    background-color: #fff;
+    border-color: var(--app-border);
+    background-color: var(--app-surface);
 
     .ant-collapse-item {
-      border: 1px solid #ebeef3;
+      border: 1px solid var(--app-border);
       margin-bottom: 24px;
     }
 
     .ant-collapse-header {
-      background-color: #f7f8fa;
+      background-color: var(--app-elevated);
       height: 42px;
     }
     .ant-collapse-content {

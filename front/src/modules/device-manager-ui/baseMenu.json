@@ -12,7 +12,7 @@
     "owner": "iot",
     "id": "9c21f88182e7cc75cbdfa8e4b7844272",
     "url": "/iot",
-    "icon": "icon-wulianwang",
+    "icon": "DeploymentUnitOutlined",
     "sortIndex": 1,
     "permissions": [],
     "children": [
@@ -87,7 +87,7 @@
         "owner": "iot",
         "id": "b6327c3ff01b49c9a7a96101606dc27a",
         "url": "/iot/device",
-        "icon": "icon-shebei",
+        "icon": "HddOutlined",
         "sortIndex": 3,
         "permissions": [],
         "showPage": [],
@@ -163,7 +163,7 @@
             "owner": "iot",
             "id": "8ddbb67de5f65514105d47b448bfd70e",
             "url": "/iot/device/Product",
-            "icon": "icon-chanpin",
+            "icon": "AppstoreOutlined",
             "sortIndex": 2,
             "assetType": "product",
             "showPage": [
@@ -473,7 +473,7 @@
             "owner": "iot",
             "id": "1b136e7e4e4e74bb24b91802e4cfcd2d",
             "url": "/iot/device/Instance",
-            "icon": "icon-shebei",
+            "icon": "HddOutlined",
             "sortIndex": 3,
             "accessSupport": {
               "text": "支持",
@@ -2392,9 +2392,75 @@
               "value": "unsupported"
             },
             "supportDataAccess": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "system",
+    "name": "系统管理",
+    "i18nMessages": {
+      "name": {
+        "zh_CN": "系统管理",
+        "en_US": "System Management",
+        "en": "System Management"
+      }
+    },
+    "owner": "iot",
+    "id": "fd1670b860ae58cc58bcd01d027ccd35",
+    "url": "/system",
+    "icon": "icon-xitongguanli1",
+    "sortIndex": 4,
+    "permissions": [],
+    "buttons": [],
+    "children": [
+      {
+        "code": "system/Log",
+        "name": "日志管理",
+        "i18nMessages": {
+          "name": {
+            "zh_CN": "日志管理",
+            "en_US": "Log Management",
+            "en": "Log Management"
+          }
+        },
+        "owner": "iot",
+        "id": "7bfca91e0accad83c96ad8b3a79153c0",
+        "sortIndex": 17,
+        "url": "/system/log",
+        "icon": "icon-rizhifuwu",
+        "showPage": [
+          "system-logger",
+          "access-logger",
+          "system-application-log"
+        ],
+        "permissions": [
+          {
+            "permission": "system-logger",
+            "actions": [
+              "query"
+            ]
           },
           {
-            "sortIndex": 12,
+            "permission": "access-logger",
+            "actions": [
+              "self-data",
+              "query"
+            ]
+          },
+          {
+            "permission": "system-application-log",
+            "actions": [
+              "query"
+            ]
+          }
+        ],
+        "buttons": [],
+        "children": [
+          {
+            "sortIndex": 3,
+            "level": 3,
             "owner": "iot",
             "name": "应用日志",
             "i18nMessages": {
@@ -2427,27 +2493,7 @@
             "supportDataAccess": false
           }
         ]
-      }
-    ]
-  },
-  {
-    "code": "system",
-    "name": "系统管理",
-    "i18nMessages": {
-      "name": {
-        "zh_CN": "系统管理",
-        "en_US": "System Management",
-        "en": "System Management"
-      }
-    },
-    "owner": "iot",
-    "id": "fd1670b860ae58cc58bcd01d027ccd35",
-    "url": "/system",
-    "icon": "icon-xitongguanli1",
-    "sortIndex": 4,
-    "permissions": [],
-    "buttons": [],
-    "children": [
+      },
       {
         "code": "system/Relationship",
         "name": "关系配置",

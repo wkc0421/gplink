@@ -415,7 +415,7 @@ watch(() => instanceStore.current?.id, () => {
       flex: 1;
       min-height: 340px;
       position: relative;
-      border: 1px solid #dcdcdc;
+      border: 1px solid var(--app-border);
 
       .edit-only {
         top: 0;
@@ -424,7 +424,7 @@ watch(() => instanceStore.current?.id, () => {
         bottom: 0;
         position: absolute;
         z-index: 1;
-        background-color: #eeeeee70;
+        background-color: var(--app-elevated);
         cursor: not-allowed;
       }
     }
@@ -433,7 +433,7 @@ watch(() => instanceStore.current?.id, () => {
       display: flex;
       justify-content: space-between;
       padding: 10px;
-      background-color: #f7f7f7;
+      background-color: var(--app-elevated);
 
       .bottom-title {
         display: flex;

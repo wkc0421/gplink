@@ -203,7 +203,7 @@
                                         bordered
                                         size="small"
                                         :column="1"
-                                        :labelStyle="{ width: '100px' }"
+                                        :labelstyle="{ width: '100px' }"
                                     >
                                         <a-descriptions-item :label="$t('Cloud.OneNet.808542-23')"
                                             >{{ $t('Cloud.OneNet.808542-10') }}</a-descriptions-item
@@ -243,7 +243,7 @@
                                         bordered
                                         size="small"
                                         :column="1"
-                                        :labelStyle="{ width: '100px' }"
+                                        :labelstyle="{ width: '100px' }"
                                     >
                                         <a-descriptions-item :label="$t('Cloud.OneNet.808542-23')"
                                             >{{ $t('Cloud.OneNet.808542-10') }}</a-descriptions-item
@@ -638,9 +638,9 @@ watch(
 .alert {
     height: 40px;
     padding-left: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     line-height: 40px;
-    background-color: #f6f6f6;
+    background-color: var(--app-elevated);
 }
 .search {
     display: flex;

@@ -116,7 +116,7 @@ const read = (type: '_read' | '_unread') => {
 .list-items {
     width: 312px;
     overflow: hidden;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--app-border);
     margin: 0 24px;
     box-sizing: content-box;
 
@@ -146,7 +146,7 @@ const read = (type: '_read' | '_unread') => {
                 width: calc(100% - 120px);
 
                 div {
-                    color: rgba(0, 0, 0, 0.85);
+                    color: var(--app-text-secondary);
                     font-size: 14px;
                     font-weight: bold;
                     margin-right: 10px;
@@ -163,7 +163,7 @@ const read = (type: '_read' | '_unread') => {
             }
             .time {
                 font-size: 12px;
-                color: rgba(0, 0, 0, 0.45);
+                color: var(--app-text-secondary);
                 width: 120px;
             }
         }
@@ -178,7 +178,7 @@ const read = (type: '_read' | '_unread') => {
 
         .btn {
             border: none;
-            background-color: #F1F4FF;
+            background-color: var(--app-info-bg);
             color: @primary-color;
             padding: 0;
         }

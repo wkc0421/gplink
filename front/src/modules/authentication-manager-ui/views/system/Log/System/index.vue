@@ -256,7 +256,7 @@ const handleSearch = (e: any) => {
     margin-bottom: 10px;
 }
 .warn-content {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--app-border);
   padding: 12px;
   border-radius: 2px;
 }

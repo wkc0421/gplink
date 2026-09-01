@@ -296,6 +296,28 @@
         "assetType": "user"
       },
       {
+        "code": "system/ApiToken",
+        "name": "令牌管理",
+        "owner": "iot",
+        "id": "system-api-token",
+        "sortIndex": 3,
+        "url": "/system/ApiToken",
+        "icon": "KeyOutlined",
+        "showPage": ["api-token"],
+        "i18nMessages": {
+          "name": {
+            "zh_CN": "令牌管理",
+            "en_US": "Token Management",
+            "en": "Token Management"
+          }
+        },
+        "permissions": [{
+          "permission": "api-token",
+          "actions": ["query", "save", "rotate", "revoke"]
+        }],
+        "buttons": []
+      },
+      {
         "code": "system/Department",
         "name": "组织管理",
         "i18nMessages": {
@@ -307,7 +329,7 @@
         },
         "owner": "iot",
         "id": "3962ec0835f3b4a68c1f63b955625046",
-        "sortIndex": 3,
+        "sortIndex": 4,
         "url": "/system/Department",
         "icon": "icon-bumenguanli",
         "showPage": [
@@ -684,7 +706,7 @@
         },
         "owner": "iot",
         "id": "9d1e96f17649ef5e7b8e7c6bb8e7b775",
-        "sortIndex": 4,
+        "sortIndex": 5,
         "url": "/system/Role",
         "icon": "icon-jiaoseguanli",
         "showPage": [
@@ -849,7 +871,7 @@
         },
         "owner": "iot",
         "id": "dcb6fa15da2eae8a4fdb71755edbc2bb",
-        "sortIndex": 5,
+        "sortIndex": 6,
         "url": "/system/Menu",
         "icon": "icon-caidanguanli",
         "showPage": [
@@ -998,7 +1020,7 @@
         },
         "owner": "iot",
         "id": "da14fad88888dc13024e8261ff8fc2b5",
-        "sortIndex": 6,
+        "sortIndex": 7,
         "url": "/system/Permission",
         "icon": "icon-quanxianguanli",
         "showPage": [
@@ -1150,7 +1172,7 @@
         "name": "API配置",
         "owner": "iot",
         "id": "8750142230773cde42a4e28efa7f84d5",
-        "sortIndex": 9,
+        "sortIndex": 10,
         "url": "/system/Api",
         "icon": "icon-chakanAPI",
         "showPage": [
@@ -1239,7 +1261,7 @@
         },
         "owner": "iot",
         "id": "e0640f9621c21078cad62d5646a5579d",
-        "sortIndex": 10,
+        "sortIndex": 11,
         "url": "/system/Apply",
         "icon": "icon-yingyongguanli",
         "showPage": [
@@ -1400,7 +1422,7 @@
         },
         "owner": "iot",
         "id": "522f790d4422a608d491bc9e2fa12b4e",
-        "sortIndex": 11,
+        "sortIndex": 12,
         "url": "/system/NoticeRule",
         "icon": "CopyOutlined",
         "showPage": [
@@ -1569,7 +1591,7 @@
         },
         "owner": "iot",
         "id": "b69782873cc24be8165c6ad292359092",
-        "sortIndex": 12,
+        "sortIndex": 13,
         "url": "/system/Dictionary",
         "icon": "FormOutlined",
         "showPage": [
@@ -1698,7 +1720,7 @@
         },
         "owner": "iot",
         "id": "b69782873cc24be8165c6ad29233333",
-        "sortIndex": 13,
+        "sortIndex": 14,
         "url": "/system/region",
         "icon": "EnvironmentOutlined",
         "showPage": [
@@ -1786,7 +1808,7 @@
         "showPage": [
           "calendar-manager"
         ],
-        "sortIndex": 14,
+        "sortIndex": 15,
         "url": "/system/Calendar",
         "icon": "icon-rili",
         "permissions": [
@@ -1868,12 +1890,13 @@
         },
         "owner": "iot",
         "id": "7bfca91e0accad83c96ad8b3a79153c0",
-        "sortIndex": 17,
+        "sortIndex": 18,
         "url": "/system/log",
         "icon": "icon-rizhifuwu",
         "showPage": [
           "system-logger",
-          "access-logger"
+          "access-logger",
+          "system-application-log"
         ],
         "permissions": [
           {
@@ -1886,6 +1909,12 @@
             "permission": "access-logger",
             "actions": [
               "self-data",
+              "query"
+            ]
+          },
+          {
+            "permission": "system-application-log",
+            "actions": [
               "query"
             ]
           }

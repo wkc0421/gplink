@@ -36,7 +36,7 @@
                 "
           :gridColumns="[2]"
           :defaultParams="defaultParams"
-          :bodyStyle="{
+          :bodystyle="{
                     paddingRight: 0,
                     paddingLeft: 0,
                 }"

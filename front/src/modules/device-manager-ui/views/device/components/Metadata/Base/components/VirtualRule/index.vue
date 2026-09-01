@@ -33,7 +33,7 @@
                     show-search
                     max-tag-count="responsive"
                     :getPopupContainer="(node) => tableWrapperRef || node"
-                    :dropdownStyle="{
+                    :dropdownstyle="{
                           zIndex: 1071
                        }"
                     :virtual="true"
@@ -91,7 +91,7 @@
                         { label: $t('VirtualRule.index.946602-10'), value: 'num' },
                     ]"
                     :getPopupContainer="(node) => tableWrapperRef || node"
-                    :dropdownStyle="{
+                    :dropdownstyle="{
                         zIndex: 1071
                      }"
                     @select="windowTypeChange"
@@ -113,7 +113,7 @@
                         v-model:value="formData.virtualRule.aggType"
                         :options="aggList"
                         :getPopupContainer="(node) => tableWrapperRef || node"
-                        :dropdownStyle="{
+                        :dropdownstyle="{
                           zIndex: 1071
                        }"
                     />

@@ -130,7 +130,7 @@
 </template>
 <script setup name="LoginRight">
 import Remember from "./remember.vue";
-import {encrypt, getImage, onlyMessage, setToken} from "@jetlinks-web/utils";
+import {encrypt, onlyMessage, setToken} from "@jetlinks-web/utils";
 import { useRequest } from "@jetlinks-web/hooks";
 import {
   captchaConfig,
@@ -148,10 +148,11 @@ import { Form, FormItem, Button, Divider, Popover, Input, InputPassword } from '
 import defaultImg from '@/assets/apply/internal-standalone.png'
 import {initPackages} from "@/package";
 import i18n from "@/locales";
+import gpMonogram from "@/assets/theme-icons/gp-monogram.svg";
 
 const BASE_API_PATH = import.meta.env.VITE_APP_BASE_API
 
-const logoImage = getImage("/login/logo.png");
+const logoImage = gpMonogram;
 const $t = i18n.global.t
 
 const props = defineProps({
@@ -312,7 +313,7 @@ watch(
       .desc {
         margin-top: 24px;
         margin-bottom: 40px;
-        color: #000000b3;
+        color: @app-text;
         font-weight: 600;
         font-size: 22px;
         text-align: center;
@@ -331,7 +332,7 @@ watch(
   margin-top: 20px;
 
   .other-text {
-    color: #807676d9;
+    color: @app-text-tertiary;
     font-size: 12px;
   }
 

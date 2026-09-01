@@ -20,6 +20,107 @@ type MenuItem = {
   id?: string
 }
 
+/**
+ * Keep the navigation identity owned by the backend while giving the three
+ * core entries a consistent outlined icon set.  These values are Ant Design
+ * icon names, so they work with both the local fallback menu and server menu
+ * data without requiring a backend menu migration or a second icon font.
+ */
+const menuIconOverrides: Record<string, string> = {
+  iot: 'DeploymentUnitOutlined',
+  device: 'HddOutlined',
+  'device/Product': 'AppstoreOutlined',
+  'device/Instance': 'HddOutlined',
+  'system/ApiToken': 'KeyOutlined',
+}
+
+// Keep the subscription-management route available for compatibility, but
+// remove its navigation entry from the top header and sidebar.
+const hiddenMenuCodes = new Set(['system/NoticeRule', 'message-subscribe'])
+const hiddenMenuUrls = new Set(['/system/NoticeRule', '/message-subscribe'])
+const hiddenMenuTitles = new Set(['订阅管理', 'Subscription Management'])
+
+const isHiddenMenuItem = (item: Pick<MenuItem, 'code' | 'url' | 'name' | 'i18nName' | 'options' | 'meta'>) => {
+  return hiddenMenuCodes.has(item.code)
+    || hiddenMenuUrls.has(item.url)
+    || hiddenMenuTitles.has(item.name)
+    || hiddenMenuTitles.has(item.i18nName)
+    || item.options?.show === false
+    || item.meta?.hideInMenu === true
+    || item.meta?.options?.show === false
+}
+
+/**
+ * Apply the product navigation presentation without changing menu identity,
+ * route paths or permissions. The backend menu tree remains the source of
+ * truth; this only normalizes the local sidebar tree used by the shell.
+ */
+export const normalizeMenuPresentation = <T extends MenuItem>(menuData: T[] = []): T[] => {
+  const clone = (item: T): T => {
+    const icon = menuIconOverrides[item.code]
+    const hidden = isHiddenMenuItem(item)
+    return {
+      ...item,
+      ...(icon ? { icon } : {}),
+      ...(hidden
+        ? {
+            options: { ...(item.options || {}), show: false },
+            meta: {
+              ...(item.meta || {}),
+              hideInMenu: true,
+              options: { ...(item.meta?.options || {}), show: false },
+            },
+          }
+        : {}),
+      children: Array.isArray(item.children)
+        ? item.children.map((child) => clone(child as T))
+        : item.children,
+    }
+  }
+
+  const result = menuData.map(clone)
+  const iot = result.find((item) => item.code === 'iot')
+  if (!iot || !Array.isArray(iot.children)) return result
+
+  const home = iot.children.find((item) => item.code === 'home')
+  if (home) {
+    home.options = { ...(home.options || {}), show: false }
+    home.meta = {
+      ...(home.meta || {}),
+      hideInMenu: true,
+      options: { ...(home.meta?.options || {}), show: false },
+    }
+  }
+
+  const deviceIndex = iot.children.findIndex((item) => item.code === 'device')
+  if (deviceIndex > 0) {
+    const [device] = iot.children.splice(deviceIndex, 1)
+    iot.children.unshift(device)
+  }
+
+  const findWithParent = (nodes: MenuItem[], code: string, parent?: MenuItem) => {
+    for (const item of nodes) {
+      if (item.code === code) return { item, parent }
+      if (Array.isArray(item.children)) {
+        const found = findWithParent(item.children, code, item)
+        if (found) return found
+      }
+    }
+    return undefined
+  }
+
+  const notice = findWithParent(iot.children, 'notice')
+  const alarm = findWithParent(iot.children, 'rule-engine/Alarm')
+  if (notice?.item && alarm?.item && notice.parent !== alarm.item) {
+    if (notice.parent?.children) {
+      notice.parent.children = notice.parent.children.filter((item) => item !== notice.item)
+    }
+    alarm.item.children = [...(alarm.item.children || []), notice.item]
+  }
+
+  return result
+}
+
 type BreadcrumbType = {
   name: string
   breadcrumbName: string
@@ -40,7 +141,9 @@ const handleMeta = (item: MenuItem, isApp: boolean):RouteMeta  => {
     id: item.id,
     icon: item.icon,
     title: item.i18nName || item.name,
-    hideInMenu: item.options?.show === false, // 隐藏菜单
+    hideInMenu: item.options?.show === false
+      || item.meta?.hideInMenu === true
+      || item.meta?.options?.show === false, // 隐藏菜单
     isApp
   }
 }
@@ -194,7 +297,7 @@ export const handleMenus = (menuData: MenuItem[], extraMenus: any, components: R
   }
 
   function siderLoop(data: MenuItem[]) {
-    const _menu = filterMenuData(data).filter(item => item.meta?.options?.show !== false)
+    const _menu = filterMenuData(data).filter(item => !isHiddenMenuItem(item))
 
     for (const menuItem of data) {
       if (menuItem.buttons) {

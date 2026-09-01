@@ -124,7 +124,7 @@ watch(
 .calendarRight {
   flex: 1 1 0;
   min-width: 0;
-    background: #fff;
+    background: var(--app-surface);
 
 
     .tips {
@@ -145,7 +145,7 @@ watch(
         .rapidActionControl {
             display: flex;
             flex: 1;
-            background-color: rgb(239, 249, 254);
+            background-color: var(--app-elevated);
             padding: 10px;
             justify-content: space-around;
             gap: 20px;

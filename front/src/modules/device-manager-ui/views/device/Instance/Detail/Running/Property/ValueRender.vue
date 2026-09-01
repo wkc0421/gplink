@@ -197,7 +197,7 @@ const getDetail = (_type: string) => {
         width: 100%;
         height: 60px;
         overflow: hidden;
-        color: #323130;
+        color: var(--app-text);
         font-weight: 700;
         font-size: 24px;
         white-space: nowrap;

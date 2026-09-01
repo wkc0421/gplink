@@ -246,7 +246,7 @@ const uploadInfo: UploadInfoType = {
     overflow: hidden;
     .upload-div {
       width: 160px;
-      background-color: #eeeeee;
+      background-color: var(--app-elevated);
         .upload-mask{
           align-items: center;
           justify-content: center;
@@ -270,7 +270,7 @@ const uploadInfo: UploadInfoType = {
       }
     }
     .uploadTip {
-      color: rgba(0, 0, 0, 0.45);
+      color: var(--app-text-secondary);
       font-size: 14px;
       line-height: 1.5715;
     }

@@ -22,7 +22,7 @@ import Api from '../Api/index.vue';
 
 <style lang="less" scoped>
 .api-container {
-  background-color: #fff;
+  background-color: var(--app-surface);
   padding: 24px;
 }
 

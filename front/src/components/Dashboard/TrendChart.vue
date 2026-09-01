@@ -113,7 +113,7 @@ const setChartOption = (x: Array<any>, y: Array<number>, maxY: number, name: str
               },
               {
                 offset: 1,
-                color: '#FFFFFF' //   0% 处的颜色
+                color: '#52A0FF' //   0% 处的颜色
               }
             ],
             global: false // 缺省为 false
@@ -310,7 +310,7 @@ watch(
 .device-position {
   // margin-top: 24px;
   padding: 24px;
-  background-color: rgb(134, 188, 231);
+  background-color: var(--app-surface);
   height: 100%;
   width: 100%;
 }

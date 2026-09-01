@@ -239,6 +239,6 @@ defineExpose({ saveBtn });
 <style lang="less" scoped>
 .function {
     padding: 24px 15px 0 15px;
-    background-color: #e7eaec;
+    background-color: var(--app-elevated);
 }
 </style>

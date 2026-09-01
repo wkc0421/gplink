@@ -4,9 +4,9 @@
         open
         :title="$t('Save.index.320308-0')"
         @cancel="emit('close')"
-        :bodyStyle="{ padding: 0 }"
+        :bodystyle="{ padding: 0 }"
     >
-        <div style="background-color: #f8f9fc; padding: 25px 100px">
+        <div style="background-color: var(--app-elevated); padding: 25px 100px">
             <a-steps :current="current" size="small" @change="onChange">
                 <a-step v-for="(item, index) in stepList" :key="item">
                     <template #title>
@@ -366,8 +366,8 @@ const onSave = async () => {
     height: 40px;
     padding: 0 20px 0 10px;
     margin-bottom: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     line-height: 40px;
-    background-color: #f6f6f6;
+    background-color: var(--app-elevated);
 }
 </style>

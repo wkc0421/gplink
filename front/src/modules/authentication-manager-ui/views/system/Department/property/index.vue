@@ -148,11 +148,11 @@ init();
 }
 
 :deep(.ant-tabs-tab-active) {
-  background: #F0F0F0 !important;
+  background: var(--app-elevated) !important;
   border-radius: 6px !important;
 
   .ant-tabs-tab-btn {
-    color: #000;
+    color: var(--app-text);
     text-shadow: none;
   }
 }
@@ -161,7 +161,7 @@ init();
   width: 140px;
   height: 40px;
   border-radius: 6px;
-  background: #F0F0F0;
+  background: var(--app-elevated);
   padding: 8px 24px;
 }
 </style>

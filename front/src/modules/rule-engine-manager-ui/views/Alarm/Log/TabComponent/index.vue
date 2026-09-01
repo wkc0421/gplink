@@ -514,7 +514,7 @@ onMounted(() => {
 </script>
 <style lang="less" scoped>
 .content-title {
-  color: #666;
+  color: @app-text-tertiary;
   font-size: 12px;
 }
 .alarmTitle {
@@ -528,7 +528,7 @@ onMounted(() => {
   }
   .alarmName {
     max-width: 30%;
-    color: #1a1a1a;
+    color: @app-text;
     margin-right: 10px;
   }
 }

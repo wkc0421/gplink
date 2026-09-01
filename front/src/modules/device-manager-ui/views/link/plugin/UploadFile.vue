@@ -105,7 +105,7 @@ const handleChange = async (info: UploadChangeParam) => {
 
 <style lang="less" scoped>
 .upload-tip {
-  color: #999;
+  color: var(--app-text-secondary);
   padding-left: 12px;
 }
 </style>

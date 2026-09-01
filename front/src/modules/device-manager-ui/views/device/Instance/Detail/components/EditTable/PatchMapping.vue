@@ -43,7 +43,7 @@
                                         title.indexOf(searchValue),
                                     )
                                   }}
-                                    <span style="color: #f50">{{
+                                    <span style="color: var(--app-text-secondary)">{{
                                         searchValue
                                       }}</span>
                                     {{
@@ -317,7 +317,7 @@ watchEffect(() => {
 }
 
 .right-list-item {
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--app-border);
   padding: 10px;
   display: flex;
   justify-content: space-between;

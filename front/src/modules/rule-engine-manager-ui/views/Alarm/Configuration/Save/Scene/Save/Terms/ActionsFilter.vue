@@ -50,7 +50,7 @@ const props = defineProps({
     position: relative;
     display: flex;
     padding: 8px 8px;
-    border: 1px dashed #e0e0e0;
+    border: 1px dashed var(--app-border);
     border-radius: 6px;
     row-gap: 16px;
   }
@@ -60,7 +60,7 @@ const props = defineProps({
   display: flex;
   align-items: center;
   padding: 6px 8px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   cursor: pointer;
 

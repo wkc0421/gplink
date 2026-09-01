@@ -11,7 +11,7 @@
     >
       <div class="token-jump-body">
         <img src="@/assets/token-error-icon.png" alt="">
-        <span style="color: #1F2429;padding: 24px 0;">{{ msg }}</span>
+        <span style="color: var(--app-text);padding: 24px 0;">{{ msg }}</span>
         <a-button style="width: 180px" type="primary" @click="onBack">返回</a-button>
       </div>
     </a-modal>

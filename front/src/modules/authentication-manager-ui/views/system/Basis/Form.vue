@@ -158,6 +158,15 @@ const props = defineProps({
 })
 
 const system = useSystemStore()
+const DEFAULT_DARK_LOGIN_BACKGROUND = '/images/login/login.png'
+const normalizeLoginBackground = (background?: string) => {
+  // Older installations persist the former light asset at /images/login.png.
+  // Keep custom uploads intact while transparently upgrading that default.
+  if (!background || background === '/images/login.png' || background === '/images/login.png?theme=dark-v2') {
+    return DEFAULT_DARK_LOGIN_BACKGROUND
+  }
+  return background
+}
 // 表单数据
 const formData = reactive<formDataType>({
   title: "",  // 系统名称
@@ -167,7 +176,7 @@ const formData = reactive<formDataType>({
   secretKey: "", // 高德web key
   'base-path': `${window.location.origin}/api`,  // base-path
   logo: "/images/login/logo.png",  // 系统logo
-  ico: "/favicon.ico",  // 浏览器页签
+  ico: "/favicon.svg?theme=gp-v7",  // 浏览器页签
   background: "/images/login/login.png"  // 登录背景图
 })
 
@@ -221,10 +230,10 @@ const getDetails = async () => {
     title: configInfo.front?.title,
     headerTheme: configInfo.front?.headerTheme || 'light',
     logo: configInfo.front?.logo || '/logo.png',
-    ico: configInfo.front?.ico || '/favicon.ico',
+    ico: configInfo.front?.ico || '/favicon.svg?theme=gp-v7',
     showRecordNumber: configInfo.front?.showRecordNumber || false,
     recordNumber: configInfo.front?.recordNumber,
-    background: configInfo.front?.background || '/images/login.png',
+    background: normalizeLoginBackground(configInfo.front?.background),
     apiKey: configInfo.amap?.apiKey,
     webKey: configInfo.amap?.webKey,
     secretKey: configInfo.amap?.secretKey,

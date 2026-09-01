@@ -26,10 +26,13 @@ const selectData = (i: any) => {
     padding: 24px 24px 0 24px;
     height: 100%;
     display: flex;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .dictionary_left {
-    border-right: 1px solid #f0f0f0;
+    border-right: 1px solid var(--app-border);
     width: 324px;
     height: 100%;
     padding-right: 12px;
@@ -39,5 +42,7 @@ const selectData = (i: any) => {
     margin-left: 12px;
     width: calc(100% - 324px);
     height: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 </style>

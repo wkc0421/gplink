@@ -1099,7 +1099,7 @@ watch(() => access.value?.id, (val) => {
 
 .context-access {
   margin-right: 10px;
-  color: #666;
+  color: var(--app-text-secondary);
   font-weight: 400;
   font-size: 12px;
 }

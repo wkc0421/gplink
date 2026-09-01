@@ -156,7 +156,7 @@ queryDeviceGeoJson()
         transform: translate(-50%, -120%);
         left: 50%;
         top: 0;
-        background-color: #fff;
+        background-color: var(--app-surface);
         padding: 4px 8px;
         border-radius: 4px;
         box-shadow: 0 0 16px rgba(0, 0, 0, .2);

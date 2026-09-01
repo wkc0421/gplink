@@ -17,7 +17,7 @@
             ref="childDeviceRef"
             :columns="columns"
             :request="query"
-            :bodyStyle="{
+            :bodystyle="{
                 padding: 0,
             }"
             :defaultParams="{

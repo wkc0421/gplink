@@ -3,14 +3,14 @@
         visible
         :title="$t('EditPassword.index.010161-0')"
         width="615px"
-        :bodyStyle="{
+        :bodystyle="{
             padding: 0,
         }"
         :confirmLoading="loading"
         @cancel="emits('close')"
     >
         <div>
-            <div style="background-color: #f8f9fc; padding: 24px">
+            <div style="background-color: var(--app-elevated); padding: 24px">
                 <a-steps
                     :current="current"
                     size="small"

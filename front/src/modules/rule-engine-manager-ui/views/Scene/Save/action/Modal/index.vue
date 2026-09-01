@@ -195,6 +195,6 @@ const onPropsCancel = () => {
   top: 0;
   left: 50px;
   width: 500px;
-  color: #777;
+  color: var(--app-text-secondary);
 }
 </style>

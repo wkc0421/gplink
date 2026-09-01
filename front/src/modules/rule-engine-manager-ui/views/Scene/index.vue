@@ -420,7 +420,7 @@ const handleView = (id: string, triggerType: string) => {
   }
 
   .subTitle-content {
-    color: rgba(0, 0, 0, 0.65);
+    color: var(--app-text-secondary);
     font-size: 14px;
     text-indent: 38px;
   }

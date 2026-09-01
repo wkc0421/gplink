@@ -392,9 +392,9 @@ const addressesTip = (data:any)=>{
 .alert {
     height: 40px;
     padding-left: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     line-height: 40px;
-    background-color: #f6f6f6;
+    background-color: var(--app-elevated);
 }
 .search {
     display: flex;
@@ -420,7 +420,7 @@ const addressesTip = (data:any)=>{
 
         .config-right-item-context {
             margin: 5px 0;
-            color: rgba(0, 0, 0, 0.8);
+            color: var(--app-text-secondary);
         }
     }
 }

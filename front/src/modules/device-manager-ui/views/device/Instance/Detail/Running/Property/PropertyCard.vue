@@ -23,7 +23,7 @@
                                 >
                                     <AIcon
                                         :type="i.icon"
-                                        style="color: #323130; font-size: 12px"
+                                        style="color: var(--app-text); font-size: 12px"
                                     />
                                 </a-button>
                             </a-tooltip>
@@ -38,7 +38,7 @@
                                 style="padding: 0;"
                             >
                                 <template #icon
-                                    ><AIcon :type="i.icon" style="color: #323130; font-size: 12px"
+                                    ><AIcon :type="i.icon" style="color: var(--app-text); font-size: 12px"
                                 /></template>
                             </j-permission-button>
                         </template>
@@ -49,7 +49,7 @@
                 <ValueRender :data="data" :value="_props.data" type="card" />
             </div>
             <div class="bottom">
-                <div style="color: rgba(0, 0, 0, 0.65); font-size: 12px">
+                <div style="color: var(--app-text-secondary); font-size: 12px">
                     {{  $t('BasicInfo.indev.028379-6')  }}
                 </div>
                 <div class="time-value">
@@ -86,7 +86,7 @@ const _props = defineProps({
 
 <style lang="less" scoped>
 .card-box {
-    background-color: rgba(0, 0, 0, 0.02);
+    background-color: var(--app-highlight-bg);
     width: 100%;
 
     .card-container {
@@ -102,7 +102,7 @@ const _props = defineProps({
             .title {
                 width: 60%;
                 margin-right: 10px;
-                color: rgba(0, 0, 0, 0.65);
+                color: var(--app-text-secondary);
                 font-weight: 400;
                 font-size: 12px;
             }
@@ -111,7 +111,7 @@ const _props = defineProps({
         .value {
             height: 60px;
             line-height: 60px;
-            color: #323130;
+            color: var(--app-text);
             font-weight: 700;
             font-size: 24px;
             margin: 10px 0;
@@ -122,7 +122,7 @@ const _props = defineProps({
                 margin-top: 5px;
                 font-size: 16px;
                 min-height: 25px;
-                color: #000;
+                color: var(--app-text);
             }
         }
     }

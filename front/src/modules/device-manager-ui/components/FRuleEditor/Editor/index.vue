@@ -276,7 +276,7 @@ queryCode();
         }
 
         .disabled {
-            color: rgba(#000, 0.5);
+            color: var(--app-text-secondary);
             cursor: not-allowed;
         }
     }

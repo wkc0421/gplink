@@ -6,7 +6,7 @@
       width="520"
       :maskClosable="false"
       destroy-on-close
-      style="background: linear-gradient(180deg, #E3EEFF 0%, #F9FAFB 100%)"
+      style="background: linear-gradient(180deg, var(--app-info-bg) 0%, var(--app-elevated) 100%)"
   >
     <template #title>
       <div style="display: flex; align-items: center; gap: 12px">
@@ -277,7 +277,7 @@ onMounted(() => {
     line-height: 22px;
     padding: 5px 12px;
     border-radius: 4px;
-    color: rgba(0, 0, 0, 0.88);
+    color: var(--app-text-secondary);
     box-sizing: border-box;
     cursor: pointer;
 
@@ -299,11 +299,11 @@ onMounted(() => {
     }
 
     .current {
-      color: #52C41A;
+      color: var(--app-text-secondary);
     }
 
     .delete {
-      color: #FF4D4F;
+      color: var(--app-text-secondary);
       display: none;
     }
 
@@ -315,7 +315,7 @@ onMounted(() => {
   }
 
   .active {
-    background: #F5F5F5;
+    background: var(--app-elevated);
   }
 
   .empty {

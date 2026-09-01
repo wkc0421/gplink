@@ -74,7 +74,7 @@ const click = (value: object) => {
 <style lang="less" scoped>
 .card-items {
     margin-bottom: 24px;
-    background-color: #fff;
+    background-color: var(--app-surface);
     padding: 24px;
 
     .card-items-container {
@@ -86,7 +86,7 @@ const click = (value: object) => {
     padding: 24px;
     // background: url('/public/images/access/background.png') no-repeat;
     background-size: 100% 100%;
-    border: 1px solid #e6e6e6;
+    border: 1px solid var(--app-border);
     overflow: hidden;
 
     &::before {
@@ -163,7 +163,7 @@ const click = (value: object) => {
                 font-weight: 800;
                 font-size: 18px;
                 line-height: 22px;
-                color: rgba(0, 0, 0, 0.85);
+                color: var(--app-text-secondary);
                 opacity: 0.85;
             }
 
@@ -173,7 +173,7 @@ const click = (value: object) => {
                 font-style: normal;
                 font-weight: 400;
                 font-size: 12px;
-                color: #666666;
+                color: var(--app-text-secondary);
                 height: 40px;
             }
         }

@@ -698,7 +698,7 @@ watch(() => departmentStore.productId, (newVal) => {
     .card-warp {
       &.active {
         .card-item-content-value {
-          color: #2f54eb;
+          color: var(--app-primary);
         }
       }
     }

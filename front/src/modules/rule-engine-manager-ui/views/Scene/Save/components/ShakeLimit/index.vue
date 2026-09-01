@@ -15,16 +15,16 @@
                 <a-input-number :min="1" :precision="0" size="small" v-model:value="shakeLimit.time" style="width: 38px" />
                 <span>{{ $t('ShakeLimit.index.9093426-7') }}</span>
                 <!-- <span>{{ $t('ShakeLimit.index.9093426-2') }}</span> -->
-                <a-radio-group :options="continuousOptions" :disabled="!shakeLimit.alarmFirst" optionType="button" buttonStyle="solid" v-model:value="shakeLimit.continuous" size="small" @change="handleChange"/>
+                <a-radio-group :options="continuousOptions" :disabled="!shakeLimit.alarmFirst" optionType="button" buttonstyle="solid" v-model:value="shakeLimit.continuous" size="small" @change="handleChange"/>
                 <span>{{ $t('ShakeLimit.index.9093426-8') }}</span>
                 <a-input-number :min="1" :max="10000" :precision="0" size="small" v-model:value="shakeLimit.threshold" style="width: 38px" />
                 <span>{{ $t('ShakeLimit.index.9093426-9') }}</span>
                 <!-- <span>{{ $t('ShakeLimit.index.9093426-3') }}</span> -->
-                <a-radio-group :options="alarmFirstOptions" :disabled="shakeLimit.continuous" optionType="button" buttonStyle="solid" v-model:value="shakeLimit.alarmFirst" size="small" @change="handleChangeAlarmFirst"/>
+                <a-radio-group :options="alarmFirstOptions" :disabled="shakeLimit.continuous" optionType="button" buttonstyle="solid" v-model:value="shakeLimit.alarmFirst" size="small" @change="handleChangeAlarmFirst"/>
                 <span>{{ $t('ShakeLimit.index.9093426-10') }}</span>
-                <a-radio-group :options="outputFirstOptions" optionType="button" buttonStyle="solid" v-model:value="shakeLimit.outputFirst" size="small" />
+                <a-radio-group :options="outputFirstOptions" optionType="button" buttonstyle="solid" v-model:value="shakeLimit.outputFirst" size="small" />
                 <span>{{ $t('ShakeLimit.index.9093426-11') }}</span>
-                <a-radio-group :options="rollingOptions" :disabled="!shakeLimit.alarmFirst" optionType="button" buttonStyle="solid" v-model:value="shakeLimit.rolling" size="small" />
+                <a-radio-group :options="rollingOptions" :disabled="!shakeLimit.alarmFirst" optionType="button" buttonstyle="solid" v-model:value="shakeLimit.rolling" size="small" />
                 <span>{{ $t('ShakeLimit.index.9093426-12') }}</span>
             </div>
         </template>

@@ -12,7 +12,7 @@
     <div class='tip'>
       <a-icon type='ExclamationCircleOutlined'/>
       {{ $t('DeviceAccess.metadataModal.306037-3') }}
-      <span style='font-weight: bold;padding:0 4px;'>{{ $t('DeviceAccess.metadataModal.306037-4') }}</span>
+      <span style='font-weight: 600;padding:0 4px;'>{{ $t('DeviceAccess.metadataModal.306037-4') }}</span>
       {{ $t('DeviceAccess.metadataModal.306037-5') }}
       <a-tooltip :title="$t('DeviceAccess.metadataModal.306037-6')">
         <a-icon type='QuestionCircleOutlined' />
@@ -251,8 +251,8 @@ const UnionFn = (DataA: any[] = [], DataB: any[] = []): any[] => {
 
 <style scoped lang='less'>
 .tip {
-  background: #F6F6F6;
-  color: #999;
+  background: var(--app-elevated);
+  color: var(--app-text-secondary);
   padding: 10px 26px;
   margin-bottom: 24px;
 }

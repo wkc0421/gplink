@@ -30,7 +30,7 @@
                 :params="params"
                 :request="e=>_queryCollector(_id, e)"
                 :gridColumn="2"
-                :bodyStyle="{
+                :bodystyle="{
                     paddingRight: 0,
                     paddingLeft: 0,
                 }"

@@ -5,7 +5,7 @@
         <div>
           <img src="@/assets/personal-token/add.png" alt="" />
         </div>
-        <div style="color: #1A1A1A">{{ $t('PersonalToken.index.061384-0') }}</div>
+        <div style="color: var(--app-text)">{{ $t('PersonalToken.index.061384-0') }}</div>
       </div>
       <a-button type="primary" @click="handleAdd">
         {{ $t('PersonalToken.index.061384-1') }}
@@ -154,7 +154,7 @@ const handleDialogOk = async (data) => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-    background-color: #F7F8FA;
+    background-color: var(--app-elevated);
     padding: 12px;
     border-radius: 6px;
   }

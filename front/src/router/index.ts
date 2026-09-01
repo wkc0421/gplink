@@ -110,6 +110,18 @@ const getRoutesByServer = async (to: any, next: any) => {
         router.addRoute(r)
       })
       router.addRoute(NOT_FIND_ROUTE)
+
+      // A fresh login starts at the shell root. Resolve that navigation to
+      // the authorized device dashboard explicitly so the shell never stays
+      // on an empty root view while nested redirects are being registered.
+      if (to.path === '/') {
+        const defaultEntry = MenuStore.getMenu('device/DashBoard')
+        const defaultPath = defaultEntry?.path?.replace('/:page*', '')
+        if (defaultPath) {
+          await next({ path: defaultPath, replace: true })
+          return
+        }
+      }
       await next({ ...to, replace: true })
     }
   } else {

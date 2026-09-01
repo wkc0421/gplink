@@ -375,12 +375,12 @@ defineExpose({
     .upload-image-border-logo {
         position: relative;
         overflow: hidden;
-        border: 1px dashed #d9d9d9;
+        border: 1px dashed var(--app-border);
         transition: all 0.3s;
         width: 160px;
         height: 150px;
         &:hover {
-            border: 1px dashed #1890ff;
+            border: 1px dashed var(--app-primary);
             display: flex;
         }
         .upload-image-content-logo {
@@ -392,7 +392,7 @@ defineExpose({
             width: 160px;
             height: 150px;
             padding: 8px;
-            background-color: rgba(0, 0, 0, 0.06);
+            background-color: var(--app-highlight-bg);
             cursor: pointer;
             .loading-logo {
                 position: absolute;
@@ -435,7 +435,7 @@ defineExpose({
     }
 }
 .button-style {
-    background-color: #fff;
+    background-color: var(--app-surface);
     height: 66px;
     overflow: hidden;
     .card-content {

@@ -24,7 +24,7 @@
         <a-checkbox-group @change="getCheckValue">
             <div class="init-home-role-content">
                 <div class="role-item role-item-1" :style="keys.includes('device')
-                        ? 'background-color: #f5f5f5;'
+                        ? 'background-color: var(--app-elevated);'
                         : ''
                     ">
                     <div class="role-item-title">
@@ -37,7 +37,7 @@
                     </div>
                 </div>
                 <div class="role-item role-item-2" :style="keys.includes('link')
-                        ? 'background-color: #f5f5f5;'
+                        ? 'background-color: var(--app-elevated);'
                         : ''
                     ">
                     <div class="role-item-title">
@@ -50,7 +50,7 @@
                     </div>
                 </div>
                 <div class="role-item role-item-3" :style="keys.includes('complex')
-                        ? 'background-color: #f5f5f5;'
+                        ? 'background-color: var(--app-elevated);'
                         : ''
                     ">
                     <div class="role-item-title">
@@ -299,7 +299,7 @@ defineExpose({
                 }
 
                 .group_name {
-                    border: .2px solid rgb(217, 217, 217);
+                    border: .2px solid var(--app-border);
                     text-align: center;
                     height: 32px;
                     line-height: 32px;
@@ -316,7 +316,7 @@ defineExpose({
                 }
 
                 .group_selected {
-                    background-color: rgb(190, 232, 251);
+                    background-color: rgba(47, 128, 255, .2);
                 }
             }
         }
@@ -351,7 +351,7 @@ defineExpose({
         background-repeat: no-repeat;
         background-position: 50%;
         background-size: 370px;
-        border: 1px solid #f5f5f5;
+        border: 1px solid var(--app-border);
 
         .role-item-title {
             display: flex;
@@ -375,7 +375,7 @@ defineExpose({
             bottom: -30px;
             left: 0;
             width: 100%;
-            color: #999;
+            color: var(--app-text-secondary);
             font-size: 12px;
             text-align: center;
         }

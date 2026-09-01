@@ -122,7 +122,7 @@ onMounted(() => {
     gap: 16px;
     .plugin-id,
     .plugin-version {
-        color: rgba(0, 0, 0, 0.85);
+        color: var(--app-text-secondary);
         opacity: 0.45;
         display: flex;
 

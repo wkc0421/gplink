@@ -106,7 +106,7 @@ onMounted(() => {
 
     .notify-type-item-title {
       font-size: 14px;
-      color: #333333;
+      color: var(--app-text);
       width: 100%;
       text-align: center;
     }
@@ -123,7 +123,7 @@ onMounted(() => {
     // }
 
     &.active {
-      border: 1px solid #2F54EB;
+      border: 1px solid var(--app-primary);
     }
   }
 }

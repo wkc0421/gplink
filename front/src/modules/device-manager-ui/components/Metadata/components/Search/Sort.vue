@@ -2,7 +2,7 @@
   <a-popover
     trigger="click"
     placement="bottom"
-    :overlayStyle="{
+    :overlaystyle="{
       'zIndex': 1050
     }"
     :getPopupContainer="(node) => tableWrapperRef || node"
@@ -146,7 +146,7 @@ const onDesc = () => {
 }
 
 .table-sort-icon {
-  color: rgba(0,0,0, 0.25);
+  color: var(--app-text-secondary);
   font-size: 16px;
 
   &.active {

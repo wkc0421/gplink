@@ -48,7 +48,8 @@ getData();
 
 <style lang="less" scoped>
 .device-count-container {
-    background-color: #fff;
+    background-color: @app-surface;
+    border: 1px solid @app-border;
     padding: 24px 14px;
     position: relative;
     .title {
@@ -67,14 +68,14 @@ getData();
             left: 0;
             width: 8px;
             height: 8px;
-            background-color: #1d39c4;
-            border: 1px solid #b4c0da;
+            background-color: @app-primary;
+            border: 1px solid @app-border-strong;
             transform: translateY(-50%);
             content: ' ';
         }
     }
     .detail {
-        color: #1d39c4;
+        color: @app-primary-hover;
         cursor: pointer;
         position: absolute;
         right: 12px;
@@ -93,18 +94,18 @@ getData();
             padding: 16px;
             background: linear-gradient(
                 135.62deg,
-                #f6f7fd 22.27%,
-                hsla(0, 0%, 100%, 0.86) 91.82%
+                #172F49 22.27%,
+                rgba(13, 25, 41, 0.86) 91.82%
             );
             border-radius: 2px;
-            box-shadow: 0 4px 18px #efefef;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, .24);
 
             .label {
-                color: #4f4f4f;
+                color: @app-text-secondary;
             }
             .value {
                 margin: 20px 0;
-                color: rgba(0, 0, 0, 0.85);
+                color: @app-text;
                 font-weight: 700;
                 font-size: 20px;
             }

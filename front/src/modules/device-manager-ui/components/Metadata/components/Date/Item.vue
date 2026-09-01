@@ -14,7 +14,7 @@
       v-model:value="date"
       :options="options"
       :placeholder="$t('Date.Item.884272-1')"
-      :dropdownStyle="{ zIndex: 1072 }"
+      :dropdownstyle="{ zIndex: 1072 }"
       :getPopupContainer="(node) => tableWrapperRef || node"
       @change="change"
       :multiple='false'

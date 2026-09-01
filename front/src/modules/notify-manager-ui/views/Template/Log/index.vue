@@ -26,7 +26,7 @@
                     <AIcon
                         v-if="slotProps.state.value === 'error'"
                         type="ExclamationCircleOutlined"
-                        style="color: #1d39c4; cursor: pointer"
+                        style="color: var(--app-text); cursor: pointer"
                         @click="handleError(slotProps.errorStack)"
                     />
                 </a-space>
@@ -196,7 +196,7 @@ watch(
     cursor:pointer;
 }
 .Icon{
-    color:#1d39c4;
+    color:var(--app-text);
     cursor:pointer;
 }
 </style>

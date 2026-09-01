@@ -15,7 +15,7 @@
         :request='_getEventList'
         mode='TABLE'
         :params='params'
-        :bodyStyle="{ padding: '0 0 0 24px' }"
+        :bodystyle="{ padding: '0 0 0 24px' }"
         :scroll="{ x: 'max-content' }"
       >
         <template v-for='i in objectKey' #[i.key]='slotProps'>

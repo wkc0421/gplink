@@ -8,11 +8,11 @@
       </div>
       <div class="items">
         <div class="item">
-          <span style="color: #777777">ICCD</span>
+          <span style="color: var(--app-text-secondary)">ICCD</span>
           <j-ellipsis>{{ data.iccId || '--' }}</j-ellipsis>
         </div>
         <div class="item">
-          <span style="color: #777777"> {{ $t('Detail.index.427958-3') }}</span>
+          <span style="color: var(--app-text-secondary)"> {{ $t('Detail.index.427958-3') }}</span>
           <a-button type="link" size="small" style="padding: 0" @click="onDeviceClick(data.deviceId)">
             <j-ellipsis>{{ data.deviceName || '--' }}</j-ellipsis>
           </a-button>
@@ -49,21 +49,21 @@
               <div class="_items">
                 <div>
                   <AIcon class="icon" type="EnvironmentOutlined"/>
-                  <span style="color: #7f7f7f; margin-left: 8px">{{ $t('RealtimePositioning.index.390590-4') }}</span>
+                  <span style="color: var(--app-text); margin-left: 8px">{{ $t('RealtimePositioning.index.390590-4') }}</span>
                 </div>
                 <j-ellipsis>{{ item.latitude ? `${item.longitude},${item.latitude}` : '--' }}</j-ellipsis>
               </div>
               <div class="_items">
                 <div>
                   <AIcon class="icon" type="FileSearchOutlined"/>
-                  <span style="color: #7f7f7f; margin-left: 8px">{{ $t('RealtimePositioning.index.390590-5') }}</span>
+                  <span style="color: var(--app-text); margin-left: 8px">{{ $t('RealtimePositioning.index.390590-5') }}</span>
                 </div>
                 <j-ellipsis>{{ item.location || '--' }}</j-ellipsis>
               </div>
               <div class="_items">
                 <div>
                   <AIcon class="icon" type="ClockCircleOutlined"/>
-                  <span style="color: #7f7f7f; margin-left: 8px">{{ $t('RealtimePositioning.index.390590-6') }}</span>
+                  <span style="color: var(--app-text); margin-left: 8px">{{ $t('RealtimePositioning.index.390590-6') }}</span>
                 </div>
                 <j-ellipsis>{{
                     item.locationTime ? dayjs(item.locationTime).format('YYYY-MM-DD HH:mm:ss') : '--'
@@ -153,7 +153,7 @@ const onDeviceClick = (id) => {
   }
 
   ._items-box {
-    border: 1px solid #D9D9D9;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
     width: 100%;
     padding: 12px;

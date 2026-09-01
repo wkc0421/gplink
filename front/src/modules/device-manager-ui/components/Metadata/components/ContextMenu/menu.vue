@@ -98,7 +98,7 @@ onMounted(async () => {
   overflow: hidden;
   width: 192px;
   padding: 4px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   .ant-menu {
     border-right: none;
 

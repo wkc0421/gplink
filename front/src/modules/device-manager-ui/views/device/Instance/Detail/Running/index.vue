@@ -13,7 +13,7 @@
                 style="height: calc(100% - 32px)"
                 v-if="tabList.length"
                 v-model:activeKey="activeKey"
-                :tabBarStyle="{ width: '200px' }"
+                :tabBarstyle="{ width: '200px' }"
                 @change="tabChange"
             >
                 <a-tab-pane v-for="i in tabList" :key="i.key">

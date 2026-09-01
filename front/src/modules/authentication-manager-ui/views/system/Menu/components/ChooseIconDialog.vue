@@ -45,12 +45,12 @@ const selected = ref<string>('');
         justify-content: center;
         height: 100px;
         font-size: 40px;
-        border: 2px solid #efefef;
+        border: 2px solid var(--app-border);
         border-radius: 2px;
         cursor: pointer;
 
         &.active {
-            color: #415ed1;
+            color: var(--app-text);
             border-color: #415ed1;
         }
     }

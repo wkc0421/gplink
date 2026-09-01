@@ -274,7 +274,7 @@ onUnmounted(() => {
     padding: 24px;
     overflow: hidden;
     overflow-y: auto;
-    background-color: #f2f5f7;
+    background-color: var(--app-elevated);
   }
 }
 

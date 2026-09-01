@@ -6,7 +6,7 @@
                 <template #title>
                     <span>{{ props.tooltip }}</span>
                 </template>
-                <AIcon type="QuestionCircleOutlined" style="padding-top: 8px;font-size: 14px;color: #666;" />
+                <AIcon type="QuestionCircleOutlined" style="padding-top: 8px;font-size: 14px;color: var(--app-text-secondary);" />
             </a-tooltip>
         </h5>
 
@@ -67,7 +67,8 @@ onMounted(() => {
 .step-container {
     width: 100%;
     padding: 24px 14px;
-    background-color: #fff;
+    background-color: @app-surface;
+    border: 1px solid @app-border;
     .title {
         position: relative;
         z-index: 2;
@@ -83,8 +84,8 @@ onMounted(() => {
             left: 0;
             width: 8px;
             height: 8px;
-            background-color: #1d39c4;
-            border: 1px solid #b4c0da;
+            background-color: @app-primary;
+            border: 1px solid @app-border-strong;
             transform: translateY(-50%);
             content: ' ';
         }
@@ -111,8 +112,8 @@ onMounted(() => {
             .box-top {
                 position: relative;
                 padding: 16px 24px;
-                background-color: #f8f9fd;
-                color: #333;
+                background-color: @app-elevated;
+                color: @app-text;
                 font-weight: 700;
                 font-size: 14px;
                 cursor: pointer;
@@ -131,7 +132,7 @@ onMounted(() => {
             }
             .box-details {
                 padding: 24px;
-                border: 1px solid #e5edf4;
+                border: 1px solid @app-border;
                 border-top: none;
                 flex: 1 1 auto;
             }

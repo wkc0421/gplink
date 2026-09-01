@@ -49,9 +49,9 @@ const props = defineProps({
     flex-direction: column;
     // height: 200px;
     padding: 24px;
-    background-color: #fff;
-    border: 1px solid #e0e4e8;
-    border-radius: 2px;
+    background-color: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: @app-radius-card;
     .top-card-content {
         display: flex;
         flex-direction: row;
@@ -61,13 +61,17 @@ const props = defineProps({
             height: 100%;
             width: 50%;
             &-title {
-                color: rgba(0, 0, 0, 0.64);
+                color: var(--app-text-secondary);
+                font-size: 13px;
+                font-weight: 500;
+                line-height: 20px;
             }
             &-value {
                 padding: 12px 0;
-                color: #323130;
-                font-weight: 700;
-                font-size: 36px;
+                color: var(--app-text);
+                font-weight: 600;
+                font-size: 32px;
+                line-height: 38px;
             }
         }
         .content-right {
@@ -93,11 +97,12 @@ const props = defineProps({
         align-items: center;
         justify-content: space-between;
         padding-top: 16px;
-        border-top: 1px solid #f0f0f0;
+        border-top: 1px solid var(--app-border);
         .footer-item-value {
-            color: #323130;
-            font-weight: 700;
+            color: var(--app-text-value);
+            font-weight: 600;
             font-size: 16px;
+            line-height: 24px;
         }
     }
 }

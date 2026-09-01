@@ -316,7 +316,7 @@
                                             v-if="item.masterProductId"
                                             type="CloudOutlined"
                                             style="
-                                                color: #4096ff;
+                                                color: var(--app-text-secondary);
                                                 margin-left: 3px;
                                             "
                                         />
@@ -338,15 +338,15 @@
                 <j-empty>
                     <template #description>
                         <p>暂无数据</p>
-                        <span style="color: #999">请点击右上角「刷新按钮」，同步网关状态</span>
+                        <span style="color: var(--app-text-secondary)">请点击右上角「刷新按钮」，同步网关状态</span>
                     </template>
                 </j-empty>
               </div>
             </template>
           </div>
           <div class="right-bottom">
-            <AIcon type="CloudOutlined" style="color: #4096ff"/>
-            <span style="color: #646c73; font-size: 12px">
+            <AIcon type="CloudOutlined" style="color: var(--app-text-secondary)"/>
+            <span style="color: var(--app-text-secondary); font-size: 12px">
                         {{ $t('Child.index.135369-17') }}
                     </span>
           </div>

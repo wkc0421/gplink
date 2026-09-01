@@ -7,7 +7,7 @@
         </div>
         <div class="contain">
             <pro-search style="padding: 18px 0" :columns="columns" noMargin @search="handleSearch" target="system_dictionary" />
-            <JProTable :bodyStyle="{
+            <JProTable :bodystyle="{
                 padding: 0,
             }" :scroll="{ y: 'calc(100vh - 500px)' }" :columns="columns" mode="TABLE" :request="queryItem" :params="params" ref="tableRef">
                 <template #headerLeftRender>
@@ -227,10 +227,10 @@ watch(() => props?.data?.id, () => {
 }
 .des_head {
     padding: 10px 20px;
-    background-color: rgb(242, 242, 242);
+    background-color: var(--app-elevated);
 
     span {
-        color: rgb(127, 127, 127)
+        color: var(--app-text-secondary)
     }
 }
 </style>

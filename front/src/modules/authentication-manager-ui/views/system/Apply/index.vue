@@ -28,7 +28,7 @@
                 <AIcon type="PlusOutlined"/>
                 {{ $t('Apply.index.483342-0') }}
               </j-permission-button>
-              <p style="margin: 0 0 0 30px; color: #0000008c">
+              <p style="margin: 0 0 0 30px; color: var(--app-text-secondary)">
                 <j-ellipsis>
                   <AIcon
                       type="ExclamationCircleOutlined"
@@ -61,8 +61,8 @@
                     style="
                                         width: calc(100% - 100px);
                                         font-size: 16px;
-                                        color: rgb(49, 94, 251);
-                                        font-weight: 700;
+                                        color: var(--app-primary);
+                                        font-weight: 600;
                                         margin-bottom: 8px;
                                     "
                 >

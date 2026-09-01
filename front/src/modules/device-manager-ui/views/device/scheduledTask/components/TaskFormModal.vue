@@ -67,7 +67,7 @@
         name="reportReadResult"
       >
         <a-switch v-model:checked="formState.reportReadResult" />
-        <span style="margin-left: 8px; color: #999">
+        <span style="margin-left: 8px; color: var(--app-text-secondary)">
           默认关闭；开启后按部分成功语义通过标准设备消息入口上报
         </span>
       </a-form-item>
@@ -122,7 +122,7 @@
           v-model:value="formState.cron"
           placeholder="例如: 0 */5 * * * ? (每5分钟)"
         />
-        <div style="color: #999; font-size: 12px; margin-top: 4px">
+        <div style="color: var(--app-text-secondary); font-size: 12px; margin-top: 4px">
           支持标准 Cron 表达式，例如 `0 0/1 * * * ?` 表示每分钟执行一次
         </div>
       </a-form-item>

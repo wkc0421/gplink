@@ -453,9 +453,9 @@ queryPlugin();
 .alert {
     height: 40px;
     padding-left: 10px;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--app-text-secondary);
     line-height: 40px;
-    background-color: #f6f6f6;
+    background-color: var(--app-elevated);
 }
 .search {
     display: flex;
@@ -482,7 +482,7 @@ queryPlugin();
     gap: 16px;
     .plugin-id,
     .plugin-version {
-        color: rgba(0, 0, 0, 0.85);
+        color: var(--app-text-secondary);
         opacity: 0.45;
         display: flex;
 

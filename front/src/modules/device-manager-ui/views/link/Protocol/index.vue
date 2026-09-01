@@ -393,7 +393,7 @@ const handleSearch = (e: any) => {
         min-height: 50px;
     }
     .card-item-content-text {
-        color: rgba(0, 0, 0, 0.75);
+        color: var(--app-text-secondary);
         font-size: 12px;
         overflow: hidden; //超出的文本隐藏
         text-overflow: ellipsis; //溢出用省略号显示

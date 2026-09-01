@@ -47,6 +47,7 @@
                 </template>
                 <template #card="slotProps">
                     <CardBox
+                        class="device-instance-card"
                         :value="slotProps"
                         @click="handleClick"
                         :actions="getActions(slotProps, 'card')"
@@ -54,7 +55,7 @@
                         :status="slotProps.state?.value"
                         :statusText="slotProps.state?.text"
                         :statusNames="{
-                            online: 'processing',
+                            online: 'success',
                             offline: 'error',
                             notActive: 'warning',
                         }"
@@ -69,32 +70,17 @@
                             />
                         </template>
                         <template #content>
-                            <j-ellipsis
-                                style="
-                                    width: calc(100% - 100px);
-                                    margin-bottom: 18px;
-                                "
-                            >
-                                <span style="font-size: 16px; font-weight: 600">
-                                    {{ slotProps.name }}
-                                </span>
-                            </j-ellipsis>
-                            <a-row>
-                                <a-col :span="12">
-                                    <div class="card-item-content-text">
-                                        {{ $t('Instance.index.133466-1') }}
-                                    </div>
-                                    <div>{{ slotProps.deviceType?.text }}</div>
-                                </a-col>
-                                <a-col :span="12">
-                                    <div class="card-item-content-text">
-                                        {{ $t('Instance.index.133466-2') }}
-                                    </div>
-                                    <j-ellipsis style="width: 100%">
-                                        {{ slotProps.productName }}
-                                    </j-ellipsis>
-                                </a-col>
-                            </a-row>
+                            <div class="device-card-content">
+                                <j-ellipsis class="device-card-id">
+                                    {{ slotProps.id || '--' }}
+                                </j-ellipsis>
+                                <j-ellipsis class="device-card-name">
+                                    {{ slotProps.name || '--' }}
+                                </j-ellipsis>
+                                <j-ellipsis class="device-card-product">
+                                    {{ slotProps.productName || '--' }}
+                                </j-ellipsis>
+                            </div>
                         </template>
                         <template #actions="item">
                             <j-permission-button
@@ -123,7 +109,7 @@
                         :status="slotProps.state?.value"
                         :text="slotProps.state?.text"
                         :statusNames="{
-                            online: 'processing',
+                            online: 'success',
                             offline: 'error',
                             notActive: 'warning',
                         }"
@@ -955,3 +941,165 @@ onMounted(() => {
     }
 });
 </script>
+
+<style lang="less" scoped>
+.device-instance-card {
+    :deep(.card-warp) {
+        border-color: @app-border-strong;
+        background:
+            linear-gradient(135deg, rgba(23, 43, 68, 0.96), rgba(13, 25, 41, 0.98) 68%),
+            @app-surface;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+
+        &:hover {
+            border-color: @app-primary-hover;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(82, 160, 255, 0.14);
+        }
+    }
+
+    :deep(.card-content) {
+        padding-right: 18px;
+        padding-bottom: 24px;
+        background:
+            radial-gradient(circle at 12% 50%, rgba(47, 128, 255, 0.12), transparent 34%),
+            linear-gradient(135deg, rgba(19, 36, 58, 0.92), rgba(13, 25, 41, 0.98) 74%);
+
+        &::after {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 36%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(112deg, transparent, rgba(82, 160, 255, 0.06));
+            content: '';
+        }
+    }
+
+    :deep(.card-item-avatar) {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        margin-right: 20px;
+
+        &::before {
+            position: absolute;
+            inset: 8px;
+            border: 1px solid rgba(82, 160, 255, 0.32);
+            border-radius: 18px;
+            background: radial-gradient(circle, rgba(47, 128, 255, 0.2), rgba(47, 128, 255, 0.03) 68%);
+            box-shadow: 0 0 20px rgba(47, 128, 255, 0.16);
+            content: '';
+        }
+
+    }
+
+    :deep(.card-item-avatar img) {
+        position: relative;
+        z-index: 1;
+        filter: drop-shadow(0 5px 10px rgba(47, 128, 255, 0.28));
+    }
+
+    :deep(.card-item-body) {
+        min-width: 0;
+    }
+
+    :deep(.card-state) {
+        top: 24px;
+        right: -14px;
+        padding-right: 22px;
+        padding-left: 18px;
+    }
+
+    :deep(.card-state-content .ant-badge-status-dot) {
+        width: 14px;
+        min-width: 14px;
+        height: 14px;
+        margin-right: 9px;
+        border-radius: 50%;
+    }
+
+    :deep(.card-state-content .ant-badge-status-success) {
+        box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.16), 0 0 12px rgba(53, 208, 127, 0.58);
+    }
+
+    :deep(.card-state-content .ant-badge-status-error) {
+        box-shadow: 0 0 0 3px rgba(255, 100, 116, 0.15), 0 0 12px rgba(255, 100, 116, 0.5);
+    }
+
+    :deep(.card-state-content .ant-badge-status-warning) {
+        box-shadow: 0 0 0 3px rgba(255, 180, 84, 0.15), 0 0 12px rgba(255, 180, 84, 0.5);
+    }
+
+    :deep(.card-state-content .ant-badge-status-text) {
+        color: @app-text !important;
+        font-size: 13px;
+        font-weight: @app-font-weight-semibold;
+        line-height: 20px;
+    }
+
+    .device-card-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+        gap: 6px;
+        padding: 2px 0;
+    }
+
+    .device-card-id,
+    .device-card-name,
+    .device-card-product {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .device-card-id {
+        color: @app-text-tertiary;
+        font-size: 12px;
+        font-weight: @app-font-weight-medium;
+        line-height: 18px;
+        letter-spacing: 0.02em;
+    }
+
+    .device-card-name {
+        color: @app-text;
+        font-size: 16px;
+        font-weight: @app-font-weight-semibold;
+        line-height: 24px;
+        letter-spacing: 0.01em;
+    }
+
+    .device-card-product {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        padding: 2px 8px;
+        color: @app-text-value;
+        font-size: 14px;
+        font-weight: @app-font-weight-medium;
+        line-height: 20px;
+        border: 1px solid rgba(82, 160, 255, 0.22);
+        border-radius: 5px;
+        background: rgba(47, 128, 255, 0.1);
+    }
+
+    :deep(.card-tools) {
+        margin-top: 8px;
+
+        :deep(.card-tools .card-button button) {
+            min-height: 32px;
+            border-color: rgba(82, 160, 255, 0.24);
+            background: rgba(19, 36, 58, 0.92);
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+            &:hover {
+                border-color: @app-primary-hover;
+                box-shadow: 0 0 12px rgba(47, 128, 255, 0.2);
+            }
+        }
+    }
+}
+</style>

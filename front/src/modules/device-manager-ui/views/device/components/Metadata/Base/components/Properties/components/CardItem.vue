@@ -58,12 +58,12 @@ watch(() => props.value, () => {
     padding: 12px;
     display: flex;
     align-items: center;
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
     justify-content: space-between;
 
     .top-img {
-      border: 1px solid #d9d9d9;
+      border: 1px solid var(--app-border);
       font-size: 20px;
       border-radius: 6px;
       display: flex;
@@ -75,7 +75,7 @@ watch(() => props.value, () => {
   }
 
   .area {
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--app-border);
     border-top: 0;
     width: 100%;
     padding: 12px;

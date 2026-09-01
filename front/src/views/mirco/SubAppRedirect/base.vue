@@ -156,7 +156,7 @@ watch(() => [route.fullPath, menuStoreRef.loading.value], () => {
     inset-inline-end: -150%;
     bottom: 0;
     inset-inline-start: -150%;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.15) 37%, rgba(0, 0, 0, 0.06) 63%);
+    background: linear-gradient(90deg, var(--app-highlight-bg) 25%, rgba(0, 0, 0, 0.15) 37%, var(--app-highlight-bg) 63%);
     animation-name: css-1p3hq3p-ant-skeleton-loading;
     animation-duration: 1.4s;
     animation-timing-function: ease;

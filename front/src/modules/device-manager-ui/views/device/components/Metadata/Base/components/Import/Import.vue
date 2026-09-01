@@ -25,7 +25,7 @@
         :keyboard="false"
         :maskClosable="false"
         :okButtonProps="{
-            disabled: !successCount,
+            disabled: props.target === 'device' ? !successCount : true,
         }"
         :getContainer="modalContainer"
         @cancel="onCancel"
@@ -37,7 +37,7 @@
                     name="file"
                     :headers="{ [TOKEN_KEY]: LocalStore.get(TOKEN_KEY) }"
                     :maxCount="1"
-                    :accept="'.xlsx,.csv'"
+                    :accept="'.xls,.xlsx,.csv'"
                     :showUploadList="showUploadList"
                     :before-upload="beforeUpload"
                     @change="uploadChange"
@@ -78,7 +78,11 @@ import {getToken, LocalStore, onlyMessage, downloadFileByUrl} from '@jetlinks-we
 import {validate} from './util'
 import { isFullScreen } from '@/utils'
 import { getTemplate, uploadAnalyzeMetadata} from '../../../../../../../api/instance'
-import {getTemplate as getProductTemplate} from '../../../../../../../api/product'
+import {
+    getTemplate as getProductTemplate,
+    importProductPropertyMetadata,
+} from '../../../../../../../api/product'
+import { fileUpload } from '@/api/comm'
 import {useGroupActive, useTableWrapper} from "../../../../../../../components/Metadata/context";
 import { useProductStore } from '../../../../../../../store/product';
 import { useInstanceStore } from '@device-manager-ui/store/instance';
@@ -111,6 +115,7 @@ const props = defineProps({
 
 const emit = defineEmits(['ok']);
 const { current } = props.target === 'product' ? useProductStore() : useInstanceStore();
+const productStore = useProductStore();
 const visible = ref(false);
 const successCount = ref(0);
 const errorCount = ref(0);
@@ -212,13 +217,50 @@ const handleError = () => {
     init();
 };
 
+const importProductMetadata = async (file) => {
+    const productId = current?.id || route.params.id;
+    if (!productId) {
+        handleError();
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadResponse = await fileUpload(formData);
+        const fileUrl = uploadResponse?.result?.accessUrl;
+        if (!fileUrl) {
+            throw new Error('上传文件未返回访问地址');
+        }
+
+        const response = await importProductPropertyMetadata(
+            productId,
+            fileUrl,
+        );
+        if (!response?.success) {
+            throw new Error('产品物模型导入失败');
+        }
+
+        await productStore.getDetail(productId);
+        onlyMessage($t('Import.Import.317604-9'));
+        visible.value = false;
+    } catch {
+        handleError();
+    }
+};
+
 const beforeUpload = (file) => {
-    const isCsv = file.type === 'text/csv';
+    const fileName = file.name?.toLowerCase() || '';
+    const isCsv = file.type === 'text/csv' || fileName.endsWith('.csv');
     const isXlsx =
-        file.type ===
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    if (!isCsv && !isXlsx) {
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        fileName.endsWith('.xlsx');
+    const isXls =
+        file.type === 'application/vnd.ms-excel' || fileName.endsWith('.xls');
+    if (!isCsv && !isXlsx && !isXls) {
         onReject();
+    } else if (props.target === 'product') {
+        void importProductMetadata(file);
     } else {
         const formData = new FormData();
         formData.append('file', file);
@@ -253,7 +295,7 @@ const uploadChange = async (info) => {
   margin: 46px 0;
   display: flex;
   flex-direction: column;
-  color: #666666;
+  color: var(--app-text-secondary);
 
   .icon {
     font-size: 30px;
@@ -267,9 +309,9 @@ const uploadChange = async (info) => {
 
   .btn {
     border: none;
-    background-color: #ECECF0;
+    background-color: var(--app-elevated);
     width: 152px;
-    color: #666666;
+    color: var(--app-text-secondary);
   }
 }
 </style>

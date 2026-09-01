@@ -58,7 +58,7 @@ onMounted(() => {
         flex-direction: column;
         align-items: center;
         width: 172px;
-        border: 1px solid #e0e4e8;
+        border: 1px solid var(--app-border);
         border-radius: 2px;
         cursor: pointer;
         transition: all 0.3s;

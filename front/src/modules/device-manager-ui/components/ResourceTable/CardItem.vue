@@ -90,8 +90,8 @@ const imageMap = new Map([
   height: 348px;
   //border: 2px solid transparent;
   color: @font-gray-900;
-  background-color: #fff;
-  border: 1px solid #eff0f1;
+  background-color: @app-surface;
+  border: 1px solid @app-border;
   .item-center {
     padding: 12px;
   }
@@ -141,12 +141,12 @@ const imageMap = new Map([
     left: 12px;
     border-radius: 4px;
     padding: 4px 12px;
-    background-color: #ffeded;
-    color: #ff4d4f;
+    background-color: rgba(255, 100, 116, .14);
+    color: @app-error;
 
     .charge {
-      background-color: #fbebd1;
-      color: #a6845f;
+      background-color: rgba(255, 180, 84, .16);
+      color: @app-warning;
     }
   }
 }

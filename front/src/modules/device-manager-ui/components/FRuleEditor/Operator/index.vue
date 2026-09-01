@@ -30,7 +30,7 @@
                                 >
                                     <a-popover
                                         v-if="node.type === 'property'"
-                                        :overlayStyle="{
+                                        :overlaystyle="{
                                             zIndex: 1200,
                                         }"
                                         placement="right"
@@ -69,7 +69,7 @@
                                     </a-popover>
                                     <a-popover
                                         v-else-if="node.type === 'tags'"
-                                        :overlayStyle="{
+                                        :overlaystyle="{
                                             zIndex: 1200,
                                         }"
                                         placement="right"

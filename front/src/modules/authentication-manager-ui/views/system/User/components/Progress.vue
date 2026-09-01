@@ -56,7 +56,7 @@ const valueArr = computed(() => {
 .progress-container {
     width: 100%;
     position: relative;
-    background-color: #e0e0e0;
+    background-color: var(--app-elevated);
     height: 8px;
     margin: 3px 0;
 
@@ -65,7 +65,7 @@ const valueArr = computed(() => {
         top: 0;
         width: 1px;
         height: 100%;
-        background-color: #fff;
+        background-color: var(--app-surface);
     }
     .value {
         transition: all 0.35s ease-in-out 0s;

@@ -5,7 +5,7 @@
       :placeholder="$t('components.Source.418270-0')"
       style="flex: 1 1 0;min-width: 0"
       :options="PropertySource"
-      :dropdownStyle="{
+      :dropdownstyle="{
               zIndex: 1071
             }"
       :getPopupContainer="(node) => tableWrapperRef || node"
@@ -16,7 +16,7 @@
     <PopoverModal
       v-if="myValue != 'manual' && !showReset"
       v-model:visible="modalVisible"
-      :bodyStyle="{
+      :bodystyle="{
                 width: '450px',
                 height: myValue === 'rule' ? '300px' : '92px',
             }"
@@ -59,7 +59,7 @@
           <a-menu-item>
             <PopoverModal
               v-model:visible="modalVisible"
-              :bodyStyle="{
+              :bodystyle="{
                                 width: '450px',
                                 height: myValue === 'rule' ? '300px' : '80px',
                             }"

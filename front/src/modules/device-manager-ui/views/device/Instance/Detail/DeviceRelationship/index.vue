@@ -372,7 +372,7 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .device-relationship {
-  background: #fff;
+  background: var(--app-surface);
   height: 100%;
 
   .sections-container {
@@ -400,7 +400,7 @@ onMounted(() => {
           gap: 6px;
 
           .section-title {
-            color: #1890ff;
+            color: var(--app-primary);
 
             :deep(.title) {
               margin-bottom: 0;
@@ -408,18 +408,18 @@ onMounted(() => {
           }
 
           .help-icon {
-            color: #999;
+            color: var(--app-text-secondary);
             margin-left: 8px;
           }
         }
 
         .edit-icon {
-          color: #999;
+          color: var(--app-text-secondary);
           font-size: 14px;
           cursor: pointer;
 
           &:hover {
-            color: #1890ff;
+            color: var(--app-primary);
           }
         }
       }
@@ -429,7 +429,7 @@ onMounted(() => {
         flex: 1;
         min-height: 0;
         overflow-y: auto;
-        background-color: #F7F8FA;
+        background-color: var(--app-elevated);
         display: flex;
         flex-direction: column;
       }
@@ -439,14 +439,14 @@ onMounted(() => {
     .section-card:first-child {
       .relation-count {
         margin-bottom: 12px;
-        color: #191C27;
+        color: var(--app-text);
         display: flex;
         align-items: center;
         justify-content: flex-end;
 
         .count-num {
-          background-color: #EFF0F1;
-          color: #1F2429;
+          background-color: var(--app-elevated);
+          color: var(--app-text);
           margin-left: 10px;
           padding: 4px;
         }
@@ -461,23 +461,23 @@ onMounted(() => {
           justify-content: space-between;
           align-items: center;
           padding: 10px;
-          background-color: #F1F7FF;
-          border: 1px solid #BAE0FF;
+          background-color: var(--app-info-bg);
+          border: 1px solid var(--app-border);
           &.relation-item-unrelated {
-            background-color: #F0F0F0;
-            border-color: #F0F0F0;
+            background-color: var(--app-elevated);
+            border-color: var(--app-border);
           }
           &:not(:last-child) {
             margin-bottom: 10px;
           }
 
           .relation-label {
-            color: #777777;
+            color: var(--app-text-secondary);
             max-width: 50%;
           }
 
           .relation-value {
-            color: #1A1A1A;
+            color: var(--app-text);
             text-align: right;
             flex: 1;
           }
@@ -500,7 +500,7 @@ onMounted(() => {
         }
 
         .list-icon {
-          color: #999;
+          color: var(--app-text-secondary);
           font-size: 14px;
           margin-left: 4px;
         }
@@ -508,14 +508,14 @@ onMounted(() => {
 
       .organization-count {
         margin-bottom: 12px;
-        color: #191C27;
+        color: var(--app-text);
         display: flex;
         align-items: center;
         justify-content: flex-end;
 
         .count-num {
-          background-color: #EFF0F1;
-          color: #1F2429;
+          background-color: var(--app-elevated);
+          color: var(--app-text);
           margin-left: 10px;
           padding: 4px;
         }
@@ -535,8 +535,8 @@ onMounted(() => {
 
           &.sub-sub-item {
             padding-left: 32px;
-            background: #f0f8ff;
-            border-left: 3px solid #1890ff;
+            background: var(--app-info-bg);
+            border-left: 3px solid var(--app-primary);
             margin: 2px 0;
             padding-right: 8px;
             border-radius: 0 4px 4px 0;
@@ -546,18 +546,18 @@ onMounted(() => {
             width: 12px;
             height: 12px;
             margin-right: 4px;
-            color: #999;
+            color: var(--app-text-secondary);
             font-size: 10px;
             transform: translateY(0);
 
             &.expanded {
-              color: #1890ff;
+              color: var(--app-primary);
             }
           }
 
           .org-name {
             flex: 1;
-            color: #333;
+            color: var(--app-text);
           }
 
           .org-actions {
@@ -571,23 +571,23 @@ onMounted(() => {
               border-radius: 2px;
 
               &.action-view {
-                color: #1890ff;
-                background: #f0f8ff;
+                color: var(--app-primary);
+                background: var(--app-info-bg);
               }
 
               &.action-edit {
-                color: #52c41a;
-                background: #f6ffed;
+                color: var(--app-text-secondary);
+                background: var(--app-success-bg);
               }
 
               &.action-delete {
-                color: #ff4d4f;
-                background: #fff2f0;
+                color: var(--app-text-secondary);
+                background: var(--app-error-bg);
               }
 
               &.action-share {
-                color: #722ed1;
-                background: #f9f0ff;
+                color: var(--app-text);
+                background: var(--app-purple-bg);
               }
 
               &:hover {
@@ -616,10 +616,10 @@ onMounted(() => {
 
       .group-count {
         margin-bottom: 8px;
-        color: #666;
+        color: var(--app-text-secondary);
 
         .count-num {
-          color: #1890ff;
+          color: var(--app-primary);
           font-weight: 500;
         }
       }
@@ -628,30 +628,30 @@ onMounted(() => {
         .group-item {
           padding: 6px 8px;
           margin-bottom: 4px;
-          background: #f8f9fa;
+          background: var(--app-elevated);
           border-radius: 4px;
-          color: #333;
+          color: var(--app-text);
         }
       }
     }
 
     // 通用样式
     .list-icon {
-      color: #999;
+      color: var(--app-text-secondary);
       font-size: 14px;
       margin-left: 4px;
     }
 
     .organization-count,
     .group-count {
-      color: #191C27;
+      color: var(--app-text);
       display: flex;
       align-items: center;
       justify-content: flex-end;
 
       .count-num {
-        background-color: #EFF0F1;
-        color: #1F2429;
+        background-color: var(--app-elevated);
+        color: var(--app-text);
         margin-left: 10px;
         padding: 4px;
         border-radius: 2px;
@@ -659,7 +659,7 @@ onMounted(() => {
     }
 
     .empty-text {
-      color: #999;
+      color: var(--app-text-secondary);
       font-size: 14px;
       text-align: center;
       padding: 20px;
@@ -668,8 +668,8 @@ onMounted(() => {
     // 操作按钮样式
     :deep(.ant-btn) {
       &.action-view {
-        color: #1890ff;
-        background: #f0f8ff;
+        color: var(--app-primary);
+        background: var(--app-info-bg);
         border: none;
         height: 20px;
         padding: 0 4px;
@@ -677,8 +677,8 @@ onMounted(() => {
       }
 
       &.action-edit {
-        color: #52c41a;
-        background: #f6ffed;
+        color: var(--app-text-secondary);
+        background: var(--app-success-bg);
         border: none;
         height: 20px;
         padding: 0 4px;
@@ -686,8 +686,8 @@ onMounted(() => {
       }
 
       &.action-delete {
-        color: #ff4d4f;
-        background: #fff2f0;
+        color: var(--app-text-secondary);
+        background: var(--app-error-bg);
         border: none;
         height: 20px;
         padding: 0 4px;
@@ -695,8 +695,8 @@ onMounted(() => {
       }
 
       &.action-share {
-        color: #722ed1;
-        background: #f9f0ff;
+        color: var(--app-text);
+        background: var(--app-purple-bg);
         border: none;
         height: 20px;
         padding: 0 4px;

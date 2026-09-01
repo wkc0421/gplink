@@ -56,7 +56,7 @@ export default {
       level: 1,
       name: i18n.global.t('data.RoleData.950813-8'),
       code: 'device/Product',
-      icon: 'icon-chanpin',
+      icon: 'AppstoreOutlined',
       url: '/iot/device/Product',
       buttons: [
         { id: 'view', name: i18n.global.t('data.RoleData.950813-9'), enabled: true, granted: true },
@@ -118,7 +118,7 @@ export default {
       level: 1,
       name: i18n.global.t('data.RoleData.950813-22'),
       code: 'device/Instance',
-      icon: 'icon-shebei',
+      icon: 'HddOutlined',
       url: '/iot/device/Instance',
       buttons: [
         { id: 'view', name: i18n.global.t('data.RoleData.950813-9'), enabled: true, granted: true },
@@ -569,7 +569,7 @@ export default {
       level: 1,
       name: i18n.global.t('data.RoleData.950813-8'),
       code: 'device/Product',
-      icon: 'icon-chanpin',
+      icon: 'AppstoreOutlined',
       url: '/iot/device/Product',
       buttons: [
         { id: 'view', name: i18n.global.t('data.RoleData.950813-9'), enabled: true, granted: true },
@@ -631,7 +631,7 @@ export default {
       level: 1,
       name: i18n.global.t('data.RoleData.950813-22'),
       code: 'device/Instance',
-      icon: 'icon-shebei',
+      icon: 'HddOutlined',
       url: '/iot/device/Instance',
       buttons: [
         { id: 'view', name: i18n.global.t('data.RoleData.950813-9'), enabled: true, granted: true },

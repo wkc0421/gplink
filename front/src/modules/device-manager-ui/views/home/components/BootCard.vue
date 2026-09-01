@@ -67,7 +67,8 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .boot-card-container {
-    background-color: #fff;
+    background-color: @app-surface;
+    border: 1px solid @app-border;
     padding: 24px 14px;
     .title {
         position: relative;
@@ -85,8 +86,8 @@ onMounted(() => {
             left: 0;
             width: 8px;
             height: 8px;
-            background-color: #1d39c4;
-            border: 1px solid #b4c0da;
+            background-color: @app-primary;
+            border: 1px solid @app-border-strong;
             transform: translateY(-50%);
             content: ' ';
         }
@@ -101,18 +102,18 @@ onMounted(() => {
             padding: 16px;
             background: linear-gradient(
                 135.62deg,
-                #f6f7fd 22.27%,
-                rgba(255, 255, 255, 0.86) 91.82%
+                #172F49 22.27%,
+                rgba(13, 25, 41, 0.86) 91.82%
             );
             border-radius: 2px;
-            box-shadow: 0 4px 18px #efefef;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, .24);
             .item-english {
-                color: #4f4f4f;
+                color: @app-text-secondary;
             }
 
             .item-title {
                 margin: 20px 0;
-                color: @text-color;
+                color: @app-text;
                 font-weight: 700;
                 font-size: 20px;
             }

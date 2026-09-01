@@ -22,7 +22,7 @@
       :columns="logColumns"
       :request="fetchLogs"
       mode="TABLE"
-      :bodyStyle="{ padding: 0 }"
+      :bodystyle="{ padding: 0 }"
       :scroll="{ y: 480 }"
     >
       <template #status="slotProps">

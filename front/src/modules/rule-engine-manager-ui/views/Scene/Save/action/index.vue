@@ -242,7 +242,7 @@ const onAdd = (actionItem: any, _parallel: boolean) => {
 
   .panel-tip {
     padding-left: 8px;
-    color: rgba(#000, 0.45);
+    color: var(--app-text-secondary);
   }
 }
 </style>

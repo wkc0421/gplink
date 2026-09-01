@@ -220,6 +220,6 @@ onMounted(() => {
 }
 .deviceId {
   cursor: pointer;
-  color: #4096ff;
+  color: var(--app-text-secondary);
 }
 </style>

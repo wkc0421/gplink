@@ -13,7 +13,7 @@
         :request="(e) => queryDetailList(e, {permission: 'save'})"
         :defaultParams="defaultParams"
         :params="params"
-        :bodyStyle="{padding: 0}"
+        :bodystyle="{padding: 0}"
         :rowSelection="type=== 'Self' ? {
           selectedRowKeys: _selectedRowKeys,
           onSelect: onSelectChange,

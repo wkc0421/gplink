@@ -15,6 +15,7 @@ import deviceAccess from './device-access.png'
 import deviceType1 from './device-type-1.png'
 import deviceType2 from './device-type-2.png'
 import deviceType3 from './device-type-3.png'
+import darkDeviceCard from '../../../../assets/theme-icons/device-card.svg'
 
 export const device = {
     button,
@@ -30,7 +31,7 @@ export const device = {
     metadataMap,
     metadataMapPng,
     union,
-    deviceAccess,
+    deviceAccess: darkDeviceCard,
     deviceType1,
     deviceType2,
     deviceType3

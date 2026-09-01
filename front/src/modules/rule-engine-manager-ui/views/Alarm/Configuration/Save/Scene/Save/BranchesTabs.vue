@@ -14,7 +14,7 @@
         >
           <div v-for="(branch, index) in group.children" :key="branch.branchId">
             <div style="display: flex;align-items: center" v-if="show && branch.when?.length">
-              <div style="padding-right: 12px;font-weight: bold;font-size: 16px;width: 46px; white-space: nowrap;">{{ index === 0 ? $t('Save.BranchesTabs.0214510-2') : $t('Save.BranchesTabs.0214510-3') }}</div>
+              <div style="padding-right: 12px;font-weight: 600;font-size: 16px;width: 46px; white-space: nowrap;">{{ index === 0 ? $t('Save.BranchesTabs.0214510-2') : $t('Save.BranchesTabs.0214510-3') }}</div>
               <Terms :when="branch.whenOptions" :data="branch.when" />
             </div>
             <div class="branches-shakeLimit" v-if="show && branch.shakeLimit?.enabled">
@@ -166,13 +166,13 @@ const select = (id, selected) => {
 
 .branches-shakeLimit {
   .branches-shakeLimit-action {
-    font-weight: bold;
+    font-weight: 500;
     padding-right: 8px;
   }
 
   .branches-shakeLimit-time {
     padding: 0 8px;
-    font-weight: bold;
+    font-weight: 500;
   }
 }
 </style>

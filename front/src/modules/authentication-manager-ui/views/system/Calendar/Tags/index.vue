@@ -110,7 +110,7 @@ const createDrag = () => {
                 id: eventEl.id,
                 title: eventEl.innerText,
                 backgroundColor: calendarTagColor.get(eventEl.id) || '#000000',
-                color: '#000',
+                color: '#000', // dark-theme-allow: event text adapts to user-selected tag color
                 editable: false,
             };
         },
@@ -178,7 +178,7 @@ onMounted(() => {
 <style lang="less" scoped>
 .tagsContainer {
     width: 260px;
-    background-color: #fff;
+    background-color: var(--app-surface);
     border-right: 1px solid #cccccc;
     padding-right: 24px;
     .content {
@@ -225,7 +225,7 @@ onMounted(() => {
         }
     }
     .tag:hover{
-        background-color: rgb(242, 242, 242);
+        background-color: var(--app-hover);
         border-radius: 4px;
     }
 }
