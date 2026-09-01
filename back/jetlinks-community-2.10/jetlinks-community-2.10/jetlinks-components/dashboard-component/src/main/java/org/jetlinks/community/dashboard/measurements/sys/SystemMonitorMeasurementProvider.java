@@ -39,6 +39,8 @@ import org.jetlinks.core.metadata.types.ObjectType;
 import org.jetlinks.core.metadata.types.StringType;
 import org.jetlinks.supports.utils.DeviceMetadataUtils;
 import org.reactivestreams.Publisher;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
@@ -135,9 +137,9 @@ public class SystemMonitorMeasurementProvider extends StaticMeasurementProvider 
 
     private static final String SYSTEM_MONITOR_REAL_TIME_TOPIC = "/_sys/monitor/info";
 
-    private final SystemMonitorService monitorService = new SystemMonitorServiceImpl();
+    private final SystemMonitorService monitorService;
 
-    private final Duration collectInterval = TimeUtils.parse(System.getProperty("monitor.system.collector.interval", "1m"));
+    private final Duration collectInterval;
 
     private final Scheduler scheduler;
 
@@ -149,17 +151,37 @@ public class SystemMonitorMeasurementProvider extends StaticMeasurementProvider 
 
     private final EventBus eventBus;
 
-    public SystemMonitorMeasurementProvider(TimeSeriesManager timeSeriesManager, EventBus eventBus) {
+    @Autowired
+    public SystemMonitorMeasurementProvider(TimeSeriesManager timeSeriesManager,
+                                            EventBus eventBus,
+                                            @Value("${monitor.system.collector.interval:5m}") String collectInterval) {
+        this(timeSeriesManager,
+             eventBus,
+             new SystemMonitorServiceImpl(),
+             TimeUtils.parse(collectInterval),
+             Schedulers.newSingle("system-monitor-collector"));
+    }
+
+    SystemMonitorMeasurementProvider(TimeSeriesManager timeSeriesManager,
+                                     EventBus eventBus,
+                                     SystemMonitorService monitorService,
+                                     Duration collectInterval,
+                                     Scheduler scheduler) {
         super(DefaultDashboardDefinition.systemMonitor, MonitorObjectDefinition.stats);
+        if (collectInterval.isZero() || collectInterval.isNegative()) {
+            throw new IllegalArgumentException("monitor.system.collector.interval must be greater than zero");
+        }
         this.timeSeriesManager = timeSeriesManager;
         this.eventBus = eventBus;
+        this.monitorService = monitorService;
+        this.collectInterval = collectInterval;
 
         addMeasurement(new StaticMeasurement(CommonMeasurementDefinition.info)
             .addDimension(new RealTimeDimension())
             .addDimension(new HistoryDimension())
         );
 
-        this.scheduler = Schedulers.newSingle("system-monitor-collector");
+        this.scheduler = scheduler;
 
         disposable.add(this.scheduler);
     }
@@ -171,49 +193,39 @@ public class SystemMonitorMeasurementProvider extends StaticMeasurementProvider 
 
     @PostConstruct
     public void init() {
-        //注册表结构
-        monitorService
+        TimeSeriesData initialData = monitorService
             .system()
-            .map(info -> TimeSeriesMetadata.of(
-                metric,
-                DeviceMetadataUtils.convertToProperties(
-                    systemInfoToMap(info).getData()
-                )
-            ))
-            .flatMap(timeSeriesManager::registerMetadata)
+            .map(this::systemInfoToMap)
+            .flatMap(data -> timeSeriesManager
+                .registerMetadata(TimeSeriesMetadata.of(
+                    metric,
+                    DeviceMetadataUtils.convertToProperties(data.getData())
+                ))
+                .thenReturn(data))
             .block(Duration.ofSeconds(10));
 
-        //定时收集监控信息
-        //定时收集监控信息
+        // 启动时写入一次，之后按配置周期直接采集一次系统信息。
         disposable.add(
-            Flux
-                .interval(Duration.ofSeconds(1), scheduler)
-                .onBackpressureDrop()
-                //每秒采集一次
-                .concatMap(l -> monitorService.cpu())
-                //收集每个窗口的结果
-                .window(collectInterval)
-                .onBackpressureDrop(dropped -> log.warn("system monitor collect data dropped"))
-                .concatMap(window -> Mono
-                    .zip(
-                        window
-                            .window(5)
-                            //5秒cpu平均值
-                            .flatMap(flx -> flx
-                                .reduce(CpuInfo::add)
-                                .map(cpu -> cpu.division(5)))
-                            //记录1分钟内最大平均值
-                            .reduce(CpuInfo::max),
-                        monitorService.memory(),
-                        monitorService.disk()
-                    )
-                    .map(tp3 -> this.systemInfoToMap(tp3.getT1(), tp3.getT2(), tp3.getT3()))
-                    .flatMap(timeSeriesManager.getService(metric)::commit)
-                    .onErrorResume(err -> {
-                        log.warn("collect system monitor data error", err);
-                        return Mono.empty();
-                    }), 1
+            Flux.concat(
+                    Mono.justOrEmpty(initialData),
+                    Flux
+                        .interval(collectInterval, collectInterval, scheduler)
+                        .onBackpressureDrop(dropped -> log.warn("system monitor collect tick dropped"))
+                        .concatMap(ignore -> monitorService
+                            .system()
+                            .map(this::systemInfoToMap)
+                            .onErrorResume(err -> {
+                                log.warn("collect system monitor data error", err);
+                                return Mono.empty();
+                            }), 1)
                 )
+                .concatMap(data -> timeSeriesManager
+                    .getService(metric)
+                    .commit(data)
+                    .onErrorResume(err -> {
+                        log.warn("commit system monitor data error", err);
+                        return Mono.empty();
+                    }), 1)
                 .subscribe(null, error -> {
                     log.warn("start system monitor task failed", error);
                 })

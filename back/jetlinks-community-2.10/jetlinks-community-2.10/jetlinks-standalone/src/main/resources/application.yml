@@ -70,6 +70,12 @@ timescaledb:
                 # 设备消息统计，只保留30天
             -   table: device_metrics
                 interval: 30d
+            -   table: device_gateway_monitor
+                interval: 30d
+            -   table: system_monitor
+                interval: 30d
+            -   table: redis_latest
+                interval: 30d
     things-data:
         enabled: true # 开启设备数据存储
         retention-policy: 3y  # 原始数据保留 3 年后自动删除
@@ -251,7 +257,11 @@ micrometer:
             server: ${spring.application.name}
         metrics:
             default:
-                step: 30s
+                step: 5m
+monitor:
+    system:
+        collector:
+            interval: 5m
 system:
     config:
         scopes:

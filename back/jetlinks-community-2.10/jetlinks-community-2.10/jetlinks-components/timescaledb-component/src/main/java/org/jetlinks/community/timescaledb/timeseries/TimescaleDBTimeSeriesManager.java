@@ -15,7 +15,6 @@
  */
 package org.jetlinks.community.timescaledb.timeseries;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hswebframework.ezorm.rdb.codec.DateTimeCodec;
 import org.hswebframework.ezorm.rdb.metadata.RDBIndexMetadata;
@@ -27,7 +26,6 @@ import org.jetlinks.community.things.utils.ThingsDatabaseUtils;
 import org.jetlinks.community.timescaledb.TimescaleDBOperations;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
 import org.jetlinks.community.timescaledb.metadata.CreateHypertable;
-import org.jetlinks.community.timescaledb.metadata.CreateRetentionPolicy;
 import org.jetlinks.community.timeseries.TimeSeriesManager;
 import org.jetlinks.community.timeseries.TimeSeriesMetadata;
 import org.jetlinks.community.timeseries.TimeSeriesMetric;
@@ -41,12 +39,23 @@ import java.util.Date;
 import static org.jetlinks.community.ConfigMetadataConstants.indexEnabled;
 
 @Slf4j
-@AllArgsConstructor
 public class TimescaleDBTimeSeriesManager implements TimeSeriesManager {
 
     private final TimescaleDBTimeSeriesProperties properties;
 
     private final TimescaleDBOperations operations;
+
+    private final TimescaleDBRetentionPolicyManager retentionPolicyManager;
+
+    public TimescaleDBTimeSeriesManager(TimescaleDBTimeSeriesProperties properties,
+                                        TimescaleDBOperations operations) {
+        this.properties = properties;
+        this.operations = operations;
+        this.retentionPolicyManager = new TimescaleDBRetentionPolicyManager(
+            operations.database().getMetadata().getCurrentSchema().getName(),
+            operations.database().sql().reactive()
+        );
+    }
 
     @Override
     public TimeSeriesService getService(TimeSeriesMetric metric) {
@@ -77,17 +86,14 @@ public class TimescaleDBTimeSeriesManager implements TimeSeriesManager {
     @Override
     public Mono<Void> registerMetadata(TimeSeriesMetadata metadata) {
         String tableName = TimescaleDBUtils.getTableName(metadata.getMetric().getId());
+        Interval retention = properties.getRetentionPolicy(tableName);
         TableBuilder builder = operations
             .database()
             .ddl()
             .createOrAlter(tableName)
-            .custom(table -> {
-                table.addFeature(new CreateHypertable(ThingsDataConstants.COLUMN_TIMESTAMP, properties.getChunkTimeInterval()));
-                Interval interval = properties.getRetentionPolicy(tableName);
-                if (interval != null && interval.getNumber().longValue() > 0) {
-                    table.addFeature(new CreateRetentionPolicy(interval));
-                }
-            });
+            .custom(table -> table.addFeature(
+                new CreateHypertable(ThingsDataConstants.COLUMN_TIMESTAMP, properties.getChunkTimeInterval())
+            ));
         for (PropertyMetadata property : metadata.getProperties()) {
             builder
                 .addColumn(property.getId())
@@ -135,6 +141,7 @@ public class TimescaleDBTimeSeriesManager implements TimeSeriesManager {
             .commit()
             .reactive()
             .then()
+            .then(retentionPolicyManager.ensure(tableName, retention))
             .contextWrite(ctx -> ctx.put(Logger.class, log));
     }
 
