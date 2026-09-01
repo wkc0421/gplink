@@ -6,6 +6,7 @@ import org.hswebframework.reactor.excel.ReactorExcel;
 import org.hswebframework.web.api.crud.entity.PagerResult;
 import org.hswebframework.web.api.crud.entity.QueryParamEntity;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.Resource;
 import org.hswebframework.web.exception.ValidationException;
 import org.jetlinks.community.io.excel.ImportExportService;
 import org.jetlinks.community.io.utils.FileUtils;
@@ -50,6 +51,7 @@ import static org.hswebframework.reactor.excel.ReactorExcel.read;
     "/api/v1/change-property/config"
 })
 @Authorize
+@Resource(id = "device-opt-api", name = "Change property")
 @Tag(name = "Change Property Config API")
 public class ChangePropertyConfigController {
 

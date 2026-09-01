@@ -6,6 +6,8 @@ import gp.saas.legacy.dto.TimerReadPropertyRuleEntity;
 import gp.saas.legacy.util.RuleSceneUtil;
 import org.hswebframework.ezorm.core.param.Term;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.Resource;
+import org.hswebframework.web.authorization.annotation.SaveAction;
 import org.hswebframework.web.bean.FastBeanCopier;
 import org.hswebframework.web.exception.BusinessException;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
@@ -38,6 +40,7 @@ import java.util.List;
     "/api/v1/rule/scene"
 })
 @Authorize
+@Resource(id = "rule-scene", name = "Rule scene")
 public class LegacyRuleSceneController {
 
     private final LocalDeviceInstanceService deviceService;
@@ -85,11 +88,13 @@ public class LegacyRuleSceneController {
     }
 
     @GetMapping("/{id}/_enable")
+    @SaveAction
     public Mono<Void> enableScene(@PathVariable String id) {
         return findNumericRule(id).then(sceneService.enable(id));
     }
 
     @GetMapping("/{id}/_disable")
+    @SaveAction
     public Mono<Void> disableScene(@PathVariable String id) {
         return findNumericRule(id).then(sceneService.disabled(id));
     }

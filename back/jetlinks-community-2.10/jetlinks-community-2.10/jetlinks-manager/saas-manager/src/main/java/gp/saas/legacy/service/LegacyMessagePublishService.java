@@ -22,7 +22,7 @@ public class LegacyMessagePublishService {
     @Value("${gplink.legacy.default-qos:0}")
     private int defaultQos;
 
-    @Value("${gplink.legacy.device-state-topic-prefix:GPLink}")
+    @Value("${gplink.legacy.device-state-topic-prefix:IOT/Business}")
     private String deviceStateTopicPrefix;
 
     public LegacyMessagePublishService(ChangePropertyMqttPublisher mqttPublisher) {
@@ -58,18 +58,13 @@ public class LegacyMessagePublishService {
         }
 
         String normalizedState = state.trim();
-        Map<String, Object> item = new LinkedHashMap<>();
-        item.put("Key", "Status");
-        item.put("Value", normalizedState);
-
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("MsgType", normalizedState);
+        payload.put("MsgType", "MQData");
         payload.put("Style", normalizedState);
         payload.put("Sender", "GPLink");
         payload.put("Time", timestamp == null ? System.currentTimeMillis() : timestamp);
-        payload.put("ProductId", productId);
-        payload.put("DeviceId", deviceId);
-        payload.put("DataObject", List.of(item));
+        payload.put("Channel", "");
+        payload.put("DataObject", List.of());
 
         return publishConfigured(payload, buildDeviceStateTopic(productId, deviceId, normalizedState));
     }
@@ -90,10 +85,10 @@ public class LegacyMessagePublishService {
     private String buildDeviceStateTopic(String productId, String deviceId, String state) {
         String prefix = StringUtils.hasText(deviceStateTopicPrefix)
             ? deviceStateTopicPrefix.trim()
-            : "GPLink";
+            : "IOT/Business";
         while (prefix.endsWith("/")) {
             prefix = prefix.substring(0, prefix.length() - 1);
         }
-        return prefix + "/" + productId + "/" + deviceId + "/" + state;
+        return prefix + "/" + productId + "/" + deviceId + "/Data/" + state;
     }
 }

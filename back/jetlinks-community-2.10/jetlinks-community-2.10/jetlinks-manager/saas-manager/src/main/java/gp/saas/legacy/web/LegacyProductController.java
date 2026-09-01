@@ -28,6 +28,7 @@ import org.hswebframework.reactor.excel.ReactorExcel;
 import org.hswebframework.web.api.crud.entity.PagerResult;
 import org.hswebframework.web.api.crud.entity.QueryParamEntity;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.Resource;
 import org.hswebframework.web.exception.ValidationException;
 import org.jetlinks.core.device.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceRegistry;
@@ -62,6 +63,7 @@ import static org.hswebframework.reactor.excel.ReactorExcel.read;
     "/api/v1/product"
 })
 @Authorize
+@Resource(id = "device-product", name = "Device product")
 @Tag(name = "Legacy Product API")
 public class LegacyProductController {
 

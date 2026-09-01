@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.Resource;
 import org.jetlinks.community.network.DefaultNetworkType;
 import org.jetlinks.community.network.NetworkConfigManager;
 import org.jetlinks.community.network.NetworkProperties;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 })
 @RequiredArgsConstructor
 @Authorize
+@Resource(id = "device-opt-api", name = "Device MQTT subscriber")
 @Validated
 @Tag(name = "Legacy gpLink MQTT subscriber API")
 public class LegacyDeviceMqttSubscriberController {

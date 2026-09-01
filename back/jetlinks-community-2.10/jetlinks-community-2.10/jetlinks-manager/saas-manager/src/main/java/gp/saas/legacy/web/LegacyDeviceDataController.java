@@ -14,6 +14,8 @@ import org.hswebframework.ezorm.core.param.TermType;
 import org.hswebframework.web.api.crud.entity.PagerResult;
 import org.hswebframework.web.api.crud.entity.QueryParamEntity;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.QueryAction;
+import org.hswebframework.web.authorization.annotation.Resource;
 import org.jetlinks.community.Interval;
 import org.jetlinks.community.device.entity.DeviceEvent;
 import org.jetlinks.community.device.entity.DeviceProperty;
@@ -58,6 +60,7 @@ import java.util.function.Supplier;
     "/api/v1/device-data"
 })
 @Authorize
+@Resource(id = "device-opt-api", name = "Device data")
 public class LegacyDeviceDataController {
 
     private static final long THREE_DAYS_MS = 3L * 24 * 60 * 60 * 1000;
@@ -131,6 +134,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping({"/devices/properties/es", "/devices/properties/pg"})
+    @QueryAction
     public Flux<DeviceDataEntity> getLatestPropertiesFromPg(@RequestBody DeiceDataRequestEntity request) {
         return Flux
             .fromIterable(nullToEmpty(request.getDevices()))
@@ -141,6 +145,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping("/devices/properties/redis")
+    @QueryAction
     public Flux<DeviceDataEntity> getLatestPropertiesFromRedis(@RequestBody DeiceDataRequestEntity request) {
         return Flux
             .fromIterable(nullToEmpty(request.getDevices()))
@@ -165,6 +170,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping({"/{deviceId}/{property}/history/test", "/{deviceId}/{property}/history/pg/test"})
+    @QueryAction
     public Mono<PagerResult<DeviceProperty>> queryPropertyPageTest(@PathVariable String deviceId,
                                                                    @PathVariable String property,
                                                                    @RequestBody QueryParamEntity query) {
@@ -172,6 +178,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping({"/{deviceId}/{property}/history/no-paging/raw", "/{deviceId}/{property}/history/no-paging/pg/raw"})
+    @QueryAction
     public Flux<DeviceProperty> queryPropertyNoPagingTest(@PathVariable String deviceId,
                                                           @PathVariable String property,
                                                           @RequestBody QueryParamEntity query) {
@@ -181,6 +188,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping({"/{deviceId}/{property}/history", "/{deviceId}/{property}/history/pg"})
+    @QueryAction
     public Mono<PagerResult<DeviceProperty>> queryPropertyPage(@PathVariable String deviceId,
                                                                @PathVariable String property,
                                                                @RequestBody QueryParamEntity query) {
@@ -195,6 +203,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping({"/{deviceId}/{property}/history/no-paging", "/{deviceId}/{property}/history/no-paging/pg"})
+    @QueryAction
     public Flux<DeviceProperty> queryPropertyNoPaging(@PathVariable String deviceId,
                                                       @PathVariable String property,
                                                       @RequestBody Map<String, Object> body) {
@@ -206,6 +215,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping({"/{deviceId}/event/{event}/history", "/{deviceId}/event/{event}/history/pg"})
+    @QueryAction
     public Flux<DeviceEvent> queryEventHistory(@PathVariable String deviceId,
                                                @PathVariable String event,
                                                @RequestBody QueryParamEntity query) {
@@ -215,6 +225,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping("/devices/agg/_query")
+    @QueryAction
     public Flux<Map<String, List<DeviceAggregationDataEntity>>> queryAggregation(@RequestBody DeiceDataRequestEntity request) {
         validateAggregationRequest(request);
         validateDeviceQuerySize(request);
@@ -245,6 +256,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping("/devices/interval")
+    @QueryAction
     public Flux<DeviceIntervalDataEntity> queryDeviceInterval(@RequestParam Long startTime,
                                                               @RequestParam Long endTime,
                                                               @RequestBody DeiceDataRequestEntity request) {
@@ -257,6 +269,7 @@ public class LegacyDeviceDataController {
     }
 
     @PostMapping("/devices/interval/{type}/history")
+    @QueryAction
     public Flux<List<DeviceIntervalDataEntity>> queryDeviceIntervalHistory(@PathVariable String type,
                                                                           @RequestParam Long startTime,
                                                                           @RequestParam Long endTime,
@@ -517,11 +530,36 @@ public class LegacyDeviceDataController {
                                                                               long startTime,
                                                                               long endTime,
                                                                               List<Long> boundaries) {
-        return queryLastValueBefore(deviceId, property, startTime)
+        return queryIntervalStartValue(deviceId, property, startTime, endTime)
             .map(Optional::of)
             .defaultIfEmpty(Optional.empty())
             .flatMap(startValue -> queryLastValuesByBucket(deviceId, property, type, startTime, endTime, boundaries)
                 .map(bucketValues -> toIntervalHistory(deviceId, property, boundaries, startValue.orElse(null), bucketValues)));
+    }
+
+    private Mono<Object> queryIntervalStartValue(String deviceId,
+                                                 String property,
+                                                 long startTime,
+                                                 long endTime) {
+        return queryLastValueBefore(deviceId, property, startTime)
+            // If there is no baseline before the interval, use the first value
+            // reported inside the requested interval as the starting value.
+            .switchIfEmpty(queryFirstValueInRange(deviceId, property, startTime, endTime));
+    }
+
+    private Mono<Object> queryFirstValueInRange(String deviceId,
+                                                String property,
+                                                long startTime,
+                                                long endTime) {
+        QueryParamEntity query = QueryParamEntity.of();
+        query.and("timestamp", TermType.gte, startTime);
+        query.and("timestamp", TermType.lte, endTime);
+        query.setOrderBy("timestamp asc");
+        query.doPaging(0, 1);
+        return deviceDataService
+            .queryProperty(deviceId, query, property)
+            .next()
+            .map(DeviceProperty::getValue);
     }
 
     private Mono<List<DeviceIntervalDataEntity>> queryIntervalHistoryForDeviceCached(String deviceId,
@@ -629,7 +667,10 @@ public class LegacyDeviceDataController {
             Long bucketEnd = boundaries.get(i + 1);
             Object intervalStartValue = currentValue;
             if (bucketValues.containsKey(bucketEnd)) {
-                currentValue = bucketValues.get(bucketEnd);
+                Object bucketValue = bucketValues.get(bucketEnd);
+                if (bucketValue != null) {
+                    currentValue = bucketValue;
+                }
             }
             data.add(new DeviceIntervalDataEntity(
                 deviceId,

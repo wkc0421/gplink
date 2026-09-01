@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -28,7 +29,6 @@ class LegacyMessagePublishServiceTest {
         LegacyMessagePublishService service = new LegacyMessagePublishService(publisher);
         ReflectionTestUtils.setField(service, "mqttNetworkId", "GP_MQTT");
         ReflectionTestUtils.setField(service, "defaultQos", 1);
-        ReflectionTestUtils.setField(service, "deviceStateTopicPrefix", "GPLink/");
 
         StepVerifier
             .create(service.standardMqttDeviceStatePublisher("product-1", "device-1", "Online", 100L))
@@ -41,22 +41,20 @@ class LegacyMessagePublishServiceTest {
 
         ChangePropertyMqttPayload message = captor.getValue();
         assertEquals("GP_MQTT", message.getMqttNetworkId());
-        assertEquals("GPLink/product-1/device-1/Online", message.getTopic());
+        assertEquals("IOT/Business/product-1/device-1/Data/Online", message.getTopic());
         assertEquals(1, message.getQos());
 
         Map<String, Object> payload = message.getPayload();
-        assertEquals("Online", payload.get("MsgType"));
+        assertEquals("MQData", payload.get("MsgType"));
         assertEquals("Online", payload.get("Style"));
         assertEquals("GPLink", payload.get("Sender"));
         assertEquals(100L, payload.get("Time"));
-        assertEquals("product-1", payload.get("ProductId"));
-        assertEquals("device-1", payload.get("DeviceId"));
+        assertEquals("", payload.get("Channel"));
+        assertFalse(payload.containsKey("ProductId"));
+        assertFalse(payload.containsKey("DeviceId"));
 
         Object dataObject = payload.get("DataObject");
         assertTrue(dataObject instanceof List);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> item = (Map<String, Object>) ((List<?>) dataObject).get(0);
-        assertEquals("Status", item.get("Key"));
-        assertEquals("Online", item.get("Value"));
+        assertTrue(((List<?>) dataObject).isEmpty());
     }
 }

@@ -6,6 +6,9 @@ import gp.saas.legacy.dto.SynchronizationAlarmRecordEntity;
 import gp.saas.legacy.service.LegacyMessagePublishService;
 import gp.saas.legacy.util.RuleSceneUtil;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.DeleteAction;
+import org.hswebframework.web.authorization.annotation.Resource;
+import org.hswebframework.web.authorization.annotation.SaveAction;
 import org.hswebframework.web.bean.FastBeanCopier;
 import org.hswebframework.web.exception.BusinessException;
 import org.hswebframework.web.id.IDGenerator;
@@ -39,6 +42,7 @@ import java.util.Map;
     "/api/v1/alarm"
 })
 @Authorize
+@Resource(id = "alarm-config", name = "Alarm")
 public class LegacyAlarmController {
 
     private final AlarmRecordService alarmRecordService;
@@ -118,16 +122,19 @@ public class LegacyAlarmController {
     }
 
     @GetMapping("/config/{id}/_enable")
+    @SaveAction
     public Mono<Void> enableAlarmConfig(@PathVariable String id) {
         return alarmConfigService.enable(id);
     }
 
     @GetMapping("/config/{id}/_disable")
+    @SaveAction
     public Mono<Void> disableAlarmConfig(@PathVariable String id) {
         return alarmConfigService.disable(id);
     }
 
     @GetMapping("/config/{id}/_bind")
+    @SaveAction
     public Mono<Integer> bindScene(@PathVariable String id, @RequestParam String ruleId) {
         return findConfig(id)
             .then(findNumericRule(ruleId))
@@ -144,6 +151,7 @@ public class LegacyAlarmController {
     }
 
     @GetMapping("/config/{id}/_unbind")
+    @DeleteAction
     public Mono<Integer> unbindScene(@PathVariable String id, @RequestParam String ruleId) {
         return findConfig(id)
             .then(findNumericRule(ruleId))

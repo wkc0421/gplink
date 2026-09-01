@@ -57,12 +57,56 @@ public class AuthorizationPermissionInitializeService {
             .flatMap(this::getPermission)
             .collect(Collectors.toList());
 
+        // The admin user is the compatibility administrator for the legacy API.
+        // Keep the wildcard permission, but also materialize the legacy resources
+        // and actions. Some legacy authorization definitions are assembled from
+        // method annotations and require an explicit resource/action pair.
+        if (isAdmin(before)) {
+            defaultPermission = Stream
+                .concat(defaultPermission.stream(), adminLegacyPermissions().stream())
+                .collect(Collectors.toList());
+        }
+
         if (CollectionUtils.isNotEmpty(defaultPermission)) {
             SimpleAuthentication defaultAuth = new SimpleAuthentication();
             defaultAuth.setPermissions(defaultPermission);
             defaultAuth.merge(before);
             event.setAuthentication(defaultAuth);
         }
+    }
+
+    private static List<Permission> adminLegacyPermissions() {
+        return List.of(
+            permission("device-product", "query", "save"),
+            permission("device-instance", "query", "save", "delete"),
+            permission("device-opt-api", "query", "save", "delete"),
+            permission("alarm-config", "query", "save", "delete"),
+            permission("rule-scene", "query", "save", "delete"),
+            permission("mqtt-forward-subscription", "query", "save", "delete"),
+            permission("system-operation", "gc", "soft-restart", "memory-analysis")
+        );
+    }
+
+    private static Permission permission(String id, String... actions) {
+        return SimplePermission
+            .builder()
+            .id(id)
+            .name(id)
+            .actions(Set.of(actions))
+            .build();
+    }
+
+    private static boolean isAdmin(Authentication authentication) {
+        if (authentication.getUser() != null
+            && "admin".equals(authentication.getUser().getUsername())) {
+            return true;
+        }
+        return authentication
+            .getDimensions()
+            .stream()
+            .filter(User.class::isInstance)
+            .map(User.class::cast)
+            .anyMatch(user -> "admin".equals(user.getUsername()));
     }
 
 

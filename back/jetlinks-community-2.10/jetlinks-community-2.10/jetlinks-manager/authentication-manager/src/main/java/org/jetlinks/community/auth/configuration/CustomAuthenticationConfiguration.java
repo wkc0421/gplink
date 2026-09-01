@@ -53,7 +53,7 @@ public class CustomAuthenticationConfiguration {
     @ConfigurationProperties(prefix = "hsweb.user-token")
     public UserTokenManager userTokenManager(ReactiveRedisOperations<Object, Object> template,
                                              ApplicationEventPublisher eventPublisher) {
-        RedisUserTokenManager userTokenManager = new RedisUserTokenManager(template);
+        RedisUserTokenManager userTokenManager = new AbsoluteExpiryRedisUserTokenManager(template);
         userTokenManager.setLocalCache(Caffeine
                                            .newBuilder()
                                            .expireAfterAccess(Duration.ofMinutes(10))

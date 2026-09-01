@@ -21,6 +21,8 @@ import gp.saas.legacy.service.LegacySystemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.Resource;
+import org.hswebframework.web.authorization.annotation.ResourceAction;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +35,7 @@ import reactor.core.publisher.Mono;
     "/api/v1/system"
 })
 @Authorize
+@Resource(id = "system-operation", name = "System operation")
 @Tag(name = "Legacy System API")
 public class LegacySystemController {
 
@@ -46,6 +49,7 @@ public class LegacySystemController {
     }
 
     @GetMapping("/gc")
+    @ResourceAction(id = "gc", name = "GC")
     @Operation(summary = "Legacy GC endpoint")
     public Mono<JSONObject> gc(@RequestParam String password) {
         if (!isValidPassword(password)) {
@@ -55,6 +59,7 @@ public class LegacySystemController {
     }
 
     @GetMapping("/soft-restart")
+    @ResourceAction(id = "soft-restart", name = "Soft restart")
     @Operation(summary = "Legacy soft restart endpoint")
     public Mono<JSONObject> softRestart(@RequestParam String password) {
         if (!isValidPassword(password)) {
@@ -64,6 +69,7 @@ public class LegacySystemController {
     }
 
     @GetMapping("/memory-analysis")
+    @ResourceAction(id = "memory-analysis", name = "Memory analysis")
     @Operation(summary = "Legacy memory analysis endpoint")
     public Mono<JSONObject> memoryAnalysis(@RequestParam String password) {
         if (!isValidPassword(password)) {

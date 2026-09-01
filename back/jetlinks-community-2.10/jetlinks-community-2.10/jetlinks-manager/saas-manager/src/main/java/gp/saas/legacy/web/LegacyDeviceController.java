@@ -15,6 +15,10 @@ import org.hswebframework.reactor.excel.ReactorExcel;
 import org.hswebframework.web.api.crud.entity.PagerResult;
 import org.hswebframework.web.api.crud.entity.QueryParamEntity;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.authorization.annotation.DeleteAction;
+import org.hswebframework.web.authorization.annotation.QueryAction;
+import org.hswebframework.web.authorization.annotation.Resource;
+import org.hswebframework.web.authorization.annotation.SaveAction;
 import org.hswebframework.web.exception.BusinessException;
 import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
@@ -57,6 +61,7 @@ import java.util.stream.Collectors;
     "/api/v1/device"
 })
 @Authorize
+@Resource(id = "device-instance", name = "Device instance")
 public class LegacyDeviceController {
 
     private static final String LEGACY_PASSWORD = "yada8888";
@@ -154,6 +159,7 @@ public class LegacyDeviceController {
     }
 
     @PostMapping("/product/{productId:.+}")
+    @DeleteAction
     public Mono<Integer> deleteByProduct(@PathVariable String productId, @RequestParam String password) {
         if (!LEGACY_PASSWORD.equals(password)) {
             return Mono.just(0);
@@ -269,6 +275,7 @@ public class LegacyDeviceController {
     }
 
     @GetMapping("/bind")
+    @SaveAction
     public Mono<Boolean> bind(@RequestParam String gatewayId, @RequestParam String deviceId) {
         if (gatewayId == null || deviceId == null) {
             return Mono.just(false);
@@ -347,6 +354,7 @@ public class LegacyDeviceController {
     }
 
     @PostMapping("/test")
+    @QueryAction
     public Flux<DeviceInstanceEntity> test() {
         return deviceService.createQuery().fetch();
     }

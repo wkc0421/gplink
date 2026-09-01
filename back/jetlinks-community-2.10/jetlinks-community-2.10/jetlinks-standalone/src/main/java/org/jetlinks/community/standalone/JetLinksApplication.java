@@ -29,7 +29,7 @@ import org.springframework.cache.annotation.EnableCaching;
     DataSourceAutoConfiguration.class
 })
 @EnableCaching
-@EnableEasyormRepository({"org.jetlinks.community.**.entity"})
+@EnableEasyormRepository({"org.jetlinks.community.**.entity", "gp.saas.**.entity"})
 @EnableAopAuthorize
 @EnableAccessLogger
 @Slf4j
