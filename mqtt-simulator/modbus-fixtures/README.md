@@ -1,10 +1,41 @@
-# Modbus 5从机模拟器 — 平台配置指南
+# Modbus 模拟器 — 平台配置指南
 
-配套脚本：`../modbus_5slave_sim.py`
+配套脚本：
+- `../modbus_tcp_client_sim.js`：TCP Client 模式，模拟网关主动连入平台，默认 5 台网关、每台 20 个从机。
+- `../modbus_5slave_sim.py`：TCP Server 模式，模拟器监听端口，平台主动拨号连接，默认 1 台网关、5 个从机。
+
+配套导入文件：
+- `modbus_device_import_5gw_100slaves.xlsx`：5 台网关、100 台子设备，第一张工作表可直接用于设备导入。
+- 如需重新生成：`powershell -NoProfile -ExecutionPolicy Bypass -File generate_modbus_device_import_xlsx.ps1`
 
 ---
 
 ## 快速开始
+
+### 模式A：网关主动连入平台（TCP Client 模拟器）
+
+平台侧先创建 **TCP 服务** 网络组件，例如监听 `0.0.0.0:4000`，再创建 **TCP 服务设备网关**，协议选择 `Modbus RTU (TCP 透传)`。
+
+```bash
+cd mqtt-simulator
+node modbus_tcp_client_sim.js --host 127.0.0.1 --port 4000
+```
+
+默认行为：
+- 启动 5 条 TCP client 连接：`mb_4000` 到 `mb_4004`
+- 每条连接模拟 20 个 Modbus 从机：`slaveId=1..20`
+- 从机类型每 5 个循环一次：温湿度、压力流量、电能表、继电器、变频器
+- 设备 ID 与导入表一致：`{网关ID}_{slaveId}`，例如 `mb_4000_1`
+
+可按需调整：
+
+```bash
+node modbus_tcp_client_sim.js --host 192.168.1.10 --port 4000 --gateways 5 --slaves-per-gateway 20 --verbose
+```
+
+> 注意：Modbus RTU 帧本身不携带网关设备 ID。TCP Server 模式下，平台侧仍需要能把一条 TCP 连接归属到对应网关设备；否则只能看到 socket 连接，无法把后续读写请求路由到正确网关会话。若连接 10 秒左右被断开，可临时增大 `-Dgateway.tcp.network.connect-check-timeout=300s` 便于排查。
+
+### 模式B：平台主动拨号模拟器（TCP Server 模拟器）
 
 ```bash
 # 启动模拟器（监听 0.0.0.0:4000）
