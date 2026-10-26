@@ -1,4 +1,5 @@
 import i18n from "@/locales";
+import { normalizeTcpClientConfiguration } from './utils';
 export const ParserConfiguration = {
     delimited: '',
     lang: '',
@@ -18,6 +19,7 @@ export const Configuration = {
     remoteHost: '',
     remotePort: '',
     secure: false,
+    ssl: false,
     username: '',
     password: '',
     topicPrefix: '',
@@ -40,6 +42,12 @@ export const FormStates2 = {
     configuration: Configuration,
 };
 
+export const createConfiguration = (type: string, configuration: Record<string, any> = {}) => ({
+    ...Configuration,
+    ...(type === 'TCP_CLIENT' ? normalizeTcpClientConfiguration(configuration) : configuration),
+    parserConfiguration: { ...ParserConfiguration, ...configuration.parserConfiguration },
+});
+
 export const TCPList = [
     'TCP_SERVER',
     'WEB_SOCKET_SERVER',
@@ -58,7 +66,7 @@ const VisibleMost = [
 ];
 
 export const VisibleData = {
-    parserType: ['TCP_SERVER'],
+    parserType: ['TCP_SERVER', 'TCP_CLIENT'],
     port: VisibleMost,
     host: VisibleMost,
     publicPort: VisibleMost,
@@ -119,7 +127,7 @@ export const Validator = {
 
 const validateAddress = (_rule: any, value: string): Promise<any> => {
     return new Promise(async (resolve, reject) => {
-        const _domainStr = value
+        const _domainStr = value || ''
         const _domain = _domainStr.replace(/^(https?|ftp):\/\/(www\.)?/i, '')
         if (
             Validator.regIpv4.test(value) ||

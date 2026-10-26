@@ -225,6 +225,10 @@ import Save from './Save.vue';
 import { onlyMessage } from '@jetlinks-web/utils';
 import { useI18n } from 'vue-i18n';
 import { useRequest } from '@jetlinks-web/hooks';
+import {
+    getDeviceActionErrorMessage,
+    isDeviceActionSuccess,
+} from '../../../../utils';
 
 const { t: $t } = useI18n();
 const instanceStore = useInstanceStore();
@@ -267,9 +271,17 @@ const deployBtn = () => {
     if (instanceStore.current.id) {
         const response = _deploy(instanceStore.current.id);
         response.then((resp) => {
-            if (resp.status === 200) {
+            if (isDeviceActionSuccess(resp)) {
                 onlyMessage($t('Config.index.926765-9'));
                 instanceStore.refresh(instanceStore.current.id);
+            } else {
+                onlyMessage(
+                    getDeviceActionErrorMessage(
+                        resp,
+                        $t('Instance.index.133466-25'),
+                    ),
+                    'error',
+                );
             }
         });
         return response;

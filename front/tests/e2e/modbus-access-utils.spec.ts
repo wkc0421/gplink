@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test'
 import {
     buildTcpAccessPayload,
     buildTcpNetworkPayload,
+    buildTcpNetworkConfigurationUpdate,
+    normalizeTcpConnectionConfiguration,
+    assertQuickTcpResourceOwnership,
     buildMetadataFromRegisterMap,
     ensureQuickResourceId,
     parseRegisterMapText,
@@ -9,6 +12,7 @@ import {
     validateTcpQuickConfig,
     validateSlaveRows,
     validateRegisterRows,
+    waitForDeviceState,
 } from '../../src/modules/device-manager-ui/views/device/ModbusAccess/utils'
 import type { TcpQuickConfigForm } from '../../src/modules/device-manager-ui/views/device/ModbusAccess/types'
 
@@ -126,6 +130,80 @@ test.describe('Modbus 接入向导工具函数', () => {
         expect(createCount).toBe(1)
     })
 
+    test('连接配置比较规范化端口和 TLS，不因无关配置重复停用网络', () => {
+        expect(normalizeTcpConnectionConfiguration('tcp-client', {
+            host: ' host.local ', port: '502', ssl: 'false', certId: 'unused', parserType: 'DIRECT',
+        })).toEqual(normalizeTcpConnectionConfiguration('tcp-client', {
+            host: 'host.local', port: 502, ssl: false,
+        }))
+        expect(normalizeTcpConnectionConfiguration('tcp-server', {
+            host: '0.0.0.0', port: '502', publicHost: ' public.local ', publicPort: '1502', secure: 'true', certId: 'cert',
+        })).toEqual({ host: '0.0.0.0', port: 502, publicHost: 'public.local', publicPort: 1502, secure: true, certId: 'cert' })
+    })
+
+    test('修正客户端连接时保留其他配置，关闭 TLS 删除旧证书', () => {
+        const previous = { host: 'old', port: 4000, ssl: true, certId: 'old-cert', parserType: 'DIRECT', custom: { keep: true } }
+        const updated = buildTcpNetworkConfigurationUpdate('tcp-client', {
+            ...tcpForm, host: ' new.local ', port: 502, tlsEnabled: false,
+        }, previous)
+        expect(updated).toEqual({ host: 'new.local', port: 502, ssl: false, parserType: 'DIRECT', custom: { keep: true } })
+        expect(previous.certId).toBe('old-cert')
+        expect(updated).not.toHaveProperty('secure')
+    })
+
+    test('修正服务端连接使用 secure 并同步公网端点', () => {
+        expect(buildTcpNetworkConfigurationUpdate('tcp-server', {
+            ...tcpForm, publicPort: 2502, tlsEnabled: true, certId: 'new-cert',
+        }, { parserType: 'DIRECT', tcpKeepAlive: true })).toEqual({
+            host: '0.0.0.0', port: 502, publicHost: '192.168.1.10', publicPort: 2502,
+            secure: true, certId: 'new-cert', parserType: 'DIRECT', tcpKeepAlive: true,
+        })
+    })
+
+    test('只允许修正本次创建且归属未变的 TCP 网络和接入', () => {
+        const created = { networkId: 'network', accessId: 'access' }
+        const network = { id: 'network', type: 'TCP_CLIENT', shareCluster: true, configuration: {} }
+        const access = { id: 'access', channel: 'network', channelId: 'network', provider: 'tcp-client-gateway', configuration: { deviceId: 'collector' } }
+        expect(() => assertQuickTcpResourceOwnership('tcp-client', created, 'collector', network, access)).not.toThrow()
+        expect(() => assertQuickTcpResourceOwnership('tcp-client', { networkId: 'network' }, 'collector', network)).not.toThrow()
+        for (const changed of [{ ...network, id: 'other' }, { ...network, type: 'TCP_SERVER' }, { ...network, shareCluster: false }]) {
+            expect(() => assertQuickTcpResourceOwnership('tcp-client', created, 'collector', changed, access)).toThrow('网络组件')
+        }
+        for (const changed of [undefined, { ...access, channelId: 'other' }, { ...access, provider: 'tcp-server-gateway' },
+            { ...access, configuration: { deviceId: 'other' } }]) {
+            expect(() => assertQuickTcpResourceOwnership('tcp-client', created, 'collector', network, changed)).toThrow('归属已变化')
+        }
+    })
+
+    test('waits until the gateway device is online', async () => {
+        const states = ['offline', 'offline', 'online']
+        const result = await waitForDeviceState(
+            async () => states.shift() || 'offline',
+            'online',
+            3,
+            0,
+        )
+
+        expect(result).toEqual({ matched: true, state: 'online' })
+        expect(states).toEqual([])
+    })
+
+    test('returns the last gateway state when the wait expires', async () => {
+        let calls = 0
+        const result = await waitForDeviceState(
+            async () => {
+                calls += 1
+                return 'offline'
+            },
+            'online',
+            3,
+            0,
+        )
+
+        expect(result).toEqual({ matched: false, state: 'offline' })
+        expect(calls).toBe(3)
+    })
+
     test('解析 registerMap CSV 并兼容字段别名', () => {
         const text = [
             'propertyId,propertyName,fc,addr,qty,dataType,order,scale,offset,writable,unit',
@@ -186,6 +264,51 @@ test.describe('Modbus 接入向导工具函数', () => {
     test('空点位和空从机列表不能通过校验', () => {
         expect(validateRegisterRows([])).toContain('registerMap 至少需要配置一行点位')
         expect(validateSlaveRows([])).toContain('从机列表至少需要配置一行从机')
+    })
+
+    test('34个点位未提供排序时自动补齐，按物模型降序显示保持导入顺序', () => {
+        const rows = parseRegisterMapText([
+            'propertyId,address,quantity,dataType',
+            ...Array.from({ length: 34 }, (_, index) => `p${index},${index * 2},2,FLOAT32`),
+        ].join('\n')).rows
+        const metadata = buildMetadataFromRegisterMap(rows)
+        expect(metadata.properties.map(item => item.sortsIndex)).toEqual(
+            Array.from({ length: 34 }, (_, index) => 34 - index),
+        )
+        expect([...metadata.properties].sort((a, b) => b.sortsIndex - a.sortsIndex).map(item => item.id))
+            .toEqual(rows.map(row => row.propertyId))
+    })
+
+    test('补排序保留0及数字字符串，避开已有编号且不修改原物模型', () => {
+        const existing = {
+            properties: [
+                { id: 'a', sortsIndex: null },
+                { id: 'b', sortsIndex: '3' },
+                { id: 'c', sortsIndex: 0 },
+                { id: 'd', sortsIndex: '  ' },
+            ],
+            functions: [{ id: 'f' }], events: [{ id: 'e' }], tags: [],
+        }
+        const snapshot = JSON.stringify(existing)
+        const metadata = buildMetadataFromRegisterMap([], existing)
+        expect(metadata.properties.map(item => item.sortsIndex)).toEqual([4, '3', 0, 2])
+        expect(JSON.stringify(existing)).toBe(snapshot)
+        expect(metadata.functions).toEqual(existing.functions)
+        expect(metadata.events).toEqual(existing.events)
+        expect(buildMetadataFromRegisterMap([], metadata)).toEqual(metadata)
+    })
+
+    test('更新已有点位并追加新点位时保留原排序，空值和非法值均补齐', () => {
+        const rows = parseRegisterMapText('propertyId,address\na,0\nd,3').rows
+        const metadata = buildMetadataFromRegisterMap(rows, {
+            properties: [
+                { id: 'a', sortsIndex: 9 },
+                { id: 'b', sortsIndex: '' },
+                { id: 'c', sortsIndex: 'not-a-number' },
+            ], functions: [], events: [], tags: [],
+        })
+        expect(metadata.properties.map(item => [item.id, item.sortsIndex]))
+            .toEqual([['a', 9], ['b', 4], ['c', 3], ['d', 2]])
     })
 
     test('registerMap 同步物模型时保留无关属性并按 propertyId upsert', () => {

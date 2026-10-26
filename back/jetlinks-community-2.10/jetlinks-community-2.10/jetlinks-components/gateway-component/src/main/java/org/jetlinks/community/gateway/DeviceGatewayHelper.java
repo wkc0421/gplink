@@ -38,6 +38,7 @@ import reactor.util.context.Context;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -55,6 +56,22 @@ import static org.jetlinks.core.message.Headers.ignoreIfOffline;
 @AllArgsConstructor
 @Getter
 public class DeviceGatewayHelper {
+
+    /** Optional connection ownership policy. Legacy transports retain their existing behavior. */
+    public interface SessionPolicy {
+        Mono<DeviceSession> update(DeviceSession existing,
+                                   Supplier<Mono<DeviceSession>> create,
+                                   Supplier<Mono<DeviceSession>> keep);
+
+        Mono<Long> remove(String deviceId);
+
+        default Mono<Void> validateChild(String parentId, DeviceOperator child) {
+            return Mono.empty();
+        }
+
+        default void accepted(DeviceSession session) {
+        }
+    }
 
     private final DeviceRegistry registry;
     private final DeviceSessionManager sessionManager;
@@ -102,7 +119,7 @@ public class DeviceGatewayHelper {
         return handleDeviceMessage(message, sessionBuilder, sessionConsumer, () -> Mono.fromRunnable(deviceNotFoundCallback));
     }
 
-    private void handleChildrenDeviceMessage(String deviceId, DeviceMessage children, HandlerContext ctx) {
+    private void handleChildrenDeviceMessage(String deviceId, DeviceMessage children, HandlerContext ctx, SessionPolicy policy) {
         //设备状态检查,断开设备连接的消息都忽略
         //这些消息属于状态管理,通常是用来自定义子设备状态的,所以这些消息都忽略处理会话
         if (deviceId == null
@@ -128,15 +145,14 @@ public class DeviceGatewayHelper {
             //注销会话一次离线,消息网关转发子设备消息一次
             //先执行移除子设备会话,防止header设置失败
             ctx.before(
-                sessionManager
-                    .remove(childrenId, removeSessionOnlyLocal(children))
+                (policy == null ? sessionManager.remove(childrenId, removeSessionOnlyLocal(children)) : policy.remove(childrenId))
                     .doOnNext(total -> {
                         //移除了会话会触发离线消息,忽略掉本次的消息.
                         if (total > 0 && children instanceof DeviceOfflineMessage) {
                             children.addHeaderIfAbsent(Headers.ignore, true);
                         }
                         //没有会话被移除(已经离线),但是手动指定了忽略离线消息.
-                        if (total == 0 && children.getHeaderOrDefault(ignoreIfOffline)) {
+                        if (total == 0 && (policy != null || children.getHeaderOrDefault(ignoreIfOffline))) {
                             children.addHeader(Headers.ignore, true);
                         }
                     })
@@ -162,9 +178,10 @@ public class DeviceGatewayHelper {
                         children,
                         child -> {
                             //新创建了的会话?
-                            return Mono.just(new ChildrenDeviceSession(childrenId, parentSession, child));
+                            return (policy == null ? Mono.<Void>empty() : policy.validateChild(deviceId, child))
+                                .then(Mono.fromSupplier(() -> new ChildrenDeviceSession(childrenId, parentSession, child)));
                         },
-                        Mono::empty)
+                         Mono::empty, policy)
                     .doOnNext(session -> {
                         if (session.isWrapFrom(ChildrenDeviceSession.class)) {
                             ChildrenDeviceSession childrenSession = session.unwrap(ChildrenDeviceSession.class);
@@ -175,6 +192,11 @@ public class DeviceGatewayHelper {
                         }
                     }))
                    .contextWrite(Context.of(DeviceMessage.class, children));
+
+            Mono<DeviceSession> verifiedSessionHandler = policy == null ? sessionHandler
+                : registry.getDevice(childrenId)
+                    .flatMap(child -> policy.validateChild(deviceId, child))
+                    .then(sessionHandler);
 
 
             //子设备注册
@@ -187,11 +209,11 @@ public class DeviceGatewayHelper {
                             .getSelfConfig(DeviceConfigKey.selfManageState)
                             .defaultIfEmpty(false)
                             .filter(Boolean.FALSE::equals))
-                        .flatMap(ignore -> sessionHandler)
+                        .flatMap(ignore -> verifiedSessionHandler)
                         .then()
                 );
             } else {
-                ctx.after(sessionHandler.then());
+                ctx.after(verifiedSessionHandler.then());
             }
 
         }
@@ -201,6 +223,14 @@ public class DeviceGatewayHelper {
                                                     Function<DeviceOperator, Mono<DeviceSession>> sessionBuilder,
                                                     Function<DeviceSession, Mono<Void>> sessionConsumer,
                                                     Supplier<Mono<DeviceOperator>> deviceNotFoundCallback) {
+        return handleDeviceMessage(message, sessionBuilder, sessionConsumer, deviceNotFoundCallback, null);
+    }
+
+    public Mono<DeviceOperator> handleDeviceMessage(DeviceMessage message,
+                                                    Function<DeviceOperator, Mono<DeviceSession>> sessionBuilder,
+                                                    Function<DeviceSession, Mono<Void>> sessionConsumer,
+                                                    Supplier<Mono<DeviceOperator>> deviceNotFoundCallback,
+                                                    SessionPolicy policy) {
         DeviceMessageUtils.addReportedPropertiesHeader(message);
         String deviceId = message.getDeviceId();
         if (!StringUtils.hasText(deviceId)) {
@@ -213,19 +243,18 @@ public class DeviceGatewayHelper {
         //子设备消息
         if (message instanceof ChildDeviceMessage) {
             DeviceMessage childrenMessage = (DeviceMessage) ((ChildDeviceMessage) message).getChildDeviceMessage();
-            handleChildrenDeviceMessage(deviceId, childrenMessage, ctx);
+            handleChildrenDeviceMessage(deviceId, childrenMessage, ctx, policy);
         }
         //子设备消息回复
         else if (message instanceof ChildDeviceMessageReply) {
             DeviceMessage childrenMessage = (DeviceMessage) ((ChildDeviceMessageReply) message).getChildDeviceMessage();
-            handleChildrenDeviceMessage(deviceId, childrenMessage, ctx);
+            handleChildrenDeviceMessage(deviceId, childrenMessage, ctx, policy);
         }
         //设备离线消息
         else if (message instanceof DeviceOfflineMessage) {
-            return sessionManager
-                .remove(deviceId, removeSessionOnlyLocal(message))
+            return (policy == null ? sessionManager.remove(deviceId, removeSessionOnlyLocal(message)) : policy.remove(deviceId))
                 .flatMap(l -> {
-                    if (l == 0 && !message.getHeaderOrDefault(ignoreIfOffline)) {
+                    if (policy == null && l == 0 && !message.getHeaderOrDefault(ignoreIfOffline)) {
                         return registry
                             .getDevice(deviceId)
                             .flatMap(device -> handleMessage(device, message));
@@ -263,7 +292,7 @@ public class DeviceGatewayHelper {
         return ctx
             .execute(
                 this
-                    .createOrUpdateSession(deviceId, message, sessionBuilder, deviceNotFoundCallback)
+                    .createOrUpdateSession(deviceId, message, sessionBuilder, deviceNotFoundCallback, policy)
                     .flatMap(sessionConsumer)
             )
             .then(registry.getDevice(deviceId))
@@ -286,7 +315,31 @@ public class DeviceGatewayHelper {
     private Mono<DeviceSession> createOrUpdateSession(String deviceId,
                                                       DeviceMessage message,
                                                       Function<DeviceOperator, Mono<DeviceSession>> sessionBuilder,
-                                                      Supplier<Mono<DeviceOperator>> deviceNotFoundCallback) {
+                                                       Supplier<Mono<DeviceOperator>> deviceNotFoundCallback,
+                                                       SessionPolicy policy) {
+        if (policy != null) {
+            return Mono.defer(() -> {
+                AtomicReference<Throwable> failure = new AtomicReference<>();
+                Supplier<Mono<DeviceSession>> create = () -> createNewSession(deviceId, message, sessionBuilder, () -> {
+                    if (isDoRegister(message)) {
+                        return handleMessage(null, message).then(Mono.delay(Duration.ofSeconds(2)))
+                            .then(registry.getDevice(deviceId));
+                    }
+                    return deviceNotFoundCallback == null ? Mono.empty() : deviceNotFoundCallback.get();
+                });
+                return sessionManager.compute(deviceId, Mono.defer(create), existing -> Mono
+                    .defer(() -> policy.update(existing, create, () -> updateSession(existing, message, sessionBuilder)))
+                    // A failing compute removes the old session in the session manager.
+                    // Preserve it atomically and report the rejection after the compute.
+                    .onErrorResume(error -> {
+                        failure.set(error);
+                        return Mono.just(existing);
+                    }))
+                    .flatMap(session -> failure.get() == null ? Mono.just(session) : Mono.error(failure.get()))
+                    .doOnNext(policy::accepted)
+                    .map(session -> handleSession(message, session));
+            });
+        }
         return sessionManager
             .getSession(deviceId, false)
             .filterWhen(DeviceSession::isAliveAsync)

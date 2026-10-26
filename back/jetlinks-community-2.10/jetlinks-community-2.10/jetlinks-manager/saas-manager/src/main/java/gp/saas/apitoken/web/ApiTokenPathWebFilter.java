@@ -14,6 +14,9 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+import java.util.Collections;
+import java.util.Optional;
+
 /** Service tokens are intentionally limited to the public /api/v1 surface. */
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
@@ -37,7 +40,9 @@ public class ApiTokenPathWebFilter implements WebFilter {
             Mono<Void> objectScope = scopeService.isApiToken(authentication)
                 ? enforceSingleObjectScope(exchange)
                 : Mono.empty();
-            return usage.then(enforcePermission(exchange)).then(objectScope).then(chain.filter(exchange)).thenReturn(Boolean.TRUE);
+            return usage.then(enforcePermission(exchange)).then(objectScope)
+                .then(Mono.defer(() -> chain.filter(exchange)))
+                .thenReturn(Boolean.TRUE);
         }).switchIfEmpty(Mono.just(Boolean.FALSE).flatMap(ignored -> chain.filter(exchange).thenReturn(Boolean.TRUE))).then();
     }
 
@@ -45,6 +50,14 @@ public class ApiTokenPathWebFilter implements WebFilter {
         String path = exchange.getRequest().getPath().value();
         String prefix = "/api/v1/";
         if (!path.startsWith(prefix)) return Mono.empty();
+        Optional<String> historyProduct = ApiTokenPermissionCatalog.historyStatisticsProductId(path);
+        if (historyProduct.isPresent()) {
+            // A device-only token cannot manage a configuration that covers
+            // every current and future device under this product.
+            return scopeService.requireAnyDataScope()
+                .then(scopeService.requireDevices(
+                    Collections.emptyList(), Collections.singletonList(historyProduct.get())));
+        }
         String relative = path.substring(prefix.length());
         String[] parts = relative.split("/");
         if (parts.length > 0 && ("device".equals(parts[0]) || "device-data".equals(parts[0]) || "product".equals(parts[0]))) {
@@ -55,6 +68,16 @@ public class ApiTokenPathWebFilter implements WebFilter {
 
     private Mono<Void> enforceObjectScope(ServerWebExchange exchange, String[] parts) {
         if (parts.length < 2 || parts[1].startsWith("_")) return Mono.empty();
+        // These are collection queries. "devices" is not an instance id;
+        // their request-body ids are checked by the controller.
+        if (parts.length >= 3
+            && "device-data".equals(parts[0])
+            && "devices".equals(parts[1])
+            && ("interval".equals(parts[2])
+                || (parts.length == 4 && "agg".equals(parts[2])
+                    && "_query".equals(parts[3])))) {
+            return Mono.empty();
+        }
         if ("device".equals(parts[0]) || "device-data".equals(parts[0])) {
             String id = parts[1];
             return deviceService.findById(id).switchIfEmpty(Mono.error(new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "device is outside API token scope")))

@@ -175,7 +175,7 @@
 | POST | `/api/v1/device-data/{deviceId}/event/{event}/history` | `getHistoryDeviceEvent` | Path `deviceId,event`，Body `QueryParamEntity` | `Flux<DeviceEvent>` | 查询设备事件历史 |
 | POST | `/api/v1/device-data/devices/interval` | `getDeviceIntervalData` | Query `startTime,endTime`，Body `DeiceDataRequestEntity` | `Flux<DeviceIntervalDataEntity>` | 查询多设备单属性区间起止值 |
 | POST | `/api/v1/device-data/devices/trend/{type}/history` | `getDeviceIntervalDataByType` | Path `type`，Query `startTime,endTime`，Body `DeiceDataRequestEntity` | `Flux<List<DeviceIntervalDataEntity>>` | 旧版按类型查询趋势区间数据 |
-| POST | `/api/v1/device-data/devices/interval/{type}/history` | `getDeviceTrendDataByType` | Path `type`，Query `startTime,endTime,limit`，Body `DeiceDataRequestEntity` | `Flux<List<DeviceIntervalDataEntity>>` | 新版趋势区间，支持 `5m/15m/30m/day/month/year` |
+| POST | `/api/v1/device-data/devices/interval/{type}/history` | `LegacyDeviceDataController.queryDeviceIntervalHistory` | Path `type`，Query `startTime,endTime`，Body `DeiceDataRequestEntity` | `Flux<List<DeviceIntervalDataEntity>>` | 当前兼容实现支持 `5m/15m/day/month/year/week/quarter`；week 每自然周一段，quarter 每自然季度一段；已启用历史统计的采集项优先查询配置快照 |
 | POST | `/api/v1/device-data/devices/interval/{type}/history/test` | `getDeviceTrendDataByTypeTest` | Path `type`，Query `startTime,endTime`，Body `DeiceDataRequestEntity` | `Flux<List<DeviceIntervalDataEntity>>` | 测试趋势接口，仅支持 `day/month/year` |
 | POST | `/api/v1/device-data/devices/agg/_query` | `getDeviceAggregationData` | Body `DeiceDataRequestEntity`，需单属性和 `aggregationRequest` | `Flux<Map<String,List<DeviceAggregationDataEntity>>>` | 直接执行 ES 聚合查询 |
 | POST | `/api/v1/device-data/transformers/load/rate` | `getTransformerLoadRate` | Query `timestamp,capacity?`，Body `DeiceDataRequestEntity` | `Flux<TransformerDataEntity>` | 查询当前变压器负荷率 |
@@ -184,6 +184,7 @@
 注意事项：
 
 - 请求实体类源码名是 `DeiceDataRequestEntity`，拼写不是 `DeviceDataRequestEntity`。
+- 区间历史的 `week/quarter` 按北京时间切分，保留请求首尾，结束时间不超过当前时刻；每台最多 1000 段。配置快照优先读取、回退规则与请求示例见 [累计表码边界快照说明](counter-snapshot-operations.md#自然周与自然季度区间历史)。
 - 多设备 ES 查询直接访问 `properties.isEmpty()`，`properties=null` 时可能 NPE。
 - `/history/test`、`/history/no-paging/test`、`/devices/interval/{type}/history/test` 是测试或原始接口。
 - Redis 接口使用当前原生 `formatValue` 逻辑，替换了源码中注释掉的旧单位转换/枚举映射逻辑。

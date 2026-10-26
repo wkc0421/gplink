@@ -99,6 +99,166 @@ public abstract class AbstractQueryOperations implements QueryOperations {
                                                                    @Nonnull ThingMetadata metadata,
                                                                    @Nonnull Map<String, PropertyMetadata> properties);
 
+    /**
+     * Generic fallback for stores without an indexed boundary-query primitive.
+     * It opens one descending stream, folds it in O(rows + boundaries), and
+     * cancels as soon as a non-null baseline at/before startTime is found.
+     * A missing outer end gets one ascending lookup for the first reading after it.
+     */
+    protected Mono<PropertyBoundaryValues> queryPropertyAtBoundaries(@Nonnull String metric,
+                                                                      long startTime,
+                                                                      long endTime,
+                                                                      @Nonnull List<Long> boundaries,
+                                                                      @Nonnull ThingMetadata metadata,
+                                                                      @Nonnull PropertyMetadata property) {
+        QueryParamEntity query = QueryParamEntity.of();
+        query.and(ThingsDataConstants.COLUMN_TIMESTAMP, "lte", endTime);
+        query.setOrderBy(ThingsDataConstants.COLUMN_TIMESTAMP + " desc");
+        query.setPaging(false);
+        return foldBoundaryValues(
+            property.getId(), startTime, endTime, boundaries,
+            queryProperty(query, metadata, Collections.singletonMap(property.getId(), property)))
+            .flatMap(values -> {
+                boolean missingEnd = values.getValues().stream()
+                    .anyMatch(value -> value.getBoundary() == endTime && value.getValue() == null);
+                long now = System.currentTimeMillis();
+                if (!missingEnd || endTime >= now) {
+                    return Mono.just(values);
+                }
+                QueryParamEntity after = QueryParamEntity.of();
+                after.and(ThingsDataConstants.COLUMN_TIMESTAMP, "gt", endTime);
+                after.and(ThingsDataConstants.COLUMN_TIMESTAMP, "lte", now);
+                after.setOrderBy(ThingsDataConstants.COLUMN_TIMESTAMP + " asc");
+                after.setPaging(false);
+                return queryProperty(after, metadata, Collections.singletonMap(property.getId(), property))
+                    .filter(value -> value.getValue() != null)
+                    .next()
+                    .map(first -> withEndValue(values, first.getValue()))
+                    .defaultIfEmpty(values);
+            });
+    }
+
+    private static PropertyBoundaryValues withEndValue(PropertyBoundaryValues values, Object endValue) {
+        List<PropertyBoundaryValues.BoundaryValue> boundaries = values.getValues().stream()
+            .map(value -> new PropertyBoundaryValues.BoundaryValue(value.getBoundary(),
+                value.getBoundary() == values.getEndTime() ? endValue : value.getValue()))
+            .collect(Collectors.toList());
+        return new PropertyBoundaryValues(values.getProperty(), values.getStartTime(), values.getEndTime(),
+            values.getInitialValue(), boundaries);
+    }
+
+    static Mono<PropertyBoundaryValues> foldBoundaryValues(String property,
+                                                            long startTime,
+                                                            long endTime,
+                                                            List<Long> boundaries,
+                                                            Flux<ThingPropertyDetail> source) {
+        BoundaryAccumulator accumulator = new BoundaryAccumulator(
+            property, startTime, endTime, boundaries);
+        return source
+            .takeUntil(accumulator::accept)
+            .then(Mono.fromSupplier(accumulator::finish));
+    }
+
+    @Nonnull
+    @Override
+    public final Mono<PropertyBoundaryValues> queryPropertyAtBoundaries(long startTime,
+                                                                         long endTime,
+                                                                         @Nonnull List<Long> boundaries,
+                                                                         @Nonnull String property) {
+        validateBoundaryRequest(startTime, endTime, boundaries, property);
+        String metric = metricBuilder.createPropertyMetric(thingType, thingTemplateId, thingId);
+        List<Long> requested = Collections.unmodifiableList(new ArrayList<>(boundaries));
+        return getMetadata()
+            .flatMap(metadata -> {
+                PropertyMetadata propertyMetadata = metadata.getPropertyOrNull(property);
+                if (propertyMetadata == null) {
+                    return Mono.just(PropertyBoundaryValues.empty(
+                        property, startTime, endTime, requested));
+                }
+                return queryPropertyAtBoundaries(
+                    metric, startTime, endTime, requested, metadata, propertyMetadata);
+            })
+            .defaultIfEmpty(PropertyBoundaryValues.empty(property, startTime, endTime, requested));
+    }
+
+    private static void validateBoundaryRequest(long startTime,
+                                                long endTime,
+                                                List<Long> boundaries,
+                                                String property) {
+        if (!StringUtils.hasText(property)) {
+            throw new IllegalArgumentException("property must not be empty");
+        }
+        if (endTime < startTime) {
+            throw new IllegalArgumentException("endTime must be greater than or equal to startTime");
+        }
+        if (boundaries == null || boundaries.isEmpty()) {
+            throw new IllegalArgumentException("boundaries must not be empty");
+        }
+        for (Long boundary : boundaries) {
+            if (boundary == null || boundary < startTime || boundary > endTime) {
+                throw new IllegalArgumentException("boundary must be within [startTime,endTime]");
+            }
+        }
+    }
+
+    private static final class BoundaryAccumulator {
+        private final String property;
+        private final long startTime;
+        private final long endTime;
+        private final List<Long> requested;
+        private final List<Long> descending;
+        private final Map<Long, Object> values = new HashMap<>();
+        private int cursor;
+        private Object baseline;
+        private Object firstInRange;
+        private boolean baselineFound;
+
+        private BoundaryAccumulator(String property,
+                                    long startTime,
+                                    long endTime,
+                                    List<Long> requested) {
+            this.property = property;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.requested = requested;
+            TreeSet<Long> ordered = new TreeSet<>(Comparator.reverseOrder());
+            ordered.addAll(requested);
+            this.descending = new ArrayList<>(ordered);
+        }
+
+        private boolean accept(ThingPropertyDetail detail) {
+            Object value = detail.getValue();
+            if (value == null) {
+                return false;
+            }
+            long timestamp = detail.getTimestamp();
+            while (cursor < descending.size() && timestamp <= descending.get(cursor)) {
+                values.put(descending.get(cursor++), value);
+            }
+            if (timestamp >= startTime && timestamp <= endTime) {
+                // The stream is descending, so the final assignment is the first in-range value.
+                firstInRange = value;
+            }
+            if (timestamp <= startTime) {
+                baseline = value;
+                baselineFound = true;
+                return true;
+            }
+            return false;
+        }
+
+        private PropertyBoundaryValues finish() {
+            List<PropertyBoundaryValues.BoundaryValue> result = new ArrayList<>(requested.size());
+            for (Long boundary : requested) {
+                // A pre-range baseline is a start fallback, not an observed end reading.
+                Object value = boundary == endTime && firstInRange == null ? null : values.get(boundary);
+                result.add(new PropertyBoundaryValues.BoundaryValue(boundary, value));
+            }
+            return new PropertyBoundaryValues(
+                property, startTime, endTime, baselineFound ? baseline : firstInRange, result);
+        }
+    }
+
     @Nonnull
     @Override
     public final Flux<ThingPropertyDetail> queryEachProperty(@Nonnull QueryParamEntity param,
@@ -259,6 +419,16 @@ public abstract class AbstractQueryOperations implements QueryOperations {
         public AggregationContext(ThingMetadata metadata, PropertyAggregation... properties) {
             this.metadata = metadata;
             this.properties = properties;
+            Set<String> aliases = new HashSet<>();
+            for (PropertyAggregation property : properties) {
+                if (property == null || !StringUtils.hasText(property.getProperty())
+                    || property.getAgg() == null || !StringUtils.hasText(property.getAlias())
+                    || Arrays.asList("time", "_ts", "property").contains(property.getAlias())
+                    || !aliases.add(property.getAlias())) {
+                    throw new org.hswebframework.web.exception.BusinessException(
+                        "聚合列、别名无效或别名重复", 400);
+                }
+            }
             propertyAlias = Arrays
                 .stream(properties)
                 .collect(Collectors.toMap(PropertyAggregation::getAlias,

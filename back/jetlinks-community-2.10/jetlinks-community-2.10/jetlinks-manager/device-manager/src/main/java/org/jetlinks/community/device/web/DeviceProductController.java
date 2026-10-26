@@ -256,6 +256,7 @@ public class DeviceProductController implements ReactiveServiceCrudController<De
                                                        @RequestBody Mono<AggRequest> param) {
 
         return param
+            .doOnNext(AggRequest::validate)
             .flatMapMany(request -> deviceDataService
                 .aggregationPropertiesByProduct(productId,
                                                 request.getQuery(),

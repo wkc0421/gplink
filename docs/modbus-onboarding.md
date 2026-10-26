@@ -767,4 +767,19 @@ done
 
 ---
 
-*最后更新：2026-04-17 | 协议版本：modbus-rtu.v1*
+## 一个采集器接入多类产品
+
+向导按“接入连接 → 采集器 → 产品与从机 → 确认与测试”配置。同一个采集器共用一条 Modbus 通道，所有产品的从机地址不得重复。
+
+- 通过“添加产品”建立配置组。各组独立选择/新建产品，维护寄存器映射、轮询计划和从机列表，并分别导入原有格式的 CSV。
+- 选择已有采集器后，按实际父子关系加载所有产品和从机。共享产品配置可以编辑，修改会影响使用该产品的其他设备。
+- CSV 导入替换当前组的对应列表；缺失的已保存从机在确认页列为待解绑项。移除从机/产品组只解除当前采集器绑定，保留资源及历史数据。
+- TCP Server 自动合并所有产品从机 ID 并更新在线子会话，保留原有接入配置及其他设备 ID，无需手动维护第二批设备。
+- 新资源在依赖可用时自动启用；已有停用产品、设备、接入保持停用，测试显示跳过。未连接显示等待连接；保存与通讯结果分别反馈。
+- 部分失败请保留页面并重试，已创建产品和设备 ID 会复用。已有设备 ID 和产品归属固定，不支持在向导中迁移至其他产品。
+
+前端纯函数回归：在 front 目录运行 `pnpm exec playwright test tests/e2e/modbus-access-utils.spec.ts tests/e2e/modbus-product-groups.spec.ts --workers=1`。
+
+浏览器回归：先运行 `node tests/e2e/modbus-wizard-server.mjs`，再运行 `python tests/e2e/modbus-multi-product.py`（需 Python Playwright 及 Chromium，可用 `MODBUS_TEST_CHROMIUM` 指定浏览器路径）。该用例拦截所有业务 HTTP 接口，使用模拟数据，不访问测试环境。
+
+*最后更新：2026-10-21 | 协议版本：modbus-rtu.v1*

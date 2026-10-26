@@ -3,7 +3,9 @@ package org.jetlinks.protocol.modbus;
 import org.jetlinks.protocol.modbus.frame.ModbusFunctionCode;
 import org.jetlinks.protocol.modbus.frame.ModbusRequest;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayDeque;
@@ -16,8 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * The only Modbus request execution queue for a physical gateway.
@@ -73,6 +77,16 @@ public final class ModbusGatewayRequestExecutor {
     private final Map<String, Long> invalidLeaseOwners = new ConcurrentHashMap<>();
     private volatile Sender sender = request -> Mono.just(false);
     private volatile Predicate<PendingRequest> leaseValidator = this::defaultLeaseValid;
+    private final Scheduler scheduler;
+    private volatile boolean disposed;
+
+    public ModbusGatewayRequestExecutor() {
+        this(Schedulers.parallel());
+    }
+
+    ModbusGatewayRequestExecutor(Scheduler scheduler) {
+        this.scheduler = scheduler;
+    }
 
     public void setSender(Sender sender) {
         this.sender = sender == null ? request -> Mono.just(false) : sender;
@@ -90,10 +104,20 @@ public final class ModbusGatewayRequestExecutor {
         if (request == null || request.gatewayId == null) {
             throw new IllegalArgumentException("request and gatewayId must not be null");
         }
-        GatewayState state = states.computeIfAbsent(request.gatewayId, ignore -> new GatewayState());
-        synchronized (state) {
-            state.waiting.addLast(request);
-            return promoteLocked(state, request.gatewayId) == request;
+        while (true) {
+            GatewayState state = states.computeIfAbsent(request.gatewayId, ignore -> new GatewayState());
+            synchronized (state) {
+                // Empty-state removal/drain may have won after the map lookup.
+                if (states.get(request.gatewayId) != state) continue;
+                if (disposed) {
+                    request.terminate();
+                    removeIfEmptyLocked(request.gatewayId, state);
+                    notifyCompletion(request, CompletionType.CONNECTION_INTERRUPTED, "modbus protocol disposed");
+                    return false;
+                }
+                state.waiting.addLast(request);
+                return promoteLocked(state, request.gatewayId) == request;
+            }
         }
     }
 
@@ -196,6 +220,7 @@ public final class ModbusGatewayRequestExecutor {
         synchronized (state) {
             if (state.inFlight != null && matcher.test(state.inFlight)) {
                 state.inFlight.cancelled = true;
+                state.inFlight.sendTask.dispose();
                 cancelled.add(state.inFlight);
             }
             java.util.Iterator<PendingRequest> iterator = state.waiting.iterator();
@@ -204,6 +229,7 @@ public final class ModbusGatewayRequestExecutor {
                 if (matcher.test(request)) {
                     iterator.remove();
                     request.cancelled = true;
+                    request.terminate();
                     cancelled.add(request);
                 }
             }
@@ -216,19 +242,23 @@ public final class ModbusGatewayRequestExecutor {
     }
 
     public List<PendingRequest> drain(String gatewayId, String reason) {
-        GatewayState state = states.remove(gatewayId);
+        GatewayState state = states.get(gatewayId);
         if (state == null) {
             return Collections.emptyList();
         }
         List<PendingRequest> drained = new ArrayList<>();
         synchronized (state) {
+            if (!states.remove(gatewayId, state)) return Collections.emptyList();
             if (state.inFlight != null) {
-                state.inFlight.cancelTimeout();
                 drained.add(state.inFlight);
                 state.inFlight = null;
             }
             drained.addAll(state.waiting);
             state.waiting.clear();
+            for (PendingRequest request : drained) {
+                request.cancelled = true;
+                request.terminate();
+            }
         }
         for (PendingRequest request : drained) {
             notifyCompletion(request, CompletionType.CONNECTION_INTERRUPTED, reason);
@@ -251,6 +281,7 @@ public final class ModbusGatewayRequestExecutor {
     }
 
     public void dispose() {
+        disposed = true;
         for (String gatewayId : new ArrayList<>(states.keySet())) {
             drain(gatewayId, "modbus protocol disposed");
         }
@@ -264,6 +295,7 @@ public final class ModbusGatewayRequestExecutor {
         PendingRequest next = state.waiting.pollFirst();
         while (next != null && !canSend(next)) {
             next.cancelled = true;
+            next.terminate();
             notifyCompletion(next, CompletionType.CANCELLED, "polling lease is no longer valid");
             next = state.waiting.pollFirst();
         }
@@ -274,11 +306,10 @@ public final class ModbusGatewayRequestExecutor {
         state.inFlight = next;
         next.sentAt = System.currentTimeMillis();
         final String token = next.requestToken;
-        next.timeoutTask = Schedulers
-                .parallel()
+        next.timeoutTask.update(scheduler
                 .schedule(() -> onTimeout(gatewayId, token),
                         Math.max(1L, next.timeoutMillis),
-                        TimeUnit.MILLISECONDS);
+                        TimeUnit.MILLISECONDS));
         return next;
     }
 
@@ -287,8 +318,23 @@ public final class ModbusGatewayRequestExecutor {
         if (next == null) {
             return;
         }
-        sender
-                .send(next)
+        sendLocked(next, () -> sender.send(next));
+    }
+
+    /** Route the codec's first frame through the same cancellable lifetime as queued frames. */
+    public void sendInitial(PendingRequest request, Supplier<Mono<Boolean>> write) {
+        GatewayState state = states.get(request.gatewayId);
+        if (state == null) return;
+        synchronized (state) {
+            if (states.get(request.gatewayId) == state && state.inFlight == request && canSend(request)) {
+                sendLocked(request, () -> sendIfCurrent(request, write));
+            }
+        }
+    }
+
+    private void sendLocked(PendingRequest next, Supplier<Mono<Boolean>> send) {
+        String gatewayId = next.gatewayId;
+        next.sendTask.update(Mono.defer(() -> isSendAllowed(next) ? send.get() : Mono.just(false))
                 .defaultIfEmpty(false)
                 .subscribe(
                         sent -> {
@@ -296,7 +342,7 @@ public final class ModbusGatewayRequestExecutor {
                                 onSendFailed(gatewayId, next.requestToken, "session rejected request");
                             }
                         },
-                        error -> onSendFailed(gatewayId, next.requestToken, error.getMessage()));
+                        error -> onSendFailed(gatewayId, next.requestToken, error.getMessage())));
     }
 
     private void onTimeout(String gatewayId, String requestToken) {
@@ -332,7 +378,7 @@ public final class ModbusGatewayRequestExecutor {
         PendingRequest request = state.inFlight;
         state.inFlight = null;
         if (request != null) {
-            request.cancelTimeout();
+            request.terminate();
         }
     }
 
@@ -343,12 +389,42 @@ public final class ModbusGatewayRequestExecutor {
     }
 
     private boolean canSend(PendingRequest request) {
-        return !request.cancelled
+        return !disposed && !request.cancelled && !request.terminated
                 && (request.source != Source.POLLING || leaseValidator.test(request));
     }
 
     public boolean isSendAllowed(PendingRequest request) {
-        return request != null && canSend(request);
+        if (request == null) return false;
+        GatewayState state = states.get(request.gatewayId);
+        if (state == null) return false;
+        synchronized (state) {
+            return states.get(request.gatewayId) == state && state.inFlight == request && canSend(request);
+        }
+    }
+
+    /**
+     * Subscribe to the actual socket write while holding the same lock used by
+     * timeout/drain. The supplier must only create the immediate write, with any
+     * inter-frame delay or session lookup performed before this method.
+     */
+    public Mono<Boolean> sendIfCurrent(PendingRequest request, Supplier<Mono<Boolean>> write) {
+        return Mono.create(sink -> {
+            GatewayState state = states.get(request.gatewayId);
+            if (state == null) {
+                sink.success(false);
+                return;
+            }
+            synchronized (state) {
+                if (states.get(request.gatewayId) != state || state.inFlight != request || !canSend(request)) {
+                    sink.success(false);
+                    return;
+                }
+                Disposable.Swap subscription = Disposables.swap();
+                sink.onCancel(subscription);
+                subscription.update(Mono.defer(write).defaultIfEmpty(false)
+                                        .subscribe(sink::success, sink::error));
+            }
+        });
     }
 
     private boolean defaultLeaseValid(PendingRequest request) {
@@ -395,8 +471,7 @@ public final class ModbusGatewayRequestExecutor {
     private static void notifyCompletion(PendingRequest request,
                                          CompletionType type,
                                          String message) {
-        Consumer<Completion> listener = request.completionListener;
-        request.completionListener = null;
+        Consumer<Completion> listener = request.completionListener.getAndSet(null);
         if (listener != null) {
             listener.accept(new Completion(type, request, message));
         }
@@ -425,9 +500,11 @@ public final class ModbusGatewayRequestExecutor {
         private final int batchStartAddress;
         private final Map<String, Object> attributes;
         private volatile boolean cancelled;
+        private volatile boolean terminated;
         private volatile long sentAt = -1L;
-        private volatile Disposable timeoutTask;
-        private volatile Consumer<Completion> completionListener;
+        private final Disposable.Swap timeoutTask = Disposables.swap();
+        private final Disposable.Swap sendTask = Disposables.swap();
+        private final AtomicReference<Consumer<Completion>> completionListener;
 
         private PendingRequest(Builder builder) {
             this.gatewayId = builder.gatewayId;
@@ -452,19 +529,17 @@ public final class ModbusGatewayRequestExecutor {
             this.attributes = builder.attributes == null
                     ? Collections.emptyMap()
                     : Collections.unmodifiableMap(new HashMap<>(builder.attributes));
-            this.completionListener = builder.completionListener;
+            this.completionListener = new AtomicReference<>(builder.completionListener);
         }
 
         public static Builder builder() {
             return new Builder();
         }
 
-        void cancelTimeout() {
-            Disposable task = timeoutTask;
-            timeoutTask = null;
-            if (task != null) {
-                task.dispose();
-            }
+        void terminate() {
+            terminated = true;
+            timeoutTask.dispose();
+            sendTask.dispose();
         }
 
         public String getGatewayId() {

@@ -40,6 +40,8 @@ import java.time.Duration;
  * @since 1.0
  */
 public class MqttClientSession implements PersistentSession {
+    public static final Duration DEFAULT_KEEP_ALIVE_TIMEOUT = Duration.ofMinutes(15);
+
     @Getter
     private final String id;
 
@@ -54,9 +56,9 @@ public class MqttClientSession implements PersistentSession {
     private long connectTime = System.currentTimeMillis();
 
     @Setter(AccessLevel.PROTECTED)
-    private long lastPingTime = System.currentTimeMillis();
+    private volatile long lastPingTime = System.currentTimeMillis();
 
-    private long keepAliveTimeout = -1;
+    private volatile long keepAliveTimeout = DEFAULT_KEEP_ALIVE_TIMEOUT.toMillis();
 
     private final DeviceGatewayMonitor monitor;
 
@@ -144,6 +146,11 @@ public class MqttClientSession implements PersistentSession {
     @Override
     public void setKeepAliveTimeout(Duration timeout) {
         this.keepAliveTimeout = timeout.toMillis();
+    }
+
+    @Override
+    public Duration getKeepAliveTimeout() {
+        return Duration.ofMillis(keepAliveTimeout);
     }
 
     @Override

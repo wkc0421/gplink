@@ -40,12 +40,12 @@ public enum DeviceState implements I18nEnumDict<String> {
     @Generated
     public static DeviceState of(byte state) {
         switch (state) {
-            case org.jetlinks.core.device.DeviceState.offline:
-                return offline;
             case org.jetlinks.core.device.DeviceState.online:
                 return online;
-            default:
+            case org.jetlinks.core.device.DeviceState.noActive:
                 return notActive;
+            default:
+                return offline;
         }
     }
 }

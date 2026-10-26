@@ -15,6 +15,8 @@
  */
 package org.jetlinks.community.network;
 
+import reactor.core.publisher.Mono;
+
 /**
  * 网络组件，所有网络相关实例根接口
  *
@@ -41,6 +43,11 @@ public interface Network {
      * 关闭网络组件
      */
     void shutdown();
+
+    /** Complete after resources have been released, when the implementation supports it. */
+    default Mono<Void> shutdownAsync() {
+        return Mono.fromRunnable(this::shutdown);
+    }
 
     /**
      * @return 是否存活

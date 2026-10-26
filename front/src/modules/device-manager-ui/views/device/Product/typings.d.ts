@@ -30,6 +30,7 @@ export type ProductItem = {
   storePolicy?: string;
   accessProvider?: string;
   modifyTime?: string;
+  features?: { id: string; [key: string]: any }[];
 };
 
 export type ConfigProperty = {

@@ -28,6 +28,7 @@ import org.jetlinks.core.message.DeviceMessage;
 import org.jetlinks.core.metadata.DeviceMetadata;
 import org.jetlinks.core.metadata.EventMetadata;
 import org.jetlinks.community.Interval;
+import org.jetlinks.community.things.data.PropertyBoundaryValues;
 import org.jetlinks.community.device.entity.DeviceEvent;
 import org.jetlinks.community.device.entity.DeviceOperationLogEntity;
 import org.jetlinks.community.device.entity.DeviceProperty;
@@ -152,6 +153,16 @@ public interface DeviceDataService {
     Flux<DeviceProperty> queryProperty(@Nonnull String deviceId,
                                        @Nonnull QueryParamEntity query,
                                        @Nonnull String... property);
+
+    /**
+     * Query one device/property at ordered boundaries using one storage query.
+     */
+    @Nonnull
+    Mono<PropertyBoundaryValues> queryPropertyAtBoundaries(@Nonnull String deviceId,
+                                                            @Nonnull String property,
+                                                            long startTime,
+                                                            long endTime,
+                                                            @Nonnull List<Long> boundaries);
 
     /**
      * 根据产品ID查询设备列表
@@ -422,7 +433,8 @@ public interface DeviceDataService {
     class AggregationRequest {
         //时间间隔
         //为空时,不按时间分组
-        @Schema(description = "间隔,如: 1d", type = "string", defaultValue = "1d")
+        @Schema(description = "聚合间隔，如1d；1w为自然周（周一至周日），1q为自然季度（1—3、4—6、7—9、10—12月）。"
+            + "按Asia/Shanghai分桶，首尾不足周期仅统计from/to范围内的数据；返回时间为桶起点。", type = "string", defaultValue = "1d")
         @Nullable
         @Builder.Default
         Interval interval = Interval.ofDays(1);
@@ -434,7 +446,8 @@ public interface DeviceDataService {
 
         @Schema(description = "时间从,如: 2020-09-01 00:00:00,支持表达式: now-1d")
         @Builder.Default
-        Date from = new DateTime()
+        @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = org.jetlinks.community.configuration.ShanghaiDateDeserializer.class)
+        Date from = new DateTime(org.joda.time.DateTimeZone.forID("Asia/Shanghai"))
             .plusMonths(-1)
             .withHourOfDay(0)
             .withMinuteOfHour(0)
@@ -443,7 +456,8 @@ public interface DeviceDataService {
 
         @Schema(description = "时间到,如: 2020-09-30 00:00:00,支持表达式: now-1d")
         @Builder.Default
-        Date to = new DateTime()
+        @com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = org.jetlinks.community.configuration.ShanghaiDateDeserializer.class)
+        Date to = new DateTime(org.joda.time.DateTimeZone.forID("Asia/Shanghai"))
             .withHourOfDay(23)
             .withMinuteOfHour(59)
             .withSecondOfMinute(59)

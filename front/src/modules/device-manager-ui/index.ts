@@ -42,6 +42,12 @@ const getExtraRoutesMap = () => {
                     url: '/detail/:id',
                     name: i18n.global.t('device-manager-ui.index.106686-0'),
                     component: () => import('./views/device/Instance/Detail/index.vue')
+                },
+                {
+                    code: 'DataQueryTest',
+                    url: '/data-query-test',
+                    name: '设备数据接口测试',
+                    component: () => import('./views/device/DataQueryTest/index.vue')
                 }
             ]
         },

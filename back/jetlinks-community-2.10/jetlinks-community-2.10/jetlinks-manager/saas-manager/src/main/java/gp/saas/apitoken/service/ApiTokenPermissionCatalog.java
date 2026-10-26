@@ -55,6 +55,13 @@ public final class ApiTokenPermissionCatalog {
     }
 
     public static Optional<PermissionTarget> resolve(String path, HttpMethod method) {
+        // Both product-history aliases are product management, not device
+        // operations. Resolve them before the broad /device prefix and the
+        // legacy /device/product delete rule below.
+        if (historyStatisticsProductId(path).isPresent()) {
+            return Optional.of(new PermissionTarget("device-product",
+                HttpMethod.GET.equals(method) ? "query" : "save"));
+        }
         String resource;
         if (path.startsWith("/api/v1/device-data")) resource = "device-opt-api";
         else if (path.startsWith("/api/v1/device")) resource = "device-instance";
@@ -76,6 +83,34 @@ public final class ApiTokenPermissionCatalog {
         else if (HttpMethod.DELETE.equals(method)) action = "delete";
         else action = "save";
         return Optional.of(new PermissionTarget(resource, action));
+    }
+
+    /** Product id in either history-statistics management route, if present. */
+    public static Optional<String> historyStatisticsProductId(String path) {
+        if (path == null) {
+            return Optional.empty();
+        }
+        String[] parts = path.split("/");
+        if (parts.length >= 6
+            && "".equals(parts[0])
+            && "api".equals(parts[1])
+            && "v1".equals(parts[2])
+            && "device-product".equals(parts[3])
+            && !parts[4].isEmpty()
+            && "history-statistics".equals(parts[5])) {
+            return Optional.of(parts[4]);
+        }
+        if (parts.length >= 7
+            && "".equals(parts[0])
+            && "api".equals(parts[1])
+            && "v1".equals(parts[2])
+            && "device".equals(parts[3])
+            && "product".equals(parts[4])
+            && !parts[5].isEmpty()
+            && "history-statistics".equals(parts[6])) {
+            return Optional.of(parts[5]);
+        }
+        return Optional.empty();
     }
 
     private static boolean isLegacyQueryPath(String path, HttpMethod method) {

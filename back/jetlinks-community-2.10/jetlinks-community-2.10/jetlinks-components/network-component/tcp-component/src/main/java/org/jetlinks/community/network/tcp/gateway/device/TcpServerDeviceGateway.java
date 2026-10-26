@@ -18,8 +18,18 @@ package org.jetlinks.community.network.tcp.gateway.device;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import io.netty.util.ReferenceCountUtil;
 import org.hswebframework.web.logger.ReactiveLogger;
+import org.jetlinks.community.gateway.AbstractDeviceGateway;
+import org.jetlinks.community.gateway.DeviceGateway;
+import org.jetlinks.community.gateway.DeviceGatewayHelper;
+import org.jetlinks.community.gateway.monitor.MonitorSupportDeviceGateway;
+import org.jetlinks.community.network.tcp.TcpMessage;
+import org.jetlinks.community.network.tcp.client.TcpClient;
+import org.jetlinks.community.network.tcp.server.TcpServer;
+import org.jetlinks.community.utils.TimeUtils;
 import org.jetlinks.core.ProtocolSupport;
+import org.jetlinks.core.device.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceOperator;
 import org.jetlinks.core.device.DeviceProductOperator;
 import org.jetlinks.core.device.DeviceRegistry;
@@ -28,32 +38,23 @@ import org.jetlinks.core.message.DeviceMessage;
 import org.jetlinks.core.message.DeviceOnlineMessage;
 import org.jetlinks.core.message.codec.DefaultTransport;
 import org.jetlinks.core.message.codec.FromDeviceMessageContext;
-import org.jetlinks.core.message.codec.Transport;
 import org.jetlinks.core.server.DeviceGatewayContext;
 import org.jetlinks.core.server.session.ChildrenDeviceSession;
 import org.jetlinks.core.server.session.DeviceSession;
-import org.jetlinks.core.trace.DeviceTracer;
-import org.jetlinks.core.trace.MonoTracer;
-import org.jetlinks.community.gateway.AbstractDeviceGateway;
-import org.jetlinks.community.gateway.DeviceGateway;
-import org.jetlinks.community.gateway.monitor.MonitorSupportDeviceGateway;
-import org.jetlinks.community.network.DefaultNetworkType;
-import org.jetlinks.community.network.NetworkType;
-import org.jetlinks.community.network.tcp.TcpMessage;
-import org.jetlinks.community.network.tcp.client.TcpClient;
-import org.jetlinks.community.network.tcp.server.TcpServer;
-import org.jetlinks.community.gateway.DeviceGatewayHelper;
-import org.jetlinks.community.utils.TimeUtils;
 import org.jetlinks.supports.server.DecodedClientMessageHandler;
 import reactor.core.Disposable;
-import reactor.core.Disposables;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -61,272 +62,237 @@ import java.util.concurrent.atomic.LongAdder;
 
 @Slf4j
 class TcpServerDeviceGateway extends AbstractDeviceGateway implements DeviceGateway, MonitorSupportDeviceGateway {
-
     final TcpServer tcpServer;
-
     @Getter
-    Mono<ProtocolSupport> protocol;
-
+    volatile Mono<ProtocolSupport> protocol;
     private final DeviceRegistry registry;
-
     private final DeviceSessionManager sessionManager;
-
     private final LongAdder counter = new LongAdder();
-
     private final AtomicBoolean started = new AtomicBoolean();
-
-    private Disposable disposable;
-
-    private final Disposable.Composite subscriptions = Disposables.composite();
-
+    private volatile Disposable disposable;
     private final DeviceGatewayHelper helper;
-
-    /**
-     * Modbus RTU has no in-band device identity. When a server-side gateway
-     * accepts a connection, bind it to the configured logical gateway device
-     * before the first probe response arrives so child-device requests can be
-     * routed through the connection.
-     */
+    private final Set<TcpConnection> connections = ConcurrentHashMap.newKeySet();
+    @Getter
     private final String gatewayDeviceId;
-
-    /**
-     * Optional child devices sharing the physical Modbus TCP connection.
-     * Modbus has no child-device login frame, so these sessions must be
-     * established when the parent connection is accepted.
-     */
-    private final List<String> childDeviceIds;
-
-    //连接检查超时时间,超过时间连接没有被正确处理返回会话,将被自动断开连接
+    private volatile List<String> childDeviceIds;
     @Setter
     private Duration connectCheckTimeout = TimeUtils.parse(System.getProperty("gateway.tcp.network.connect-check-timeout", "10s"));
 
-    public TcpServerDeviceGateway(String id,
-                                  Mono<ProtocolSupport> protocol,
-                                  DeviceRegistry deviceRegistry,
-                                  DecodedClientMessageHandler clientMessageHandler,
-                                  DeviceSessionManager sessionManager,
-                                  TcpServer tcpServer,
-                                  String gatewayDeviceId,
-                                  List<String> childDeviceIds) {
+    TcpServerDeviceGateway(String id, Mono<ProtocolSupport> protocol, DeviceRegistry registry,
+                           DecodedClientMessageHandler handler, DeviceSessionManager sessionManager,
+                           TcpServer tcpServer, String gatewayDeviceId, List<String> childDeviceIds) {
         super(id);
         this.protocol = protocol;
-        this.registry = deviceRegistry;
-        this.tcpServer = tcpServer;
+        this.registry = registry;
         this.sessionManager = sessionManager;
-        this.helper = new DeviceGatewayHelper(registry, sessionManager, clientMessageHandler);
+        this.tcpServer = tcpServer;
         this.gatewayDeviceId = gatewayDeviceId;
-        this.childDeviceIds = childDeviceIds == null ? Collections.emptyList() : childDeviceIds;
+        this.childDeviceIds = childDeviceIds == null ? Collections.emptyList() : List.copyOf(childDeviceIds);
+        this.helper = new DeviceGatewayHelper(registry, sessionManager, handler);
     }
 
     @Override
-    public long totalConnection() {
-        return counter.sum();
+    public long totalConnection() { return counter.sum(); }
+
+    Mono<Void> reloadChildDevices(List<String> configuredChildren) {
+        return Mono.defer(() -> {
+            List<String> previous = childDeviceIds;
+            List<String> next = List.copyOf(configuredChildren);
+            return TcpSessionOwner.validateChildren(registry, gatewayDeviceId, next).then(Mono.defer(() -> {
+            List<String> removed = new ArrayList<>(previous);
+            removed.removeAll(next);
+            childDeviceIds = next;
+            return Flux.fromIterable(connections)
+                .concatMap(connection -> Flux.fromIterable(removed).concatMap(connection.owner::remove)
+                    .then(connection.bindConfiguredChildren()))
+                .then()
+                .onErrorResume(error -> {
+                    childDeviceIds = previous;
+                    List<String> added = new ArrayList<>(next);
+                    added.removeAll(previous);
+                    return Flux.fromIterable(connections)
+                        .concatMap(connection -> Flux.fromIterable(added).concatMap(connection.owner::remove)
+                            .then(connection.bindConfiguredChildren()))
+                        .then().onErrorResume(rollback -> { error.addSuppressed(rollback); return Mono.empty(); })
+                        .then(Mono.error(error));
+                });
+            }));
+        });
     }
 
+    Mono<Void> bindConfiguredChildren(DeviceSession parent) {
+        TcpDeviceSession tcp = TcpSessionOwner.tcpSession(parent);
+        if (tcp == null || !tcp.owner().accessId.equals(getId())) return Mono.empty();
+        TcpSessionOwner owner = tcp.owner();
+        return owner.track(() -> Flux.fromIterable(childDeviceIds)
+            .concatMap(id -> registry.getDevice(id).flatMap(child -> child.getConfig(DeviceConfigKey.parentGatewayId)
+                .filter(parent.getDeviceId()::equals)
+                .switchIfEmpty(Mono.error(new IllegalStateException("Child [" + id + "] does not belong to parent [" + parent.getDeviceId() + "]")))
+                .then(Mono.defer(() -> {
+                    if (!owner.isActive() || !childDeviceIds.contains(id)) return Mono.empty();
+                    AtomicReference<Throwable> failure = new AtomicReference<>();
+                    Mono<DeviceSession> create = Mono.fromSupplier(() -> new ChildrenDeviceSession(id, parent, child));
+                    return sessionManager.compute(id, create, existing -> owner.update(existing, () -> create,
+                        () -> Mono.just(existing)).onErrorResume(error -> {
+                            failure.set(error);
+                            return Mono.just(existing);
+                        }))
+                        .flatMap(session -> failure.get() == null ? Mono.just(session) : Mono.error(failure.get()))
+                        .doOnNext(owner::accepted);
+                }))))
+            .then());
+    }
 
     class TcpConnection implements DeviceGatewayContext {
         final TcpClient client;
         final AtomicReference<DeviceSession> sessionRef = new AtomicReference<>();
         final InetSocketAddress address;
-        Disposable legalityChecker;
+        final TcpSessionOwner owner = new TcpSessionOwner(getId(), sessionManager);
+        final Sinks.Empty<Void> disconnected = Sinks.empty();
+        final AtomicBoolean cleaned = new AtomicBoolean();
+        volatile Disposable legalityChecker;
 
         TcpConnection(TcpClient client) {
             this.client = client;
             this.address = client.getRemoteAddress();
-            monitor.totalConnection(counter.sum());
-            client.onDisconnect(() -> {
-                counter.decrement();
-                monitor.disconnected();
-                monitor.totalConnection(counter.sum());
-                // Dispose legalityChecker on disconnect to prevent scheduler leak
-                Disposable checker = legalityChecker;
-                if (checker != null && !checker.isDisposed()) {
-                    checker.dispose();
-                }
-                //check session
-                DeviceSession session = sessionRef.get();
-                if (session != null && session.getDeviceId() != null) {
-                    sessionManager
-                        .getSession(session.getDeviceId())
-                        .subscribe(null, err -> log.warn("get session on disconnect error", err));
-                }
-
-            });
-            monitor.connected();
-
             sessionRef.set(new UnknownTcpDeviceSession(client.getId(), client, DefaultTransport.TCP, monitor));
+        }
 
-            if (gatewayDeviceId != null && !gatewayDeviceId.isEmpty()) {
-                DeviceOnlineMessage online = new DeviceOnlineMessage();
-                online.setDeviceId(gatewayDeviceId);
-                online.timestamp(System.currentTimeMillis());
-                handleDeviceMessage(online)
-                    .then(bindConfiguredChildren())
-                    .subscribe(null,
-                               err -> log.warn("bind configured gateway device [{}] failed", gatewayDeviceId, err));
+        void terminate() {
+            owner.invalidate();
+            disconnected.tryEmitEmpty();
+            closeClient(client);
+        }
+
+        Mono<Void> cleanup() {
+            owner.invalidate();
+            if (cleaned.compareAndSet(false, true)) {
+                Disposable checker = legalityChecker;
+                if (checker != null) checker.dispose();
+                if (connections.remove(this)) {
+                    counter.decrement();
+                    monitor.disconnected();
+                    monitor.totalConnection(counter.sum());
+                }
+                closeClient(client);
             }
-
-            legalityChecker = Schedulers
-                .parallel()
-                .schedule(this::checkLegality, connectCheckTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            return owner.close();
         }
 
         private Mono<Void> bindConfiguredChildren() {
-            if (childDeviceIds.isEmpty()) {
-                return Mono.empty();
-            }
-            return Mono
-                .justOrEmpty(sessionRef.get())
-                .filter(parentSession -> !(parentSession instanceof UnknownTcpDeviceSession))
-                .flatMapMany(parentSession -> reactor.core.publisher.Flux
-                    .fromIterable(childDeviceIds)
-                    .flatMap(childId -> registry
-                        .getDevice(childId)
-                        .flatMap(child -> sessionManager.compute(
-                            childId,
-                            Mono.just(new ChildrenDeviceSession(childId, parentSession, child)),
-                            existing -> Mono.just(new ChildrenDeviceSession(childId, parentSession, child)))))
-                )
-                .then();
+            return Mono.defer(() -> Mono.justOrEmpty(sessionRef.get())
+                .filter(session -> session.isWrapFrom(TcpDeviceSession.class) && owner.owns(session))
+                .flatMap(TcpServerDeviceGateway.this::bindConfiguredChildren));
         }
 
         public void checkLegality() {
-            //超过时间还未获取到任何设备则认为连接不合法，自动断开连接
-            if ((sessionRef.get() instanceof UnknownTcpDeviceSession)) {
-                log.info("tcp [{}] connection is illegal, close it.", address);
-                try {
-                    client.disconnect();
-                } catch (Throwable ignore) {
-                }
+            if (sessionRef.get() instanceof UnknownTcpDeviceSession) {
+                log.info("tcp [{}] connection has no registered device, close it", address);
+                terminate();
             }
         }
 
         Mono<Void> accept() {
-            return getProtocol()
-                .flatMap(protocol -> protocol.onClientConnect(DefaultTransport.TCP, client, this))
-                .then(
-                    client
-                        .subscribe()
-                        .filter(tcp -> started.get())
+            return Mono.defer(() -> {
+                synchronized (connections) {
+                    if (!started.get()) { closeClient(client); return Mono.empty(); }
+                    connections.add(this);
+                    counter.increment();
+                }
+                monitor.connected();
+                monitor.totalConnection(counter.sum());
+                client.onDisconnect(() -> { owner.invalidate(); disconnected.tryEmitEmpty(); });
+                legalityChecker = Schedulers.parallel().schedule(this::checkLegality,
+                    connectCheckTimeout.toMillis(), TimeUnit.MILLISECONDS);
+                Mono<Void> prebind = Mono.empty();
+                if (gatewayDeviceId != null && !gatewayDeviceId.isEmpty()) {
+                    DeviceOnlineMessage online = new DeviceOnlineMessage();
+                    online.setDeviceId(gatewayDeviceId);
+                    prebind = handleDeviceMessage(online).then(bindConfiguredChildren());
+                }
+                Mono<Void> accepted = prebind
+                    .then(getProtocol().flatMap(pt -> pt.onClientConnect(DefaultTransport.TCP, client, this)))
+                    .then(client.subscribe().filter(message -> started.get() && owner.isActive())
                         .concatMap(this::handleTcpMessage)
-                        .onErrorResume((err) -> {
-                            log.error(err.getMessage(), err);
-                            client.shutdown();
-                            return Mono.empty();
-                        })
-                        .then()
-                )
-                .doOnCancel(client::shutdown);
+                        .doOnDiscard(TcpMessage.class, message -> ReferenceCountUtil.safeRelease(message.getPayload()))
+                        .then())
+                    .takeUntilOther(disconnected.asMono());
+                return Mono.usingWhen(Mono.just(this), ignored -> accepted,
+                    ignored -> cleanup(), (ignored, error) -> cleanup(), ignored -> cleanup());
+            });
         }
 
         Mono<Void> handleTcpMessage(TcpMessage message) {
-            return getProtocol()
-                .flatMap(pt -> pt.getMessageCodec(DefaultTransport.TCP))
-                .flatMapMany(codec -> codec.decode(FromDeviceMessageContext.of(
-                    sessionRef.get(), message, registry, msg -> handleDeviceMessage(msg).then())))
-                .cast(DeviceMessage.class)
-                .concatMap(msg -> this
-                    .handleDeviceMessage(msg)
-                    .as(MonoTracer.create(
-                        DeviceTracer.SpanName.decode(msg.getDeviceId()),
-                        (span, _msg) -> span.setAttributeLazy(DeviceTracer.SpanKey.message, _msg::toString))))
-                .onErrorResume((err) -> {
-                    log.error("Handle TCP[{}] message failed:\n{}",
-                              address,
-                              message
-                        , err);
-                    return Mono.fromRunnable(client::reset);
-                })
-                .subscribeOn(Schedulers.parallel())
-                .then();
+            return getProtocol().flatMap(pt -> pt.getMessageCodec(DefaultTransport.TCP))
+                .flatMapMany(codec -> codec.decode(FromDeviceMessageContext.of(sessionRef.get(), message,
+                    registry, decoded -> handleDeviceMessage(decoded).then())))
+                .cast(DeviceMessage.class).concatMap(this::handleDeviceMessage)
+                .onErrorResume(error -> { log.warn("handle TCP [{}] message failed", address, error); return Mono.empty(); })
+                .subscribeOn(Schedulers.parallel()).then()
+                .doFinally(ignored -> ReferenceCountUtil.safeRelease(message.getPayload()));
         }
 
         Mono<DeviceMessage> handleDeviceMessage(DeviceMessage message) {
-            Disposable checker = legalityChecker;
-            if (checker != null) {
-                checker.dispose();
-                legalityChecker = null;
-            }
+            if (message.getDeviceId() == null || message.getDeviceId().trim().isEmpty()) return Mono.empty();
             monitor.receivedMessage();
-            return helper
-                .handleDeviceMessage(
-                    message,
-                    device -> new TcpDeviceSession(device, client,DefaultTransport.TCP, monitor),
+            return owner.track(() -> owner.validate(registry, message.getDeviceId(), true)
+                .then(helper.handleDeviceMessage(message,
+                    device -> owner.validate(registry, device.getDeviceId(), true)
+                        .then(Mono.defer(() -> owner.isActive()
+                            ? Mono.just(new TcpDeviceSession(device, client, DefaultTransport.TCP, monitor, true, owner)) : Mono.empty())),
                     session -> {
-                        TcpDeviceSession deviceSession = session.unwrap(TcpDeviceSession.class);
-                        deviceSession.setClient(client);
-                        deviceSession.setShutdownClientOnClose(true);
-                        sessionRef.set(deviceSession);
-                    },
-                    () -> log.warn("TCP{}: The device[{}] in the message body does not exist:{}", address, message.getDeviceId(), message)
-                )
-                .thenReturn(message);
+                        if (owner.isActive() && owner.owns(session)) {
+                            sessionRef.set(session);
+                            Disposable checker = legalityChecker;
+                            if (checker != null) checker.dispose();
+                        }
+                        return Mono.empty();
+                    }, () -> { log.warn("TCP [{}] device [{}] is not registered", address, message.getDeviceId()); return Mono.empty(); }, owner))
+                .map(ignored -> message));
         }
 
         @Override
-        public Mono<DeviceOperator> getDevice(String deviceId) {
-            return registry.getDevice(deviceId);
-        }
-
+        public Mono<DeviceOperator> getDevice(String deviceId) { return registry.getDevice(deviceId); }
         @Override
-        public Mono<DeviceProductOperator> getProduct(String productId) {
-            return registry.getProduct(productId);
-        }
-
+        public Mono<DeviceProductOperator> getProduct(String productId) { return registry.getProduct(productId); }
         @Override
-        public Mono<Void> onMessage(DeviceMessage message) {
-            return handleDeviceMessage(message).then();
-        }
+        public Mono<Void> onMessage(DeviceMessage message) { return handleDeviceMessage(message).then(); }
     }
 
-
     private void closeClient(TcpClient client) {
-        try {
-            client.shutdown();
-        } catch (Throwable ignore) {
-
-        }
+        try { client.shutdown(); } catch (Throwable error) { log.debug("close TCP client failed", error); }
     }
 
     private void doStart() {
-        if (started.getAndSet(true) || disposable != null) {
-            return;
-        }
-        disposable = tcpServer
-            .handleConnection()
-            .onBackpressureBuffer(1024, client -> {
-                log.warn("tcp server [{}] connection buffer is full, close it.", client.getRemoteAddress());
-                closeClient(client);
-            })
+        if (started.getAndSet(true)) return;
+        disposable = tcpServer.handleConnection()
+            .onBackpressureBuffer(1024, this::closeClient)
             .publishOn(Schedulers.parallel())
-            .flatMap(client -> new TcpConnection(client)
-                         .accept()
-                         .onErrorResume(err -> {
-                             log.error("handle tcp client[{}] error", client.getRemoteAddress(), err);
-                             return Mono.empty();
-                         })
-                , Integer.MAX_VALUE)
+            .flatMap(client -> new TcpConnection(client).accept().onErrorResume(error -> {
+                log.warn("TCP client acceptance failed", error);
+                return Mono.empty();
+            }), Integer.MAX_VALUE)
+            .doOnDiscard(TcpClient.class, this::closeClient)
             .contextWrite(ReactiveLogger.start("network", tcpServer.getId()))
-            .subscribe(
-                ignore -> {
-                },
-                error -> log.error(error.getMessage(), error)
-            );
+            .subscribe(ignored -> { }, error -> log.error("TCP gateway accept stream failed", error));
     }
 
     @Override
-    protected Mono<Void> doStartup() {
-        return Mono.fromRunnable(this::doStart);
-    }
+    protected Mono<Void> doStartup() { return Mono.fromRunnable(this::doStart); }
 
     @Override
     protected Mono<Void> doShutdown() {
-        return Mono.fromRunnable(() -> {
-            subscriptions.dispose();
-            if (null != disposable) {
-                disposable.dispose();
-                disposable = null;
+        return Mono.defer(() -> {
+            List<TcpConnection> closing;
+            synchronized (connections) {
+                started.set(false);
+                closing = new ArrayList<>(connections);
+                closing.forEach(connection -> connection.owner.invalidate());
             }
+            Disposable current = disposable;
+            disposable = null;
+            if (current != null) current.dispose();
+            return Flux.fromIterable(closing).flatMapDelayError(TcpConnection::cleanup, 32, 1).then();
         });
     }
 }

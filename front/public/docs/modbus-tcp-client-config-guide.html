@@ -96,25 +96,16 @@
           </article>
 
           <article class="step">
-            <div class="step-title"><span class="num">3</span><h3>配置从机产品和 registerMap</h3></div>
-            <p>在“从机产品与 registerMap”中选择已有 <code>deviceType=childrenDevice</code> 产品，或新建从机产品。每一行点位说明一个物模型属性如何读取 Modbus 地址。</p>
-            <table class="fields"><tr><th>点位字段</th><th>填写规则</th></tr><tr><td>属性 ID/名称</td><td>属性 ID 必须与产品物模型一致，名称用于阅读和测试结果展示。</td></tr><tr><td>功能码</td><td><code>0x01/0x02/0x03/0x04</code> 用于读取，<code>0x05/0x06/0x0F/0x10</code> 用于写入。</td></tr><tr><td>地址/数量</td><td>按设备协议填写，页面地址通常从 0 开始；数量必须覆盖数据类型需要的寄存器数。</td></tr><tr><td>数据类型/字节序</td><td>按设备实际编码选择 BIT、INT16、UINT16、INT32、UINT32、FLOAT32、INT64 或 FLOAT64，以及 ABCD、CDAB、BADC、DCBA。</td></tr><tr><td>比例/偏移/可写/单位</td><td>用于把寄存器原始值换算为业务值；只有确认设备支持写入时才勾选“可写”。</td></tr></table>
-            <p>点位可以逐行添加，也可以通过 CSV 或粘贴导入。需要周期采集时，在“轮询计划”中启用轮询并选择采集项；留空采集项表示使用全部可读点位。</p>
-            <figure><img src="/images/docs/modbus-tcp-client-config-guide/03-register-map-polling.png" alt="从机产品寄存器映射和轮询计划截图"><figcaption>图 3：配置从机产品的 registerMap，并按需要启用轮询计划。</figcaption></figure>
+            <div class="step-title"><span class="num">3</span><h3>按产品配置点位、轮询与从机</h3></div>
+            <p>通过产品列表切换配置组。每组选择或新建一个从机产品，分别维护寄存器映射、物模型、产品轮询和从机列表；点击“添加产品”继续配置其他型号。</p>
+            <p>每组可单独导入点位 CSV、从机 CSV 或粘贴 Excel 内容。导入仅替换当前组列表。所有产品共用同一条 Modbus 通道，因此 slaveId 在采集器下必须唯一，范围为 1–247。</p>
+            <p>选择已有采集器会加载其全部产品与从机。已有设备 ID 固定；共享产品的点位与轮询修改会影响其他使用该产品的设备。移除已有从机或整个产品组会列入待解绑清单，保存时只解除与当前采集器的绑定，保留产品、设备和历史数据。</p>
           </article>
-
           <article class="step">
-            <div class="step-title"><span class="num">4</span><h3>填写从机列表</h3></div>
-            <p>点击“下一步”进入“从机列表”。每一行代表一台挂在当前网关设备下的 Modbus 从机，填写唯一的 <code>slaveId</code>、平台设备 ID、设备名称和说明。</p>
-            <p>设备 ID 和设备名称可以由页面自动生成，也可以手工指定。只有确实需要单台设备不同轮询策略时，才打开“覆盖产品轮询”；否则让从机继承产品轮询配置。</p>
-            <figure><img src="/images/docs/modbus-tcp-client-config-guide/04-slave-list.png" alt="Modbus 从机列表截图"><figcaption>图 4：为每台现场从机填写 slaveId、设备 ID、设备名称和轮询覆盖选项。</figcaption></figure>
-          </article>
-
-          <article class="step">
-            <div class="step-title"><span class="num">5</span><h3>保存并执行通讯测试</h3></div>
-            <p>进入“保存后通讯测试”后，先核对接入方式、连接地址、网络组件和接入网关。可以选择要测试的从机和属性；不选择时默认测试导入的全部从机和第一个可读点位。</p>
-            <p>点击“保存并测试”后，向导会依次保存产品、物模型、从机设备和 <code>slaveId</code>，启动 TCP 客户端和接入网关，再调用属性读取接口发起标准 Modbus RTU 读请求。中途失败时已经创建的资源不会自动删除。</p>
-            <figure><img src="/images/docs/modbus-tcp-client-config-guide/05-review-before-save.png" alt="保存前通讯测试确认截图"><figcaption>图 5：保存前确认连接摘要、测试从机和测试属性。</figcaption></figure>
+            <div class="step-title"><span class="num">4</span><h3>确认全部产品并执行测试</h3></div>
+            <p>核对各产品的点位数、从机数、新增、修改和待解绑内容；分别选择每个产品的测试从机和可读属性。不选择时，默认读取本产品全部可测试从机的第一个可读点位。</p>
+            <p>点击“保存并测试”统一保存各产品并绑定到同一采集器。TCP 服务端会自动维护完整的 childDeviceIds，无需手动追加第二批设备。新增资源在依赖可用时自动启用；已有停用资源保留原状态，相关测试显示“已跳过”。</p>
+            <p>测试结果按产品显示“成功”“失败”“等待连接”或“已跳过”。保存成功而采集器未连接时显示等待连接。部分保存失败时请保留页面，修正后重试，向导会复用已创建资源。</p>
           </article>
         </section>
 
@@ -133,7 +124,7 @@
             <tr><td>读取值为空或数值异常</td><td>逐项核对功能码、地址起点、数量、数据类型、字节序、比例和偏移。设备手册中的 40001 可能对应页面地址 0。</td></tr>
             <tr><td>CRC 或拆包错误</td><td>Modbus RTU over TCP 使用 DIRECT 负载解析；不要把 TCP 连接配置成按 CRC 分隔或混用其他协议解析器。</td></tr>
             <tr><td>人工读取成功但轮询没有数据</td><td>确认产品轮询已启用、采集项包含可读属性、周期和从机覆盖配置正确，并查看设备最新属性时间。</td></tr>
-            <tr><td>保存中途失败后再次保存异常</td><td>先查看“网络组件、接入网关、产品、设备”哪些已创建，复用已有资源或按依赖逆序清理后再重试。</td></tr>
+            <tr><td>保存中途失败后再次保存异常</td><td>保留向导页面，根据具体产品和失败阶段修正后重试；已创建资源会复用。刷新页面后可选择已有资源继续配置。</td></tr>
           </tbody></table>
         </section>
       </main>

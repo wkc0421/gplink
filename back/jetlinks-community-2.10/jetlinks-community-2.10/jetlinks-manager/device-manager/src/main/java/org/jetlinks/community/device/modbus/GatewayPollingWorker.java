@@ -7,8 +7,11 @@ import org.jetlinks.core.event.EventBus;
 import org.jetlinks.core.message.ReadPropertyMessageSender;
 import org.jetlinks.core.message.property.ReadPropertyMessageReply;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.nio.charset.StandardCharsets;
@@ -23,6 +26,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
 
 @Slf4j
 final class GatewayPollingWorker {
@@ -39,6 +44,17 @@ final class GatewayPollingWorker {
     private final DeviceRegistry registry;
     private final ModbusPollReportPublisher reportPublisher;
     private final EventBus eventBus;
+    private final Scheduler scheduler;
+    private final LongSupplier clock;
+    private final Object lifecycle = new Object();
+    private volatile boolean stopped;
+    private boolean applicationShutdown;
+    private final Sinks.Empty<Void> stoppedSignal = Sinks.empty();
+    private final Sinks.Empty<Void> shutdownSignal = Sinks.empty();
+    private final Disposable.Swap frameCancellation = Disposables.swap();
+    private Mono<Boolean> acquisition;
+    private Mono<Boolean> startup;
+    private Mono<Void> stopCompletion;
 
     private final AtomicBoolean leaseValid = new AtomicBoolean();
     private final AtomicLong leaseValidUntil = new AtomicLong();
@@ -53,6 +69,19 @@ final class GatewayPollingWorker {
                          DeviceRegistry registry,
                          ModbusPollReportPublisher reportPublisher,
                          EventBus eventBus) {
+        this(gatewayId, nodeId, leaseService, planResolver, registry, reportPublisher, eventBus,
+             Schedulers.parallel(), System::currentTimeMillis);
+    }
+
+    GatewayPollingWorker(String gatewayId,
+                         String nodeId,
+                         ModbusPollingLeaseService leaseService,
+                         ModbusPollPlanResolver planResolver,
+                         DeviceRegistry registry,
+                         ModbusPollReportPublisher reportPublisher,
+                         EventBus eventBus,
+                         Scheduler scheduler,
+                         LongSupplier clock) {
         this.gatewayId = gatewayId;
         this.nodeId = nodeId;
         this.ownerValue = ownerToken + "|" + nodeId;
@@ -61,33 +90,126 @@ final class GatewayPollingWorker {
         this.registry = registry;
         this.reportPublisher = reportPublisher;
         this.eventBus = eventBus;
+        this.scheduler = scheduler;
+        this.clock = clock;
     }
 
     Mono<Boolean> start() {
-        return leaseService
-                .acquire(gatewayId, ownerValue, LEASE_TTL)
+        return Mono.defer(() -> {
+            synchronized (lifecycle) {
+                if (stopped) {
+                    return Mono.just(false);
+                }
+                if (startup == null) {
+                    // Observe the Redis result even if startup is cancelled. A late
+                    // successful acquisition must be released before a reconnect.
+                    acquisition = Mono.defer(() -> {
+                        synchronized (lifecycle) {
+                            return stopped ? Mono.just(false)
+                                    : leaseService.acquire(gatewayId, ownerValue, LEASE_TTL);
+                        }
+                    })
+                            .takeUntilOther(shutdownSignal.asMono())
+                            .defaultIfEmpty(false)
+                            .cache();
+                    startup = startAcquired()
+                            .takeUntilOther(stoppedSignal.asMono())
+                            .defaultIfEmpty(false)
+                            .onErrorResume(error -> stop()
+                                    .onErrorResume(releaseError -> Mono.empty())
+                                    .then(Mono.error(error)))
+                            .cache();
+                }
+                return startup;
+            }
+        }).doOnCancel(this::stop);
+    }
+
+    private Mono<Boolean> startAcquired() {
+        return acquisition
                 .flatMap(acquired -> {
                     if (!acquired) {
                         return Mono.just(false);
                     }
-                    markLeaseValid();
+                    synchronized (lifecycle) {
+                        if (stopped) {
+                            return Mono.just(false);
+                        }
+                        markLeaseValid();
+                        startLeaseRenewal();
+                    }
                     return reloadPlans()
-                            .then(Mono.fromRunnable(this::startLoops))
-                            .thenReturn(true);
+                            .then(Mono.defer(() -> {
+                                synchronized (lifecycle) {
+                                    if (stopped) {
+                                        return Mono.just(false);
+                                    }
+                                    if (isLeaseValid()) {
+                                        startLoops();
+                                        return Mono.just(true);
+                                    }
+                                }
+                                return stop().thenReturn(false);
+                            }));
                 });
     }
 
     Mono<Void> reloadPlans() {
-        return planResolver
-                .resolve(gatewayId)
+        return Flux.defer(() -> stopped ? Flux.empty() : planResolver.resolve(gatewayId))
+                .takeUntilOther(stoppedSignal.asMono())
                 .collectList()
-                .doOnNext(resolved -> this.plans = resolved)
+                .doOnNext(resolved -> {
+                    synchronized (lifecycle) {
+                        if (stopped) {
+                            return;
+                        }
+                        Map<String, ModbusPollPlan> previous = plans.stream()
+                                .collect(Collectors.toMap(ModbusPollPlan::getId, plan -> plan));
+                        // A metadata save must not start another first round for an unchanged plan.
+                        this.plans = resolved.stream().map(plan -> {
+                            ModbusPollPlan existing = previous.get(plan.getId());
+                            return existing != null && existing.hasSameDefinition(plan) ? existing : plan;
+                        }).collect(Collectors.toList());
+                    }
+                })
                 .then();
     }
 
     Mono<Void> stop() {
         stopLocally(true);
-        return leaseService.release(gatewayId, ownerValue).then();
+        Mono<Void> completion;
+        boolean beginRelease = false;
+        synchronized (lifecycle) {
+            if (stopCompletion == null) {
+                beginRelease = true;
+                stopCompletion = (acquisition == null ? Mono.<Boolean>empty() : acquisition
+                        // A transport error can leave Redis's outcome unknown;
+                        // the owner-token guarded release is safe in that case.
+                        .onErrorReturn(true))
+                        .filter(Boolean.TRUE::equals)
+                        .flatMap(ignore -> Mono.defer(() -> {
+                            synchronized (lifecycle) {
+                                return applicationShutdown ? Mono.empty()
+                                        : leaseService.release(gatewayId, ownerValue).then();
+                            }
+                        }))
+                        .then()
+                        .takeUntilOther(shutdownSignal.asMono())
+                        .cache();
+            }
+            completion = stopCompletion;
+        }
+        if (beginRelease) {
+            // Stopping can cancel the startup branch that called us before it
+            // subscribes to the returned barrier. Keep cleanup independently owned.
+            completion.subscribe(null,
+                    error -> log.warn("Failed to release stopped Modbus worker [{}]", gatewayId, error));
+        }
+        return completion;
+    }
+
+    Mono<Void> whenStopped() {
+        return stoppedSignal.asMono();
     }
 
     /**
@@ -97,18 +219,28 @@ final class GatewayPollingWorker {
      * protocol support lifecycle.
      */
     void shutdownLocally() {
+        synchronized (lifecycle) {
+            applicationShutdown = true;
+        }
         stopLocally(false);
+        frameCancellation.dispose();
+        shutdownSignal.tryEmitEmpty();
     }
 
     boolean isLeaseValid() {
-        return leaseValid.get() && System.currentTimeMillis() < leaseValidUntil.get();
+        return !stopped && leaseValid.get() && clock.getAsLong() < leaseValidUntil.get();
     }
 
-    private void startLoops() {
+    private void startLeaseRenewal() {
+        // Plan loading may take longer than the lease TTL; keep ownership until it is ready.
         renewal = Flux
-                .interval(RENEW_INTERVAL, Schedulers.parallel())
-                .concatMap(ignore -> leaseService
-                        .renew(gatewayId, ownerValue, LEASE_TTL)
+                .interval(RENEW_INTERVAL, scheduler)
+                .concatMap(ignore -> Mono.defer(() -> {
+                            synchronized (lifecycle) {
+                                return stopped ? Mono.empty()
+                                        : leaseService.renew(gatewayId, ownerValue, LEASE_TTL);
+                            }
+                        })
                         .doOnNext(renewed -> {
                             if (renewed) {
                                 markLeaseValid();
@@ -121,9 +253,11 @@ final class GatewayPollingWorker {
                             return Mono.empty();
                         }))
                 .subscribe();
+    }
 
+    private void startLoops() {
         loop = Flux
-                .interval(Duration.ZERO, Duration.ofMillis(200), Schedulers.parallel())
+                .interval(Duration.ZERO, Duration.ofMillis(200), scheduler)
                 .onBackpressureLatest()
                 .concatMap(ignore -> executeDuePlan()
                         .onErrorResume(error -> {
@@ -138,22 +272,38 @@ final class GatewayPollingWorker {
             loseLease("local lease expired");
             return Mono.empty();
         }
-        long now = System.currentTimeMillis();
-        ModbusPollPlan due = plans
+        long now = clock.getAsLong();
+        List<ModbusPollPlan> due = plans
                 .stream()
                 .filter(plan -> plan.isDue(now))
-                .min(Comparator.comparingLong(ModbusPollPlan::getNextFireTime))
-                .orElse(null);
-        if (due == null) {
+                .sorted(Comparator.comparingLong(ModbusPollPlan::getNextFireTime))
+                .collect(Collectors.toList());
+        if (due.isEmpty()) {
             return Mono.empty();
         }
-        long plannedFireTime = due.claimFire(now);
-        String cycleId = UUID.randomUUID().toString();
-        return executePlan(due, plannedFireTime, cycleId)
+        List<ModbusPollPlan> fixedDelayRound = new ArrayList<>();
+        return Flux.fromIterable(due)
+                .concatMap(plan -> {
+                    if (!isLeaseValid()) {
+                        return Mono.empty();
+                    }
+                    long plannedFireTime = plan.claimFire(clock.getAsLong());
+                    if (plan.getScheduleType() == ModbusPollPlan.ScheduleType.FIXED_DELAY) {
+                        fixedDelayRound.add(plan);
+                        return executePlan(plan, plannedFireTime, UUID.randomUUID().toString());
+                    }
+                    return executePlan(plan, plannedFireTime, UUID.randomUUID().toString())
+                            .doFinally(ignore -> {
+                                long completed = clock.getAsLong();
+                                plan.mergeCronTrigger(completed);
+                                plan.complete(completed);
+                            });
+                })
+                .then()
                 .doFinally(ignore -> {
-                    long completed = System.currentTimeMillis();
-                    due.mergeCronTrigger(completed);
-                    due.complete(completed);
+                    long completed = clock.getAsLong();
+                    // All products due in this gateway round finish before their delay starts.
+                    fixedDelayRound.forEach(plan -> plan.complete(completed));
                 });
     }
 
@@ -169,7 +319,7 @@ final class GatewayPollingWorker {
                     Mono<Void> read = pollDevice(plan, deviceId, plannedFireTime, cycleId);
                     if (plan.getDeviceIntervalMs() > 0) {
                         read = read
-                                .then(Mono.delay(Duration.ofMillis(plan.getDeviceIntervalMs())))
+                                .then(Mono.delay(Duration.ofMillis(plan.getDeviceIntervalMs()), scheduler))
                                 .then();
                     }
                     return read;
@@ -181,7 +331,7 @@ final class GatewayPollingWorker {
                                   String deviceId,
                                   long plannedFireTime,
                                   String cycleId) {
-        long startedAt = System.currentTimeMillis();
+        long startedAt = clock.getAsLong();
         String messageId = deterministicMessageId(plan.getId(), plannedFireTime, deviceId);
         PollAccumulator accumulator = new PollAccumulator(plan.getPropertyIds());
         return registry
@@ -198,7 +348,7 @@ final class GatewayPollingWorker {
                     if (accumulator.properties.isEmpty() || !isLeaseValid()) {
                         return Mono.empty();
                     }
-                    long completedAt = System.currentTimeMillis();
+                    long completedAt = clock.getAsLong();
                     ModbusPollReportPublisher.PollCycleResult result =
                             new ModbusPollReportPublisher.PollCycleResult(
                                     gatewayId,
@@ -266,8 +416,12 @@ final class GatewayPollingWorker {
     }
 
     private void markLeaseValid() {
-        leaseValidUntil.set(System.currentTimeMillis() + LEASE_TTL.toMillis());
-        leaseValid.set(true);
+        synchronized (lifecycle) {
+            if (!stopped) {
+                leaseValidUntil.set(clock.getAsLong() + LEASE_TTL.toMillis());
+                leaseValid.set(true);
+            }
+        }
     }
 
     private void loseLease(String reason) {
@@ -278,19 +432,33 @@ final class GatewayPollingWorker {
     }
 
     private void cancelQueuedFrames() {
-        eventBus
-                .publish(
-                        ModbusPollingCoordinator.LEASE_LOST_TOPIC,
-                        gatewayId + "|" + ownerToken)
-                .subscribe();
+        synchronized (lifecycle) {
+            if (!applicationShutdown) {
+                frameCancellation.update(eventBus
+                        .publish(ModbusPollingCoordinator.LEASE_LOST_TOPIC, gatewayId + "|" + ownerToken)
+                        .subscribe(null, error -> log.warn("Failed to cancel Modbus frames [{}]", gatewayId, error)));
+            }
+        }
     }
 
     private void stopLocally(boolean notifyExecutor) {
-        leaseValid.set(false);
-        dispose(loop);
-        dispose(renewal);
-        loop = null;
-        renewal = null;
+        Disposable previousLoop;
+        Disposable previousRenewal;
+        synchronized (lifecycle) {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
+            leaseValid.set(false);
+            previousLoop = loop;
+            previousRenewal = renewal;
+            loop = null;
+            renewal = null;
+            plans = new ArrayList<>();
+        }
+        dispose(previousLoop);
+        dispose(previousRenewal);
+        stoppedSignal.tryEmitEmpty();
         if (notifyExecutor) {
             cancelQueuedFrames();
         }

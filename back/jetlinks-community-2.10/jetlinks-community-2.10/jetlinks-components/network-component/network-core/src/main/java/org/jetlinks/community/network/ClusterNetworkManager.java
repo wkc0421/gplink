@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 public class ClusterNetworkManager implements NetworkManager, CommandLineRunner {
@@ -107,11 +108,26 @@ public class ClusterNetworkManager implements NetworkManager, CommandLineRunner 
 
     public Mono<Network> createOrUpdate(NetworkProvider<Object> provider, String id, Object properties) {
         ReactiveCacheContainer<String, Network> networkStore = getNetworkStore(provider.getType());
-        return networkStore.compute(id, (key, network) -> {
-            if (network == null) {
-                return provider.createNetwork(properties);
-            }
-            return provider.reload(network, properties);
+        return Mono.defer(() -> {
+            AtomicReference<Throwable> reloadError = new AtomicReference<>();
+            return networkStore.compute(id, (key, network) -> {
+                if (network == null) {
+                    return provider.createNetwork(properties);
+                }
+                // Keep failed reloads managed. TCP servers also return the bind
+                // failure to callers after the original instance is cached again.
+                return Mono.defer(() -> provider.reload(network, properties))
+                    .switchIfEmpty(Mono.just(network))
+                    .onErrorResume(error -> {
+                        if (DefaultNetworkType.TCP_SERVER.getId().equals(provider.getType().getId())) {
+                            reloadError.set(error);
+                        }
+                        log.warn("reload network [{}:{}] failed, keep previous instance",
+                                 provider.getType().getId(), id, error);
+                        return Mono.just(network);
+                    });
+            }).flatMap(network -> reloadError.get() == null
+                    ? Mono.just(network) : Mono.error(reloadError.get()));
         });
     }
 
@@ -166,17 +182,13 @@ public class ClusterNetworkManager implements NetworkManager, CommandLineRunner 
     }
 
     public Mono<Void> doShutdown(String type, String id) {
-        return Mono
-            .justOrEmpty(getNetworkStore(type).getNow(id))
-            .doOnNext(Network::shutdown)
-            .then();
+        return Mono.defer(() -> Mono.justOrEmpty(getNetworkStore(type).getNow(id)))
+            .flatMap(Network::shutdownAsync);
     }
 
     public Mono<Void> doDestroy(String type, String id) {
-        return Mono
-            .justOrEmpty(getNetworkStore(type).remove(id))
-            .doOnNext(Network::shutdown)
-            .then();
+        return Mono.defer(() -> Mono.justOrEmpty(getNetworkStore(type).remove(id)))
+            .flatMap(Network::shutdownAsync);
     }
 
     @Override
@@ -278,7 +290,7 @@ public class ClusterNetworkManager implements NetworkManager, CommandLineRunner 
         for (ReactiveCacheContainer<String, Network> value : store.values()) {
             for (Network network : value.valuesNow()) {
                 try {
-                    network.shutdown();
+                    network.shutdownAsync().block(Duration.ofSeconds(30));
                 } catch (RejectedExecutionException ignore) {
 
                 } catch (Throwable e) {

@@ -78,7 +78,7 @@ timescaledb:
                 interval: 30d
     things-data:
         enabled: true # 开启设备数据存储
-        retention-policy: 3y  # 原始数据保留 3 年后自动删除
+        retention-policy: 5y  # 原始数据保留 5 年后自动删除
         chunk-time-interval: 4h # 32GB × 2500msg/min × 100采集项 ≈ 4167 rows/s，目标chunk≈80M行/4167≈5.3h，取4h
         compress: true          # 启用列压缩（30 天以上自动压缩）
         compress-after: 30d
@@ -86,12 +86,23 @@ timescaledb:
         cagg:
           enabled: true         # 建立小时级 continuous aggregate（仅属性表）
           refresh-interval: 1h  # cagg 自动刷新间隔；每小时刷新上一个完整小时
-          start-offset: 3h      # 刷新策略 start_offset（窗口覆盖 1h~3h 前，避免 hourly bucket 过小）
-          end-offset: 1h        # 刷新策略 end_offset；只刷 1h~3h 前的完整 bucket，不触碰当前写入小时
-          retention: 3y         # cagg 视图数据保留时长
+          start-offset: 5y      # 兼容字段；实际回看窗口由 things-data.retention-policy 决定
+          end-offset: 1h        # 跳过最近未完整的小时桶，查询以实时聚合补齐
+          retention: 5y         # cagg 视图数据保留时长
           daily-enabled: true   # 在小时 cagg 之上建立日级层级 cagg（_daily_agg）
-          daily-start-offset: 3d  # 日级 cagg 刷新 start_offset；window=3d-1d=2d>1d满足约束，1d chunk后刷新速度快
+          daily-start-offset: 5y  # 兼容字段；日/月层同样覆盖原始数据保留期
           monthly-enabled: true # 在日级 cagg 之上建立月级层级 cagg（_monthly_agg）
+        counter-snapshot:
+          enabled: true           # 默认没有启用的产品采集项
+          hour-chunk-interval: 30d
+          day-chunk-interval: 365d
+          retention: 5y
+          poll-interval: 5m
+          boundary-delay: 5m
+          batch-devices: 50
+          batch-boundaries: 24
+          concurrency: 2
+          sql-timeout: 30s
     write-buffer:
         parallelism: 4          # 并发写入 worker 数；16 并发会导致同一 chunk 锁竞争，单机 PG 用 4 更稳
         size: 1000              # 恢复默认值；大批次写入持锁时间长，导致读查询被阻塞

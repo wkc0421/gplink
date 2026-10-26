@@ -120,6 +120,10 @@ import {
   _deploy,
   _undeploy,
 } from "../../../../../api/instance";
+import {
+  getDeviceActionErrorMessage,
+  isDeviceActionSuccess,
+} from "../../utils";
 import { useInstanceStore } from "../../../../../store/instance";
 import { onlyMessage } from "@jetlinks-web/utils";
 import { diagnose } from "../../../../../assets";
@@ -311,7 +315,7 @@ const onDeploy = async () => {
       : await _deployCloud(edgeId, props.rows).finally(() => {
           loading.value = false;
         });
-  if (res.success) {
+  if (isDeviceActionSuccess(res)) {
     if (props.batch) {
       result.value = res.result;
       handleResult(res.result);
@@ -319,6 +323,11 @@ const onDeploy = async () => {
       onlyMessage($t("Child.actionModal.664579-25"));
       emits("close");
     }
+  } else {
+    onlyMessage(
+      getDeviceActionErrorMessage(res, $t("Instance.index.133466-25")),
+      "error",
+    );
   }
 };
 

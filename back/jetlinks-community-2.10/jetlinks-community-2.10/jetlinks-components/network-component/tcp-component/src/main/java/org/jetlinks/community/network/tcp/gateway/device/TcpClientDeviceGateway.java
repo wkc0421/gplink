@@ -17,6 +17,7 @@ package org.jetlinks.community.network.tcp.gateway.device;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import io.netty.util.ReferenceCountUtil;
 import org.hswebframework.web.logger.ReactiveLogger;
 import org.jetlinks.community.gateway.AbstractDeviceGateway;
 import org.jetlinks.community.gateway.DeviceGateway;
@@ -40,12 +41,14 @@ import org.jetlinks.core.trace.MonoTracer;
 import org.jetlinks.supports.server.DecodedClientMessageHandler;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
 
 /**
  * TCP-Client variant of the device gateway. The platform dials out to a
@@ -74,15 +77,18 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
      * handshake, so TCP client mode needs an explicit id to bind the logical
      * gateway session before child-device reads can be sent.
      */
-    private final String gatewayDeviceId;
-
-    private final LongAdder counter = new LongAdder();
+    private final AtomicReference<String> gatewayDeviceId = new AtomicReference<>();
 
     private final AtomicBoolean started = new AtomicBoolean();
+
+    private final AtomicBoolean connected = new AtomicBoolean();
+
+    private final AtomicBoolean binding = new AtomicBoolean();
 
     private final AtomicReference<DeviceSession> sessionRef = new AtomicReference<>();
 
     private final AtomicReference<Disposable.Composite> subscriptions = new AtomicReference<>();
+    private final AtomicReference<TcpSessionOwner> connectionOwner = new AtomicReference<>();
 
     TcpClientDeviceGateway(String id,
                            Mono<ProtocolSupport> protocol,
@@ -96,13 +102,13 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
         this.registry = registry;
         this.sessionManager = sessionManager;
         this.tcpClient = tcpClient;
-        this.gatewayDeviceId = gatewayDeviceId;
+        this.gatewayDeviceId.set(gatewayDeviceId);
         this.helper = new DeviceGatewayHelper(registry, sessionManager, clientMessageHandler);
     }
 
     @Override
     public long totalConnection() {
-        return counter.sum();
+        return connected.get() ? 1 : 0;
     }
 
     @Override
@@ -112,17 +118,28 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
 
     @Override
     protected Mono<Void> doShutdown() {
-        return Mono.fromRunnable(() -> {
-            started.set(false);
+        return Mono.defer(() -> {
+            TcpSessionOwner owner;
+            synchronized (connected) {
+                started.set(false);
+                owner = connectionOwner.getAndSet(null);
+                if (owner != null) owner.invalidate();
+            }
             Disposable.Composite lifecycle = subscriptions.getAndSet(null);
             if (lifecycle != null) {
                 lifecycle.dispose();
             }
-            DeviceSession session = sessionRef.getAndSet(null);
-            if (session != null) {
-                session.close();
+            if (connected.getAndSet(false)) {
+                monitor.disconnected();
+                monitor.totalConnection(0);
             }
-            tcpClient.shutdown();
+            sessionRef.set(null);
+            return (owner == null ? Mono.<Void>empty() : owner.close())
+                .onErrorResume(error -> Mono.defer(tcpClient::shutdownAsync)
+                    .onErrorResume(closeError -> { error.addSuppressed(closeError); return Mono.empty(); })
+                    .then(Mono.error(error)))
+                .then(Mono.defer(tcpClient::shutdownAsync))
+                .doOnCancel(tcpClient::shutdown);
         });
     }
 
@@ -136,38 +153,40 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
             previous.dispose();
         }
         sessionRef.set(new UnknownTcpDeviceSession(tcpClient.getId(), tcpClient, DefaultTransport.TCP, monitor));
-        counter.increment();
-        monitor.connected();
 
-        // A Modbus RTU/TCP bus has no login or device-id frame. When the
-        // gateway configuration supplies the pre-created gateway device id,
-        // establish its session immediately so child devices can be queried.
-        if (gatewayDeviceId != null && !gatewayDeviceId.isEmpty()) {
-            DeviceOnlineMessage online = new DeviceOnlineMessage();
-            online.setDeviceId(gatewayDeviceId);
-            online.timestamp(System.currentTimeMillis());
-            Disposable binding = handleDeviceMessage(online)
-                .subscribe(null, err -> log.warn("bind configured gateway device [{}] failed", gatewayDeviceId, err));
-            lifecycle.add(binding);
-        }
-        monitor.totalConnection(counter.sum());
+        Disposable state = tcpClient
+                .connectionState()
+                .distinctUntilChanged()
+                .doOnNext(online -> {
+                    if (!online) {
+                        TcpSessionOwner owner = connectionOwner.get();
+                        if (owner != null) owner.invalidate();
+                    }
+                })
+                .concatMap(stateValue -> handleConnectionState(stateValue)
+                        .onErrorResume(error -> {
+                            log.warn("handle TCP client gateway[{}] connection state [{}] failed",
+                                     getId(), stateValue, error);
+                            return Mono.empty();
+                        }))
+                .subscribe();
+        lifecycle.add(state);
 
-        tcpClient.onDisconnect(() -> {
-            counter.decrement();
-            monitor.disconnected();
-            monitor.totalConnection(counter.sum());
-            DeviceSession current = sessionRef.get();
-            if (current != null && current.getDeviceId() != null) {
-                sessionManager
-                    .getSession(current.getDeviceId())
-                    .subscribe(null, err -> log.warn("get session on disconnect error", err));
-            }
-        });
+        // The socket can connect before the configured device is enabled. A later
+        // registration must not require a new physical connection or a restart.
+        lifecycle.add(Flux.interval(Duration.ofSeconds(5))
+                .concatMap(ignore -> reconcileConfiguredGatewayDevice()
+                        .onErrorResume(error -> {
+                            log.warn("recover TCP client gateway[{}] device session failed", getId(), error);
+                            return Mono.empty();
+                        }))
+                .subscribe());
 
         Disposable recv = tcpClient
                 .subscribe()
                 .filter(msg -> started.get())
                 .concatMap(this::handleTcpMessage)
+                .doOnDiscard(TcpMessage.class, message -> ReferenceCountUtil.safeRelease(message.getPayload()))
                 .onErrorResume(err -> {
                     log.error("TCP client gateway[{}] receive error", getId(), err);
                     return Mono.empty();
@@ -177,14 +196,114 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
                 .subscribe();
         lifecycle.add(recv);
 
-        Disposable connectHook = getProtocol()
-                .flatMap(pt -> pt.onClientConnect(DefaultTransport.TCP, tcpClient, this))
-                .onErrorResume(err -> {
-                    log.warn("protocol onClientConnect failed", err);
-                    return Mono.empty();
-                })
-                .subscribe();
-        lifecycle.add(connectHook);
+    }
+
+    private Mono<Void> handleConnectionState(boolean online) {
+        if (!started.get()) {
+            return Mono.empty();
+        }
+        return online ? handleConnected() : handleDisconnected();
+    }
+
+    private Mono<Void> handleConnected() {
+        synchronized (connected) {
+            if (!started.get() || !connected.compareAndSet(false, true)) {
+                return Mono.empty();
+            }
+            connectionOwner.set(new TcpSessionOwner(getId(), sessionManager));
+            sessionRef.set(new UnknownTcpDeviceSession(tcpClient.getId(), tcpClient, DefaultTransport.TCP, monitor));
+        }
+        monitor.connected();
+        monitor.totalConnection(1);
+
+        return bindConfiguredGatewayDevice()
+                .onErrorResume(ignore -> Mono.empty())
+                .then(getProtocol()
+                        .flatMap(pt -> pt.onClientConnect(DefaultTransport.TCP, tcpClient, this))
+                         .timeout(Duration.ofSeconds(10))
+                        .onErrorResume(err -> {
+                            log.warn("protocol onClientConnect failed", err);
+                            return Mono.empty();
+                        }));
+    }
+
+    private Mono<Void> handleDisconnected() {
+        if (!connected.compareAndSet(true, false)) {
+            return Mono.empty();
+        }
+        monitor.disconnected();
+        monitor.totalConnection(0);
+
+        TcpSessionOwner owner = connectionOwner.getAndSet(null);
+        sessionRef.set(new UnknownTcpDeviceSession(tcpClient.getId(), tcpClient, DefaultTransport.TCP, monitor));
+        return owner == null ? Mono.empty() : owner.close();
+    }
+
+    private Mono<Void> bindConfiguredGatewayDevice() {
+        return Mono.defer(() -> {
+            String deviceId = gatewayDeviceId.get();
+            if (!started.get() || !connected.get() || deviceId == null || deviceId.isEmpty()
+                    || !binding.compareAndSet(false, true)) {
+                return Mono.empty();
+            }
+            return bindDevice(deviceId)
+                    .doFinally(ignore -> binding.set(false));
+        });
+    }
+
+    private Mono<Void> bindDevice(String deviceId) {
+        if (!started.get() || !connected.get() || deviceId == null || deviceId.isEmpty()) return Mono.empty();
+        DeviceOnlineMessage online = new DeviceOnlineMessage();
+        online.setDeviceId(deviceId);
+        online.timestamp(System.currentTimeMillis());
+        return registry.getDevice(deviceId).flatMap(device -> handleDeviceMessage(online))
+            .doOnNext(ignore -> log.info("TCP client gateway[{}] bound configured device [{}]", getId(), deviceId))
+            .doOnError(error -> log.warn("bind configured gateway device [{}] failed", deviceId, error)).then();
+    }
+
+    private Mono<Void> reconcileConfiguredGatewayDevice() {
+        return Mono.defer(() -> {
+            String deviceId = gatewayDeviceId.get();
+            if (!started.get() || !connected.get() || !tcpClient.isAlive()
+                    || deviceId == null || deviceId.isEmpty()) {
+                return Mono.empty();
+            }
+            return sessionManager.getSession(deviceId, false)
+                    .filter(session -> session.isAlive()
+                            && session.isWrapFrom(TcpDeviceSession.class)
+                            && session.unwrap(TcpDeviceSession.class) == sessionRef.get())
+                    .hasElement()
+                    // Do not ping or re-register healthy sessions: only inbound
+                    // traffic should refresh the TCP client's idle timeout.
+                    .flatMap(healthy -> healthy ? Mono.empty() : bindConfiguredGatewayDevice());
+        });
+    }
+
+    Mono<Void> updateGatewayDeviceId(String deviceId) {
+        return Flux.interval(Duration.ZERO, Duration.ofMillis(10))
+            .filter(ignored -> binding.compareAndSet(false, true)).next().timeout(Duration.ofSeconds(10))
+            .flatMap(ignored -> Mono.defer(() -> {
+            String previous = gatewayDeviceId.get();
+            TcpSessionOwner owner = connectionOwner.get();
+            Mono<Void> validate = owner == null || deviceId == null || deviceId.isEmpty() ? Mono.empty()
+                : registry.getDevice(deviceId).flatMap(device -> owner.validate(registry, deviceId, true));
+            return validate.then(Mono.defer(() -> {
+                gatewayDeviceId.set(deviceId);
+                return bindDevice(deviceId)
+                    .then(owner != null && previous != null && !previous.isEmpty() && !Objects.equals(previous, deviceId)
+                        ? owner.remove(previous).then() : Mono.empty())
+                    .onErrorResume(error -> {
+                        gatewayDeviceId.set(previous);
+                        Mono<Void> rollback = owner != null && deviceId != null && !deviceId.isEmpty() && !Objects.equals(previous, deviceId)
+                            ? owner.remove(deviceId).then() : Mono.empty();
+                        return rollback.then(bindDevice(previous))
+                            .onErrorResume(rollbackError -> {
+                                error.addSuppressed(rollbackError);
+                                return Mono.empty();
+                            }).then(Mono.error(error));
+                    });
+            }));
+        }).doFinally(ignoredSignal -> binding.set(false)));
     }
 
     private Mono<Void> handleTcpMessage(TcpMessage message) {
@@ -202,24 +321,30 @@ class TcpClientDeviceGateway extends AbstractDeviceGateway
                     return Mono.empty();
                 })
                 .subscribeOn(Schedulers.parallel())
-                .then();
+                .then()
+                .doFinally(ignored -> ReferenceCountUtil.safeRelease(message.getPayload()));
     }
 
     private Mono<DeviceMessage> handleDeviceMessage(DeviceMessage message) {
+        if (message.getDeviceId() == null || message.getDeviceId().trim().isEmpty()) return Mono.empty();
         monitor.receivedMessage();
-        return helper
-                .handleDeviceMessage(
+        TcpSessionOwner owner = connectionOwner.get();
+        if (owner == null) return Mono.empty();
+        return owner.track(() -> owner.validate(registry, message.getDeviceId(), true)
+            .then(helper.handleDeviceMessage(
                         message,
-                        device -> new TcpDeviceSession(device, tcpClient, DefaultTransport.TCP, monitor, false),
+                        device -> owner.validate(registry, device.getDeviceId(), true)
+                            .then(Mono.defer(() -> owner.isActive()
+                                ? Mono.just(new TcpDeviceSession(device, tcpClient, DefaultTransport.TCP, monitor, false, owner)) : Mono.empty())),
                         session -> {
                             TcpDeviceSession deviceSession = session.unwrap(TcpDeviceSession.class);
-                            deviceSession.setClient(tcpClient);
-                            deviceSession.setShutdownClientOnClose(false);
-                            sessionRef.set(deviceSession);
+                            if (owner.isActive() && connectionOwner.get() == owner) sessionRef.set(deviceSession);
+                            return Mono.empty();
                         },
-                        () -> log.warn("TCP client gateway[{}]: device[{}] not found: {}",
-                                getId(), message.getDeviceId(), message))
-                .thenReturn(message);
+                        () -> {
+                            log.warn("TCP client gateway[{}]: device[{}] not found: {}", getId(), message.getDeviceId(), message);
+                            return Mono.empty();
+                        }, owner)).map(ignored -> message));
     }
 
     @Override

@@ -35,6 +35,7 @@ import org.jetlinks.community.device.entity.*;
 import org.jetlinks.community.device.enums.DeviceProductState;
 import org.jetlinks.community.device.events.DeviceProductDeployEvent;
 import org.jetlinks.community.device.timeseries.DeviceTimeSeriesMetric;
+import org.jetlinks.community.gateway.supports.DeviceGatewayPropertiesManager;
 import org.jetlinks.community.timeseries.TimeSeriesManager;
 import org.jetlinks.supports.official.JetLinksDeviceMetadataCodec;
 import org.reactivestreams.Publisher;
@@ -44,6 +45,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
@@ -66,6 +68,14 @@ public class LocalDeviceProductService extends GenericReactiveCrudService<Device
 
     private final DeviceConfigMetadataManager metadataManager;
 
+    /**
+     * The protocol configured on a product must follow its selected device
+     * gateway.  Keeping this lookup in the backend prevents a stale protocol
+     * value from an older installation (or a concurrent UI request) from
+     * being persisted and later resolved as an unsupported protocol.
+     */
+    private final DeviceGatewayPropertiesManager gatewayPropertiesManager;
+
     private final Map<String, Mono<DeviceProductEntity>> productLoadCache = Caffeine
         .newBuilder()
         .expireAfterWrite(Duration.ofSeconds(2))
@@ -78,12 +88,14 @@ public class LocalDeviceProductService extends GenericReactiveCrudService<Device
                                      ApplicationEventPublisher eventPublisher,
                                      ReactiveRepository<DeviceInstanceEntity, String> instanceRepository,
                                      TimeSeriesManager timeSeriesManager,
-                                     DeviceConfigMetadataManager metadataManager) {
+                                     DeviceConfigMetadataManager metadataManager,
+                                     DeviceGatewayPropertiesManager gatewayPropertiesManager) {
         this.registry = registry;
         this.eventPublisher = eventPublisher;
         this.instanceRepository = instanceRepository;
         this.timeSeriesManager = timeSeriesManager;
         this.metadataManager = metadataManager;
+        this.gatewayPropertiesManager = gatewayPropertiesManager;
     }
 
     /**
@@ -110,6 +122,7 @@ public class LocalDeviceProductService extends GenericReactiveCrudService<Device
     @Override
     public Mono<SaveResult> save(Publisher<DeviceProductEntity> entityPublisher) {
         return Flux.from(entityPublisher)
+                   .flatMap(this::normalizeAccessProtocol)
                    .flatMap(product -> validateMetadata(product.getId(), product.getMetadata()).thenReturn(product))
                    .as(super::save);
     }
@@ -118,8 +131,32 @@ public class LocalDeviceProductService extends GenericReactiveCrudService<Device
     public Mono<Integer> updateById(String id, Mono<DeviceProductEntity> entityPublisher) {
         return super.updateById(id, entityPublisher
             .doOnNext(product -> product.setState(null))
+            .flatMap(this::normalizeAccessProtocol)
             .flatMap(product -> validateMetadata(product.getId(), product.getMetadata()).thenReturn(product))
         );
+    }
+
+    /**
+     * Resolve the authoritative protocol/transport from the selected gateway.
+     * Plugin gateways do not have a row in device_gateway; in that case the
+     * product's supplied values are intentionally preserved for compatibility.
+     */
+    private Mono<DeviceProductEntity> normalizeAccessProtocol(DeviceProductEntity product) {
+        String accessId = product.getAccessId();
+        if (!StringUtils.hasText(accessId)) {
+            return Mono.just(product);
+        }
+        return gatewayPropertiesManager
+            .getProperties(accessId)
+            .filter(properties -> StringUtils.hasText(properties.getProtocol()))
+            .map(properties -> {
+                product.setMessageProtocol(properties.getProtocol());
+                if (StringUtils.hasText(properties.getTransport())) {
+                    product.setTransportProtocol(properties.getTransport());
+                }
+                return product;
+            })
+            .defaultIfEmpty(product);
     }
 
     private Mono<Void> validateMetadata(String productId, String metadata) {
@@ -149,6 +186,7 @@ public class LocalDeviceProductService extends GenericReactiveCrudService<Device
     @Transactional
     public Mono<Integer> deploy(String id) {
         return findById(Mono.just(id))
+            .flatMap(this::normalizeAccessProtocol)
             .doOnNext(this::validateDeviceProduct)
             // 检查协议相关配置的必填项
             .flatMap(product -> validateConfiguration(product).thenReturn(product))

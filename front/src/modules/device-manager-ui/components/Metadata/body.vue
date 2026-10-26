@@ -4,7 +4,7 @@
     class="metadata-edit-table-body-viewport" :style="{ ...style, height: height + 'px'}" ref="viewScrollRef" @scroll="onScroll">
     <div :style="{position: 'relative'}">
       <div class="metadata-edit-scrollbar" :style="containerStyle"> </div>
-      <div class="metadata-edit-table-center" ref="tableCenterRef" >
+      <div class="metadata-edit-table-center" ref="tableCenterRef" :style="{ width: `${contentWidth}px` }" >
         <div
             v-if="virtualData.length"
             v-for="(item, index) in virtualData"
@@ -66,10 +66,14 @@ const props = defineProps({
   readonly: {
     type: Boolean,
     default: false
+  },
+  contentWidth: {
+    type: Number,
+    default: 0
   }
 })
 
-const emit = defineEmits(['update:dataSource', 'scrollDown'])
+const emit = defineEmits(['update:dataSource', 'scrollDown', 'horizontalScroll'])
 
 const viewScrollRef = ref()
 const tableCenterRef = ref()
@@ -83,6 +87,7 @@ const context = useRightMenuContext()
 
 let scrollLock = ref(false)
 let menuInstance
+let lastHorizontalScrollLeft = 0
 
 const maxLen = computed(() => {
   return Math.trunc(props.height / props.cellHeight)
@@ -112,6 +117,12 @@ const onScroll = () => {
   const height = viewScrollRef.value.scrollTop
   const clientHeight = viewScrollRef.value.clientHeight
   const scrollHeight = viewScrollRef.value.scrollHeight
+  const horizontalScrollLeft = viewScrollRef.value.scrollLeft
+
+  if (horizontalScrollLeft !== lastHorizontalScrollLeft) {
+    lastHorizontalScrollLeft = horizontalScrollLeft
+    emit('horizontalScroll', horizontalScrollLeft)
+  }
 
   const _index = Math.round(height / props.cellHeight) - 1
 
@@ -133,6 +144,10 @@ const scrollTo = (index) => {
     let top = index * props.cellHeight
     viewScrollRef.value.scrollTop = top
   }
+}
+
+const scrollToHorizontal = (left) => {
+  if (viewScrollRef.value) viewScrollRef.value.scrollLeft = left
 }
 
 const showContextMenu = (e, record, _index) => {
@@ -225,6 +240,7 @@ watch(() => props.groupKey, () => {
 
 defineExpose({
   scrollTo,
+  scrollToHorizontal,
   updateSelectedKeys
 })
 
@@ -234,7 +250,7 @@ defineExpose({
 .metadata-edit-table-body-viewport {
   max-height: 100%;
   width: 100%;
-  overflow: hidden auto;
+  overflow: auto;
   position: relative;
 
   .metadata-edit-scrollbar {

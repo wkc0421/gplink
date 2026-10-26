@@ -1,0 +1,16 @@
+{
+    "schemaVersion":  1,
+    "bundleId":  "gplink2-windows-offline-2026.10.13-network-only-modbus-import-jdk-priority-fulljdk-nginx-config",
+    "name":  "GPLink2 Windows Offline Bundle",
+    "targetOperatingSystems":  [
+                                   "Windows 11 x64",
+                                   "Windows Server 2019 x64",
+                                   "Windows Server 2022 x64",
+                                   "Windows Server 2025 x64"
+                               ],
+    "minimumMemoryGB":  16,
+    "applicationService":  "GpLink2",
+    "postgresqlService":  "GpLinkPostgreSQL16",
+    "createdAt":  "2026-10-13T15:15:58+08:00",
+    "packageManifestSha256":  "9093F6C31D58BF068B57EAFF3EFE1FBE4450A9C7E395B45AB5A06776E93D466F"
+}

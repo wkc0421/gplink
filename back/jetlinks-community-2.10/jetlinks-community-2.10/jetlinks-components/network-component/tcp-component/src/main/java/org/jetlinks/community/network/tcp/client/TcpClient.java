@@ -49,6 +49,18 @@ public interface TcpClient extends Network, ClientConnection {
     Flux<TcpMessage> subscribe();
 
     /**
+     * Subscribe to the physical TCP connection state.
+     *
+     * <p>The latest state is replayed to new subscribers. {@code true} is
+     * emitted only after the current socket has been accepted, while
+     * {@code false} is emitted when that socket is replaced, fails, or is
+     * closed.</p>
+     *
+     * @return physical connection state
+     */
+    Flux<Boolean> connectionState();
+
+    /**
      * 向客户端发送数据
      *
      * @param message 数据对象

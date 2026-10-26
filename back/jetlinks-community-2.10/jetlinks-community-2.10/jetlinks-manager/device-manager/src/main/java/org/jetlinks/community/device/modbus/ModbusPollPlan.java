@@ -9,6 +9,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Getter
 final class ModbusPollPlan {
@@ -49,7 +50,20 @@ final class ModbusPollPlan {
         this.retryCount = Math.max(0, retryCount);
         this.propertyIds = Collections.unmodifiableList(new ArrayList<>(propertyIds));
         this.deviceIds = Collections.unmodifiableList(new ArrayList<>(deviceIds));
-        this.nextFireTime = computeNext(System.currentTimeMillis());
+        long readyAt = System.currentTimeMillis();
+        this.nextFireTime = scheduleType == ScheduleType.FIXED_DELAY ? readyAt : computeNext(readyAt);
+    }
+
+    boolean hasSameDefinition(ModbusPollPlan other) {
+        return id.equals(other.id)
+                && scheduleType == other.scheduleType
+                && intervalMs == other.intervalMs
+                && Objects.equals(cron, other.cron)
+                && deviceIntervalMs == other.deviceIntervalMs
+                && frameIntervalMs == other.frameIntervalMs
+                && retryCount == other.retryCount
+                && propertyIds.equals(other.propertyIds)
+                && deviceIds.equals(other.deviceIds);
     }
 
     boolean isDue(long now) {

@@ -27,10 +27,12 @@ import org.jetlinks.community.network.DefaultNetworkType;
 import org.jetlinks.community.network.NetworkManager;
 import org.jetlinks.community.network.NetworkType;
 import org.jetlinks.community.network.mqtt.client.MqttClient;
+import org.jetlinks.community.network.mqtt.gateway.device.session.MqttClientSession;
 import org.jetlinks.supports.server.DecodedClientMessageHandler;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Objects;
 
 @Component
@@ -83,14 +85,15 @@ public class MqttClientDeviceGatewayProvider implements DeviceGatewayProvider {
             .map(mqttClient -> {
                 String protocol = properties.getProtocol();
 
-                return new MqttClientDeviceGateway(properties.getId(),
+                MqttClientDeviceGateway gateway = new MqttClientDeviceGateway(properties.getId(),
                                                    mqttClient,
                                                    registry,
                                                    Mono.defer(() -> protocolSupports.getProtocol(protocol)),
                                                    sessionManager,
                                                    clientMessageHandler
                 );
-
+                gateway.setKeepAliveTimeout(getKeepAliveTimeout(properties));
+                return gateway;
             });
     }
 
@@ -108,9 +111,17 @@ public class MqttClientDeviceGatewayProvider implements DeviceGatewayProvider {
                           .flatMap(gate -> gate.startup().thenReturn(gate)));
         }
         //更新协议包
+        deviceGateway.setKeepAliveTimeout(getKeepAliveTimeout(properties));
         deviceGateway.setProtocol(protocolSupports.getProtocol(properties.getProtocol()));
         return deviceGateway
             .reload()
             .thenReturn(deviceGateway);
+    }
+
+    private Duration getKeepAliveTimeout(DeviceGatewayProperties properties) {
+        return properties
+            .getLong("keepAliveTimeout")
+            .map(Duration::ofSeconds)
+            .orElse(MqttClientSession.DEFAULT_KEEP_ALIVE_TIMEOUT);
     }
 }

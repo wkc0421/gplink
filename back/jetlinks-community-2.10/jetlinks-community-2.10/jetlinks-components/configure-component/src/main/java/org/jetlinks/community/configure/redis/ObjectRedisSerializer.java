@@ -26,12 +26,17 @@ import org.springframework.data.redis.serializer.SerializationException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.Serializable;
+import java.io.UTFDataFormatException;
 
 @Slf4j
 @AllArgsConstructor
 public class ObjectRedisSerializer implements RedisSerializer<Object> {
+
+    private static final SerializeUtils.Serializer OBJECT_SERIALIZER = SerializeUtils.lookup(Serializable.class);
 
     static final FastThreadLocal<ByteArrayOutputStream> STREAM_LOCAL = new FastThreadLocal<ByteArrayOutputStream>() {
         @Override
@@ -51,16 +56,38 @@ public class ObjectRedisSerializer implements RedisSerializer<Object> {
         if (o == null) {
             return null;
         }
-        ByteArrayOutputStream arr = STREAM_LOCAL.get();
-        try (ObjectOutput output = Serializers.getDefault().createOutput(arr)) {
-
-            SerializeUtils.writeObject(o, output);
-            output.flush();
-
-            return arr.toByteArray();
+        try {
+            try {
+                return serialize(o, false);
+            } catch (UTFDataFormatException e) {
+                if (!(o instanceof Serializable)) {
+                    throw e;
+                }
+                // The compact STRING encoding uses writeUTF (a 65535-byte limit).
+                // The existing OBJECT encoding supports long/nested strings and
+                // remains readable by SerializeUtils.readObject in older releases.
+                return serialize(o, true);
+            }
         } catch (Throwable e) {
             log.error(e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private byte[] serialize(Object value, boolean useObjectEncoding) throws IOException {
+        ByteArrayOutputStream arr = STREAM_LOCAL.get();
+        try (ObjectOutput output = Serializers.getDefault().createOutput(arr)) {
+            if (useObjectEncoding) {
+                output.writeByte(OBJECT_SERIALIZER.getCode());
+                OBJECT_SERIALIZER.serialize(value, output);
+            } else {
+                SerializeUtils.writeObject(value, output);
+            }
+            output.flush();
+            return arr.toByteArray();
+        } finally {
+            // A failed write must not leave partial bytes for the next Redis value.
+            arr.reset();
         }
     }
 

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -86,7 +87,8 @@ public class DefaultDeviceGatewayManager implements DeviceGatewayManager {
     public Mono<Void> doStart(String id) {
         return this
             .getGateway(id)
-            .flatMap(DeviceGateway::startup)
+            .flatMap(gateway -> Mono.usingWhen(Mono.just(gateway), DeviceGateway::startup,
+                ignored -> Mono.empty(), (failed, error) -> failed.shutdown(), DeviceGateway::shutdown))
             .doOnSuccess(nil -> log.debug("started device gateway {}", id))
             .doOnError(err -> log.error("start device gateway {} error", id, err));
     }
@@ -114,7 +116,9 @@ public class DefaultDeviceGatewayManager implements DeviceGatewayManager {
     }
 
     private Mono<Void> doReload(String gatewayId) {
-        return propertiesManager
+        return Mono.defer(() -> {
+            AtomicReference<Throwable> failure = new AtomicReference<>();
+            return propertiesManager
             .getProperties(gatewayId)
             .flatMap(prop -> {
 
@@ -123,17 +127,24 @@ public class DefaultDeviceGatewayManager implements DeviceGatewayManager {
                     .compute(gatewayId, (id, gateway) -> {
                         if (gateway != null) {
                             log.debug("reload device gateway {} {}:{}", prop.getName(), prop.getProvider(), prop.getId());
-                            return provider
-                                .reloadDeviceGateway(gateway, prop)
-                                .cast(DeviceGateway.class);
+                            return Mono.defer(() -> provider.reloadDeviceGateway(gateway, prop))
+                                .cast(DeviceGateway.class)
+                                .switchIfEmpty(Mono.error(new IllegalStateException("Gateway reload returned no instance")))
+                                .onErrorResume(error -> {
+                                    failure.set(error);
+                                    return Mono.just(gateway);
+                                });
                         }
                         log.debug("create device gateway {} {}:{}", prop.getName(), prop.getProvider(), prop.getId());
                         return provider
                             .createDeviceGateway(prop)
-                            .flatMap(newer -> newer.startup().thenReturn(newer));
+                            .flatMap(newer -> Mono.usingWhen(Mono.just(newer),
+                                candidate -> candidate.startup().thenReturn(candidate),
+                                ignored -> Mono.empty(), (failed, error) -> failed.shutdown(), DeviceGateway::shutdown));
                     });
             })
-            .then();
+            .then(Mono.defer(() -> failure.get() == null ? Mono.empty() : Mono.error(failure.get())));
+        });
     }
 
     @Override

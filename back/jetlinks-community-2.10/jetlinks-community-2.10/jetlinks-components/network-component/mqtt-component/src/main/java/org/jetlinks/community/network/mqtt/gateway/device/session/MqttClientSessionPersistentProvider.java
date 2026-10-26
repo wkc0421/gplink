@@ -121,7 +121,11 @@ public class MqttClientSessionPersistentProvider implements DeviceSessionProvide
                         manager.getNetwork(DefaultNetworkType.MQTT_CLIENT, networkId),
                         GatewayMonitors.getDeviceGatewayMonitor(gatewayId));
 
-                    session.setKeepAliveTimeout(Duration.ofMillis(keepAliveTimeout));
+                    // Older sessions inherited DeviceSession's zero timeout getter,
+                    // so their stored value did not represent the actual timeout.
+                    session.setKeepAliveTimeout(keepAliveTimeout == 0
+                                                    ? MqttClientSession.DEFAULT_KEEP_ALIVE_TIMEOUT
+                                                    : Duration.ofMillis(keepAliveTimeout));
                     session.setLastPingTime(lastPingTime);
                     session.setConnectTime(connectTime);
                     session.setGatewayId(gatewayId);

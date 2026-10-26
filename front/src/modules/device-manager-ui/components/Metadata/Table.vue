@@ -6,11 +6,23 @@
     <div class="metadata-edit-table-extra">
       <slot name="extra" :isFullscreen="isFullscreen" :fullScreenToggle="toggle"/>
     </div>
+    <div v-if="horizontalOverflow" class="metadata-edit-table-horizontal-controls">
+      <div class="metadata-edit-table-horizontal-hint">
+        <span>左右拖动滚动条查看全部列</span>
+        <div class="metadata-edit-table-horizontal-buttons">
+          <a-button size="small" aria-label="向左查看表格列" :disabled="horizontalScrollLeft <= 0" @click="scrollHorizontally(-400)">◀</a-button>
+          <a-button size="small" aria-label="向右查看表格列" :disabled="horizontalScrollLeft >= maxHorizontalScroll" @click="scrollHorizontally(400)">▶</a-button>
+        </div>
+      </div>
+      <div ref="horizontalScrollbar" class="metadata-edit-table-horizontal-scrollbar" @scroll="onHorizontalScrollbarScroll">
+        <div :style="{ width: `${contentWidth + scrollWidth}px`, height: '1px' }"></div>
+      </div>
+    </div>
     <div class="metadata-edit-table">
-      <div class="metadata-edit-table-header" style="height: 50px" :style="{paddingRight: scrollWidth + 'px'}">
+      <div ref="headerViewport" class="metadata-edit-table-header" style="height: 50px" :style="{paddingRight: scrollWidth + 'px'}">
         <Header
           :columns="myColumns"
-          :style="{width: tableStyle.width}"
+          :style="{width: `${contentWidth}px`}"
         />
       </div>
       <div class="metadata-edit-table-body" :style="{width: tableStyle.width, height: `${height}px`}">
@@ -19,6 +31,7 @@
           :dataSource="bodyDataSource"
           :columns="myColumns"
           :cellHeight="cellHeight"
+          :contentWidth="contentWidth"
           :height="height"
           :disableMenu="disableMenu"
           :rowKey="rowKey"
@@ -27,6 +40,7 @@
           :rowSelection="rowSelection"
           :readonly="readonly"
           @scrollDown="onScrollDown"
+          @horizontalScroll="syncHorizontalScroll"
         >
         <template v-for="(_, name) in slots" #[name]="slotData">
           <slot :name="name" v-bind="slotData || {}"/>
@@ -110,6 +124,10 @@ const attrs = useAttrs()
 const myColumns = ref([])
 const tableWrapper = ref()
 const tableBody = ref()
+const headerViewport = ref()
+const horizontalScrollbar = ref()
+const horizontalScrollLeft = ref(0)
+const viewportWidth = ref(0)
 const tableStyle = reactive({
   width: '100%',
   height: props.height
@@ -311,13 +329,47 @@ function addFieldError(key, message) {
 }
 
 const scrollWidth = computed(() => {
-  return (props.dataSource.length * props.cellHeight) > props.height ? 17 : 0
+  return (bodyDataSource.value.length * props.cellHeight) > props.height ? 17 : 0
 })
+
+const contentWidth = computed(() => {
+  const lastColumn = myColumns.value[myColumns.value.length - 1]
+  return lastColumn ? lastColumn.left + lastColumn.width : 0
+})
+const maxHorizontalScroll = computed(() => Math.max(0, contentWidth.value - viewportWidth.value + scrollWidth.value))
+const horizontalOverflow = computed(() => viewportWidth.value > 0 && maxHorizontalScroll.value > 1)
+
+const syncHorizontalScroll = (left) => {
+  horizontalScrollLeft.value = left
+  if (headerViewport.value && headerViewport.value.scrollLeft !== left) {
+    headerViewport.value.scrollLeft = left
+  }
+  if (horizontalScrollbar.value && horizontalScrollbar.value.scrollLeft !== left) {
+    horizontalScrollbar.value.scrollLeft = left
+  }
+}
+
+const setHorizontalScroll = (left) => {
+  horizontalScrollLeft.value = left
+  if (horizontalScrollbar.value && horizontalScrollbar.value.scrollLeft !== left) {
+    horizontalScrollbar.value.scrollLeft = left
+  }
+  if (headerViewport.value) headerViewport.value.scrollLeft = left
+  tableBody.value?.scrollToHorizontal(left)
+}
+
+const onHorizontalScrollbarScroll = (event) => setHorizontalScroll(event.target.scrollLeft)
+
+const scrollHorizontally = (delta) => {
+  const left = Math.max(0, Math.min(maxHorizontalScroll.value, horizontalScrollLeft.value + delta))
+  setHorizontalScroll(left)
+}
 
 function onResize({width = 0, height}) {
 
   const _width = width - scrollWidth.value
 
+  viewportWidth.value = width
   tableStyle.width = width || '100%'
 
   // tableStyle.height = height - 146
@@ -341,6 +393,10 @@ function onResize({width = 0, height}) {
 
   myColumns.value = handleColumnsWidth(newColumns, _width)
 }
+
+watch(maxHorizontalScroll, (max) => {
+  if (horizontalScrollLeft.value > max) scrollHorizontally(max - horizontalScrollLeft.value)
+})
 
 const onScrollDown = (len) => {
   emit('scrollDown', len)
@@ -454,6 +510,52 @@ defineExpose({
 
   &.table-full-screen {
     padding: 24px;
+  }
+
+  .metadata-edit-table-horizontal-controls {
+    margin-bottom: 8px;
+    padding: 6px 10px 4px;
+    border: 1px solid var(--app-border);
+    border-radius: 4px;
+    background: @app-surface;
+  }
+
+  .metadata-edit-table-horizontal-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+    color: var(--app-text);
+    font-size: 12px;
+  }
+
+  .metadata-edit-table-horizontal-buttons {
+    display: flex;
+    gap: 4px;
+  }
+
+  .metadata-edit-table-horizontal-scrollbar {
+    width: 100%;
+    height: 18px;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    scrollbar-color: @primary-color @app-bg;
+    scrollbar-width: auto;
+
+    &::-webkit-scrollbar {
+      height: 12px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: @app-bg;
+      border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: @primary-color;
+      border-radius: 6px;
+    }
   }
 
   .metadata-edit-table {

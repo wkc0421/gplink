@@ -356,6 +356,8 @@ GET /modbus/polling/status
 
 在接入向导选择测试设备和测试属性，执行读取测试。人工读取始终返回 `ReadPropertyMessageReply`，不会因为启用了轮询而变成上报消息。
 
+`modbus-rtu.v1` 的读属性请求和读属性回复仅用于完成内部请求，不保存消息日志或属性历史数据。回复及其子设备包装消息会标记 `ignoreLog=true`、`ignoreStorage=true`，成功、协议异常、超时和连接中断均遵循此规则。人工读取仍可获得成功值或失败原因；写属性等其他消息维持原有存储行为。
+
 测试成功至少应确认：
 
 - 请求中的 `slaveId` 正确。
@@ -375,6 +377,7 @@ GET /modbus/polling/status
 - 部分窗口成功时，Header `pollResult=partial`，成功属性不会丢弃。
 - 全部窗口失败时不生成空上报。
 - API 和人工读取仍返回 `ReadPropertyMessageReply`。
+- 读链路仅持久化汇总的 `ReportPropertyMessage`，不重复保存读请求和读回复；上报同时保留消息日志与属性数据。
 
 上报包含以下字段：
 

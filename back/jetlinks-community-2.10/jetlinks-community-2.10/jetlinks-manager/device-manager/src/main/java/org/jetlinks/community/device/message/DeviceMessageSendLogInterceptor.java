@@ -24,6 +24,7 @@ import org.jetlinks.core.enums.ErrorCode;
 import org.jetlinks.core.event.EventBus;
 import org.jetlinks.core.exception.DeviceOperationException;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.ChildDeviceMessage;
 import org.jetlinks.core.message.Headers;
 import org.jetlinks.core.message.Message;
 import org.jetlinks.core.message.RepayableDeviceMessage;
@@ -31,6 +32,7 @@ import org.jetlinks.core.message.function.FunctionInvokeMessage;
 import org.jetlinks.core.message.function.FunctionParameter;
 import org.jetlinks.core.message.interceptor.DeviceMessageSenderInterceptor;
 import org.jetlinks.core.message.property.WritePropertyMessage;
+import org.jetlinks.core.message.property.ReadPropertyMessage;
 import org.jetlinks.core.message.property.WritePropertyMessageReply;
 import org.jetlinks.core.metadata.FunctionMetadata;
 import org.jetlinks.core.metadata.PropertyMetadata;
@@ -162,10 +164,34 @@ public class DeviceMessageSendLogInterceptor implements DeviceMessageSenderInter
         if (message instanceof RepayableDeviceMessage) {
             return this
                 .prepareMessage(device, message)
+                .flatMap(msg -> prepareModbusReadRecord(device, msg))
                 .flatMap(msg -> this.doPublish(msg).thenReturn(msg));
         } else {
             return Mono.just(message);
         }
+    }
+
+    private Mono<DeviceMessage> prepareModbusReadRecord(DeviceOperator device, DeviceMessage message) {
+        Message payload = message;
+        while (payload instanceof ChildDeviceMessage) {
+            payload = ((ChildDeviceMessage) payload).getChildDeviceMessage();
+        }
+        if (!(payload instanceof ReadPropertyMessage)) {
+            return Mono.just(message);
+        }
+        final Message read = payload;
+        return device.getProtocol()
+            .filter(protocol -> "modbus-rtu.v1".equals(protocol.getId()))
+            .doOnNext(ignore -> {
+                // Apply before publishing the send event; encoding happens too
+                // late to reliably exclude the request from message persistence.
+                message.addHeader(Headers.ignoreLog, true);
+                message.addHeader(Headers.ignoreStorage, true);
+                read.addHeader(Headers.ignoreLog, true);
+                read.addHeader(Headers.ignoreStorage, true);
+            })
+            .onErrorResume(ignore -> Mono.empty())
+            .thenReturn(message);
     }
 
     @Override

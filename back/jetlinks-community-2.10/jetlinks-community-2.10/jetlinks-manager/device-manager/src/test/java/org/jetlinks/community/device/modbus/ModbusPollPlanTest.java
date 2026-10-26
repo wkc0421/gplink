@@ -11,11 +11,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ModbusPollPlanTest {
 
     @Test
+    void fixedDelayFirstRunIsDueAsSoonAsThePlanIsReady() {
+        ModbusPollPlan plan = new ModbusPollPlan(
+                "p", ModbusPollPlan.ScheduleType.FIXED_DELAY, 300000, null,
+                100, 100, 0, Collections.singletonList("temp"), Collections.singletonList("d1"));
+
+        assertTrue(plan.isDue(System.currentTimeMillis()), "online gateway must not wait five minutes for its first poll");
+    }
+
+    @Test
     void fixedDelayStartsAfterCompletion() {
         ModbusPollPlan plan = new ModbusPollPlan(
                 "p",
                 ModbusPollPlan.ScheduleType.FIXED_DELAY,
-                30000,
+                300000,
                 null,
                 100,
                 100,
@@ -29,7 +38,9 @@ class ModbusPollPlanTest {
 
         long completed = first + 5000;
         plan.complete(completed);
-        assertEquals(completed + 30000, plan.getNextFireTime());
+        assertEquals(completed + 300000, plan.getNextFireTime());
+        assertFalse(plan.isDue(completed + 299999));
+        assertTrue(plan.isDue(completed + 300000));
     }
 
     @Test

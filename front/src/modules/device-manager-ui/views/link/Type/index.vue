@@ -79,10 +79,10 @@
                       <div class="card-item-content-text">
                         <a-tooltip>
                           <template #title>{{
-                              slotProps.type
+                              getTypeLabel(slotProps)
                             }}
                           </template>
-                          {{ slotProps.type }}
+                          {{ getTypeLabel(slotProps) }}
                         </a-tooltip>
                       </div>
                     </a-col>
@@ -173,7 +173,7 @@
             }}
           </template>
           <template #type="slotProps">
-            {{ slotProps.typeObject.name }}
+            {{ getTypeLabel(slotProps) }}
           </template>
           <template #details="slotProps">
             {{ getDetails(slotProps) }}
@@ -190,6 +190,7 @@ import {useMenuStore} from '@/store';
 import {network} from "../../../assets";
 import {useI18n} from 'vue-i18n';
 import { isNoCommunity } from '@/utils/utils';
+import { getNetworkEndpoints, getNetworkTypeLabel } from './utils';
 
 const {t: $t} = useI18n();
 const menuStory = useMenuStore();
@@ -221,7 +222,7 @@ const columns = [
         const res: any = await supports();
         return (options.value = res.result.map((item: any) => ({
           value: item.id,
-          label: item.name,
+          label: getNetworkTypeLabel({ type: item.id, typeObject: item }, $t('Type.tcpClient')),
         })));
       },
     },
@@ -391,65 +392,16 @@ const handleEdit = (id: string) => {
   });
 };
 
-const getDetails = (slotProps: Partial<Record<string, any>>) => {
-  const {typeObject, shareCluster, configuration, cluster} = slotProps;
-  let headers = typeObject.name.replace(/[^j-zA-Z]/g, '').toLowerCase() + '://';
-  const flag = slotProps.configuration?.secure || cluster?.[0]?.configuration?.secure
-  if(['MQTT_CLIENT', 'MQTT_SERVER'].includes(typeObject.value) && flag){
-    headers = 'mqtts://'
-  }
+const getTypeLabel = (network: Record<string, any>) =>
+  getNetworkTypeLabel(network, $t('Type.tcpClient'));
 
-  const content = !!shareCluster
-      ? (configuration.publicHost || configuration.remoteHost) +
-      ':' +
-      (configuration.publicPort || configuration.remotePort)
-      : (cluster[0].configuration.publicHost ||
-          cluster[0].configuration.remoteHost) +
-      ':' +
-      (cluster[0].configuration.publicPort ||
-          cluster[0].configuration.remotePort);
-  let head = $t('Type.index.196842-20');
-  if (!!shareCluster) {
-    !!configuration.publicHost && (head = $t('Type.index.196842-21'));
-  } else {
-    !!cluster[0].configuration.publicHost && (head = $t('Type.index.196842-21'));
-  }
-  if (!shareCluster && cluster.length > 1) {
-    const contentItem2 =
-        (cluster[1].configuration.publicHost ||
-            cluster[1].configuration.remoteHost) +
-        ':' +
-        (cluster[1].configuration.publicPort ||
-            cluster[1].configuration.remotePort);
-    let headItme2 = $t('Type.index.196842-22');
-    !!cluster[1].configuration.publicHost && (headItme2 = $t('Type.index.196842-21'));
-    if (cluster.length > 2) {
-      return (
-          head +
-          headers +
-          content +
-          ' ' +
-          headItme2 +
-          headers +
-          contentItem2 +
-          '。。。'
-      );
-    }
-    return (
-        head + headers + content + ' ' + headItme2 + headers + contentItem2
-    );
-  }
-  return head + headers + content;
+const getDetails = (network: Record<string, any>) => {
+  const endpoints = getNetworkEndpoints(network);
+  const details = endpoints.slice(0, 2).map(endpoint =>
+    $t(endpoint.public ? 'Type.index.196842-21' : 'Type.index.196842-20') + endpoint.url
+  ).join(' ');
+  return details + (endpoints.length > 2 ? '???' : '');
 };
-
-// const getSupports = async () => {
-//     const res: any = await supports();
-//     options.value = res.result.map((item: any) => ({
-//         value: item.id,
-//         label: item.name,
-//     }));
-// };
-// getSupports();
 
 /**
  * 搜索

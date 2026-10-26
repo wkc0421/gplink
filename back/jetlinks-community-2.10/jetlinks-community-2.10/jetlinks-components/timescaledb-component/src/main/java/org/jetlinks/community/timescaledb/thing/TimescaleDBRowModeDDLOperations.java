@@ -17,7 +17,6 @@ package org.jetlinks.community.timescaledb.thing;
 
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
-import org.hswebframework.ezorm.rdb.codec.DateTimeCodec;
 import org.hswebframework.ezorm.rdb.metadata.RDBIndexMetadata;
 import org.hswebframework.ezorm.rdb.metadata.RDBSchemaMetadata;
 import org.hswebframework.ezorm.rdb.metadata.RDBTableMetadata;
@@ -30,7 +29,6 @@ import org.jetlinks.community.things.data.operations.MetricBuilder;
 import org.jetlinks.community.things.data.operations.RowModeDDLOperationsBase;
 import org.jetlinks.community.things.utils.ThingsDatabaseUtils;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
-import org.jetlinks.community.timescaledb.metadata.CreateContinuousAggregate;
 import org.jetlinks.community.timescaledb.metadata.CreateCompressionPolicy;
 import org.jetlinks.community.timescaledb.metadata.CreateHypertable;
 import org.jetlinks.community.timescaledb.metadata.CreateRetentionPolicy;
@@ -91,8 +89,8 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
                     if (Objects
                         .equals(ThingsDataConstants.COLUMN_TIMESTAMP, column.getName())) {
                         column.setNotNull(true);
-                        column.setJdbcType(JDBCType.TIMESTAMP, Date.class);
-                        column.setValueCodec(new DateTimeCodec("yyyy-MM-dd HH:mm:ss.SSS", Date.class));
+                        column.setJdbcType(JDBCType.TIMESTAMP, java.time.LocalDateTime.class);
+                        column.setValueCodec(new ShanghaiTimestampCodec());
                     }
                     TimescaleDBUtils.customColumn(property,column);
                 })
@@ -133,7 +131,9 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
 
         table.addFeature(new CreateHypertable(ThingsDataConstants.COLUMN_TIMESTAMP, this.properties.getChunkTimeInterval()));
 
-        if (this.properties.getRetentionPolicy() != null) {
+        // Property-table retention is reconciled after DDL by ContinuousAggregateManager,
+        // including already-existing jobs whose drop_after was configured to an older value.
+        if (this.properties.getRetentionPolicy() != null && metricType != MetricType.properties) {
             table.addFeature(new CreateRetentionPolicy(this.properties.getRetentionPolicy()));
         }
 
@@ -149,34 +149,23 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
             ));
         }
 
-        // 仅对属性表建立 cagg（小时/日/月层级），当 cagg.enabled=true
-        if (this.properties.getCagg().isEnabled() && metricType == MetricType.properties) {
-            TimescaleDBThingsDataProperties.Cagg c = this.properties.getCagg();
-            String thingIdCol = metricBuilder.getThingIdProperty();
-            table.addFeature(new CreateContinuousAggregate(
-                c.getRefreshInterval(),
-                c.getStartOffset(),
-                c.getEndOffset(),
-                c.getRetention(),
-                c.isDailyEnabled(),
-                c.getDailyStartOffset(),
-                c.isMonthlyEnabled(),
-                thingIdCol
-            ));
-        }
+        Mono<Void> ensureCagg = metricType == MetricType.properties
+            ? Mono.defer(() -> new ContinuousAggregateManager(database, this.properties,
+                    metricBuilder.getThingIdProperty()).ensure(table.getName()))
+            : Mono.empty();
 
         if (ddl) {
             return builder
                 .commit()
                 .reactive()
-                .then()
+                .then(ensureCagg)
                 .contextWrite(ctx -> ctx.put(Logger.class, log));
         }
         return schema
             .getTableReactive(metric, true)
             .doOnNext(oldTable -> oldTable.replace(table))
             .switchIfEmpty(Mono.fromRunnable(() -> schema.addTable(table)))
-            .then()
+            .then(ensureCagg)
             .contextWrite(ctx -> ctx.put(Logger.class, log));
     }
 

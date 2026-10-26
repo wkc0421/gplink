@@ -16,19 +16,23 @@
 package org.jetlinks.community.timescaledb.configuration;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.hswebframework.ezorm.rdb.executor.reactive.ReactiveSqlExecutor;
 import org.jetlinks.core.things.ThingsRegistry;
 import org.jetlinks.community.things.data.ThingsDataRepositoryStrategy;
 import org.jetlinks.community.timescaledb.TimescaleDBOperations;
 import org.jetlinks.community.timescaledb.thing.CaggMonitorService;
+import org.jetlinks.community.timescaledb.thing.RawRetentionStartupReconciler;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBColumnModeStrategy;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBRowModeStrategy;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBThingsDataProperties;
+import org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(after = TimescaleDBConfiguration.class)
@@ -37,6 +41,22 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "timescaledb.things-data", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(TimescaleDBThingsDataProperties.class)
 public class TimescaleDBThingsDataConfiguration {
+
+    @Bean(initMethod = "init")
+    public RawRetentionStartupReconciler rawRetentionStartupReconciler(
+        TimescaleDBOperations operations, TimescaleDBThingsDataProperties properties,
+        @Value("${jetlinks.device.storage.metric.property-prefix:properties_}") String propertyPrefix) {
+        return new RawRetentionStartupReconciler(operations, properties, propertyPrefix);
+    }
+
+    @Bean(initMethod = "init", destroyMethod = "shutdown")
+    @ConditionalOnProperty(prefix = "timescaledb.things-data.counter-snapshot",
+        name = "enabled", havingValue = "true", matchIfMissing = true)
+    public CounterSnapshotService counterSnapshotService(TimescaleDBOperations operations,
+                                                         TimescaleDBThingsDataProperties properties,
+                                                         ObjectProvider<MeterRegistry> metrics) {
+        return new CounterSnapshotService(operations, properties, metrics.getIfAvailable());
+    }
 
 
     @Bean
@@ -58,9 +78,10 @@ public class TimescaleDBThingsDataConfiguration {
     @ConditionalOnProperty(
         prefix = "timescaledb.things-data.cagg",
         name = "enabled", havingValue = "true")
-    public CaggMonitorService caggMonitorService(ReactiveSqlExecutor sqlExecutor,
+    public CaggMonitorService caggMonitorService(TimescaleDBOperations operations,
                                                  MeterRegistry meterRegistry) {
-        return new CaggMonitorService(sqlExecutor, meterRegistry);
+        return new CaggMonitorService(operations.database().getMetadata().getFeatureNow(ReactiveSqlExecutor.ID),
+                                      meterRegistry);
     }
 
 }

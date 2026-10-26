@@ -25,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 /**
  * 查询操作,用于查询物相关数据
@@ -61,6 +62,22 @@ public interface QueryOperations extends Wrapper {
     @Nonnull
     Flux<ThingPropertyDetail> queryProperty(@Nonnull QueryParamEntity query,
                                             @Nonnull String... property);
+
+    /**
+     * Query one property's value at a set of time boundaries.
+     *
+     * <p>Implementations must preserve the supplied boundary order. The
+     * default is intentionally empty for repositories which do not store
+     * historical data; {@link AbstractQueryOperations} supplies the generic
+     * one-stream implementation.</p>
+     */
+    @Nonnull
+    default Mono<PropertyBoundaryValues> queryPropertyAtBoundaries(long startTime,
+                                                                    long endTime,
+                                                                    @Nonnull List<Long> boundaries,
+                                                                    @Nonnull String property) {
+        return Mono.just(PropertyBoundaryValues.empty(property, startTime, endTime, boundaries));
+    }
 
     /**
      * 分页查询属性数据,通常用于查询单个属性的历史列表.

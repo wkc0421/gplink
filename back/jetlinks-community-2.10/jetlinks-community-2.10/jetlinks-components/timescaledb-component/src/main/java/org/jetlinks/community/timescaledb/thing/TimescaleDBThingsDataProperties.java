@@ -35,7 +35,7 @@ public class TimescaleDBThingsDataProperties {
     /**
      * 数据保留时长
      */
-    private Interval retentionPolicy;
+    private Interval retentionPolicy = Interval.of(5, Interval.year);
 
     /**
      * 是否对属性表启用 TimescaleDB 列压缩（仅属性表）
@@ -62,6 +62,37 @@ public class TimescaleDBThingsDataProperties {
      */
     private Cagg cagg = new Cagg();
 
+    /** Product/property-specific cumulative counter boundary snapshots. */
+    private CounterSnapshot counterSnapshot = new CounterSnapshot();
+
+    /** Resource bounds apply before SQL execution and gap filling. */
+    private AggregationLimits aggregation = new AggregationLimits();
+
+    @Getter
+    @Setter
+    public static class AggregationLimits {
+        private int maxBuckets = 10_000;
+        private int maxColumns = 100;
+        private int maxCells = 100_000;
+        private java.time.Duration timeout = java.time.Duration.ofSeconds(30);
+    }
+
+    @Getter
+    @Setter
+    public static class CounterSnapshot {
+        /** Enables infrastructure only; no product/property is opted in by default. */
+        private boolean enabled = true;
+        private Interval hourChunkInterval = Interval.ofDays(30);
+        private Interval dayChunkInterval = Interval.ofDays(365);
+        private Interval retention = Interval.of(5, Interval.year);
+        private java.time.Duration pollInterval = java.time.Duration.ofMinutes(5);
+        private java.time.Duration boundaryDelay = java.time.Duration.ofMinutes(5);
+        private int batchDevices = 50;
+        private int batchBoundaries = 24;
+        private int concurrency = 2;
+        private java.time.Duration sqlTimeout = java.time.Duration.ofSeconds(30);
+    }
+
     @Getter
     @Setter
     public static class Cagg {
@@ -76,9 +107,9 @@ public class TimescaleDBThingsDataProperties {
         private Interval refreshInterval = Interval.ofHours(1);
 
         /**
-         * 刷新策略 start_offset，默认 3 小时
+         * 兼容旧配置；实际刷新起点由原始数据 retention-policy 决定。
          */
-        private Interval startOffset = Interval.ofHours(3);
+        private Interval startOffset = Interval.of(5, Interval.year);
 
         /**
          * 刷新策略 end_offset，默认 1 小时
@@ -88,7 +119,7 @@ public class TimescaleDBThingsDataProperties {
         /**
          * cagg 视图数据保留时长，默认 3 年
          */
-        private Interval retention = Interval.of(3, Interval.year);
+        private Interval retention = Interval.of(5, Interval.year);
 
         /**
          * 是否在小时 cagg 之上建立日级层级 cagg（_daily_agg），默认 false
@@ -96,12 +127,9 @@ public class TimescaleDBThingsDataProperties {
         private boolean dailyEnabled = false;
 
         /**
-         * 日级 cagg 刷新策略 start_offset，默认 3 天。
-         * TimescaleDB 要求 (start_offset - end_offset) > schedule_interval(1d)，
-         * 3d - end_offset(1d) = 2d > 1d 满足约束。
-         * 原来 7d chunk 时刷新 2d 数据很慢（32min），现在 1d chunk 后速度大幅改善。
+         * 兼容旧配置；日/月级同样使用原始数据 retention-policy 作为回看窗口。
          */
-        private Interval dailyStartOffset = Interval.ofDays(3);
+        private Interval dailyStartOffset = Interval.of(5, Interval.year);
 
         /**
          * 是否在日级 cagg 之上建立月级层级 cagg（_monthly_agg），需要 dailyEnabled=true，默认 false

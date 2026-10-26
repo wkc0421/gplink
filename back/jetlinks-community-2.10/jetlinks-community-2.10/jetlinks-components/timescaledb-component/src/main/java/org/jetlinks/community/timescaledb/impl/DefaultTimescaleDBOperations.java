@@ -25,6 +25,8 @@ import org.hswebframework.ezorm.rdb.metadata.dialect.Dialect;
 import org.hswebframework.ezorm.rdb.operator.DatabaseOperator;
 import org.hswebframework.ezorm.rdb.operator.DefaultDatabaseOperator;
 import org.jetlinks.community.datasource.rdb.RDBDataSource;
+import org.jetlinks.community.datasource.rdb.DefaultRDBDataSource;
+import org.jetlinks.community.timescaledb.thing.CancellableAggregationExecutor;
 import org.jetlinks.community.datasource.rdb.RDBDataSourceProperties;
 import org.jetlinks.community.datasource.rdb.RDBDataSourceProvider;
 import org.jetlinks.community.timescaledb.TimescaleDBDataWriter;
@@ -36,6 +38,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import io.r2dbc.spi.ConnectionFactory;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
 
@@ -51,6 +54,7 @@ public class DefaultTimescaleDBOperations implements TimescaleDBOperations, Appl
     private ApplicationContext context;
     private DatabaseOperator database;
     private DefaultTimescaleDBDataWriter writer;
+    private ConnectionFactory connectionFactory;
 
 
     public void shutdown() {
@@ -61,8 +65,10 @@ public class DefaultTimescaleDBOperations implements TimescaleDBOperations, Appl
         if (properties.isSharedSpring() && context != null) {
             //使用spring共享数据源
             ReactiveSqlExecutor sqlExecutor = context.getBean(ReactiveSqlExecutor.class);
+            connectionFactory = context.getBean(ConnectionFactory.class);
             RDBDatabaseMetadata database = new RDBDatabaseMetadata(Dialect.POSTGRES);
             database.addFeature(sqlExecutor);
+            database.addFeature(new CancellableAggregationExecutor(connectionFactory));
             database.addFeature(ReactiveSyncSqlExecutor.of(sqlExecutor));
 
             RDBSchemaMetadata schema = TimescaleDBDialectProvider.GLOBAL.createSchema(properties.getSchema());
@@ -91,8 +97,11 @@ public class DefaultTimescaleDBOperations implements TimescaleDBOperations, Appl
                 .create("TimescaleDB", datasource);
             disposable.add(dataSource);
             database = dataSource.operator();
+            connectionFactory = dataSource.unwrap(DefaultRDBDataSource.class).getConnectionFactory();
+            database.getMetadata().addFeature(new CancellableAggregationExecutor(
+                connectionFactory));
         }
-        writer = new DefaultTimescaleDBDataWriter(database, properties.getWriteBuffer());
+        writer = new DefaultTimescaleDBDataWriter(database, properties.getWriteBuffer(), connectionFactory);
         writer.init();
         disposable.add(writer::stop);
     }
@@ -105,6 +114,15 @@ public class DefaultTimescaleDBOperations implements TimescaleDBOperations, Appl
     @Override
     public TimescaleDBDataWriter writer() {
         return writer;
+    }
+
+    @Override
+    public ConnectionFactory connectionFactory() {
+        return connectionFactory;
+    }
+
+    public void setCounterSnapshotService(org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService service) {
+        writer.setCounterSnapshotService(service);
     }
 
     @Override

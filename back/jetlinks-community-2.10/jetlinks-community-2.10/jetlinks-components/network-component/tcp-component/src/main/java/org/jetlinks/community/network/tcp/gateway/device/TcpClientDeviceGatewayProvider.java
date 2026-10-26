@@ -80,7 +80,7 @@ public class TcpClientDeviceGatewayProvider implements DeviceGatewayProvider {
 
     @Override
     public Mono<DeviceGateway> createDeviceGateway(DeviceGatewayProperties properties) {
-        return networkManager
+        return validate(properties).then(Mono.defer(() -> networkManager
                 .<TcpClient>getNetwork(getNetworkType(), properties.getChannelId())
                 .map(client -> {
                     String protocol = properties.getProtocol();
@@ -94,21 +94,37 @@ public class TcpClientDeviceGatewayProvider implements DeviceGatewayProvider {
                             client,
                             (String) properties.getConfiguration().get("deviceId")
                     );
-                });
+                })));
+    }
+
+    private Mono<Void> validate(DeviceGatewayProperties properties) {
+        return Mono.defer(() -> {
+            Assert.hasText(properties.getId(), "gateway id can not be empty");
+            Assert.hasText(properties.getProtocol(), "protocol can not be empty");
+            Assert.hasText(properties.getChannelId(), "network channel can not be empty");
+            Object device = properties.getConfiguration().get("deviceId");
+            Assert.isTrue(device == null || device instanceof String, "deviceId must be a string");
+            return protocolSupports.getProtocol(properties.getProtocol())
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Protocol does not exist: " + properties.getProtocol())))
+                .then(device == null || ((String) device).isEmpty() ? Mono.empty()
+                    : registry.getDevice((String) device).flatMap(ignored -> TcpSessionOwner.validateAccess(
+                        registry, (String) device, properties.getId(), true)));
+        });
     }
 
     @Override
     public Mono<? extends DeviceGateway> reloadDeviceGateway(DeviceGateway gateway,
                                                              DeviceGatewayProperties properties) {
         TcpClientDeviceGateway current = (TcpClientDeviceGateway) gateway;
-        if (!Objects.equals(current.tcpClient.getId(), properties.getChannelId())) {
-            return gateway
-                    .shutdown()
-                    .then(createDeviceGateway(properties))
-                    .flatMap(newer -> newer.startup().thenReturn(newer));
-        }
-        String protocol = properties.getProtocol();
-        current.protocol = Mono.defer(() -> protocolSupports.getProtocol(protocol));
-        return Mono.just(gateway);
+        return validate(properties).then(Mono.defer(() -> {
+            if (!Objects.equals(current.tcpClient.getId(), properties.getChannelId())) {
+                return TcpGatewayReload.replace(current, createDeviceGateway(properties));
+            }
+            String protocol = properties.getProtocol();
+            String deviceId = (String) properties.getConfiguration().get("deviceId");
+            return current.updateGatewayDeviceId(deviceId)
+                .doOnSuccess(ignored -> current.protocol = Mono.defer(() -> protocolSupports.getProtocol(protocol)))
+                .thenReturn(gateway);
+        }));
     }
 }

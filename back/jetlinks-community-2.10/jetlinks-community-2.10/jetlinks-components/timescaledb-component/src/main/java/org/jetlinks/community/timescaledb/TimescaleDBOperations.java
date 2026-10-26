@@ -16,11 +16,15 @@
 package org.jetlinks.community.timescaledb;
 
 import org.hswebframework.ezorm.rdb.operator.DatabaseOperator;
+import io.r2dbc.spi.ConnectionFactory;
 
 public interface TimescaleDBOperations {
 
     DatabaseOperator database();
 
     TimescaleDBDataWriter writer();
+
+    /** The pool used by the actual TimescaleDB operator, not the platform database. */
+    ConnectionFactory connectionFactory();
 
 }

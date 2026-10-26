@@ -21,8 +21,11 @@ import lombok.Getter;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.ZoneId;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * 时间间隔单位，可用于计算时间范围的间隔周期
@@ -128,16 +131,41 @@ public enum IntervalUnit {
     }
 
     public final long truncatedTo(long timestamp, int duration) {
-        long ts = truncatedTo(timestamp);
-        //指定了多个周期
-        if (Math.abs(duration) > 1) {
-            ts = next(ts, duration);
+        return truncatedTo(timestamp, duration, ZoneOffset.UTC);
+    }
+
+    /** Same origins as time_bucket: Monday 2000-01-03, or 2000-01-01 for calendar months. */
+    public final long truncatedTo(long timestamp, int duration, ZoneId zone) {
+        if (duration <= 0) {
+            throw new IllegalArgumentException("interval must be a positive integer");
         }
-        return ts;
+        if (this == FOREVER) {
+            return 0;
+        }
+        LocalDateTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), zone);
+        LocalDateTime origin;
+        LocalDateTime bucket;
+        if (this == MONTHS || this == QUARTER || this == YEARS) {
+            origin = LocalDateTime.of(2000, 1, 1, 0, 0);
+            long months = Math.multiplyExact((long) duration, this == YEARS ? 12 : durationOfUnit);
+            long distance = ((long) time.getYear() - 2000) * 12 + time.getMonthValue() - 1;
+            bucket = origin.plusMonths(Math.multiplyExact(Math.floorDiv(distance, months), months));
+        } else {
+            origin = LocalDateTime.of(2000, 1, 3, 0, 0);
+            long width = toMillis(duration);
+            long distance = Duration.between(origin, time).toMillis();
+            bucket = origin.plus(Math.multiplyExact(Math.floorDiv(distance, width), width), ChronoUnit.MILLIS);
+        }
+        return bucket.atZone(zone).toInstant().toEpochMilli();
+    }
+
+    public final long advance(long timestamp, int duration, ZoneId zone) {
+        return next(LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), zone), duration)
+            .atZone(zone).toInstant().toEpochMilli();
     }
 
     public long toMillis(int duration) {
-        return duration * durationOfUnit * unit.getDuration().toMillis();
+        return Math.multiplyExact(Math.multiplyExact((long) duration, durationOfUnit), unit.getDuration().toMillis());
     }
 
     public final Iterable<Long> iterate(long from, long to) {
@@ -153,19 +181,30 @@ public enum IntervalUnit {
      * @return 每个间隔的时间戳迭代器
      */
     public Iterable<Long> iterate(long from, long to, int duration) {
+        if (duration <= 0 || from > to) {
+            throw new IllegalArgumentException("invalid interval or time range");
+        }
         return () -> new Iterator<Long>() {
-            long _from = truncatedTo(Math.min(from, to));
-            final long _to = truncatedTo(Math.max(from, to));
+            long _from = truncatedTo(from, duration);
+            final long _to = truncatedTo(to, duration);
+            boolean finished;
 
             @Override
             public boolean hasNext() {
-                return _from <= _to;
+                return !finished && _from <= _to;
             }
 
             @Override
             public Long next() {
-                long that = truncatedTo(_from, duration);
-                _from = IntervalUnit.this.next(_from, duration);
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                long that = _from;
+                if (_from == _to) {
+                    finished = true;
+                } else {
+                    _from = IntervalUnit.this.next(_from, duration);
+                }
                 return that;
             }
         };

@@ -7,6 +7,7 @@ export interface ConfigurationType {
     remoteHost: string;
     remotePort: string;
     secure: boolean;
+    ssl: boolean;
     username: string;
     password: string;
     topicPrefix: string;

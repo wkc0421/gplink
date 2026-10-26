@@ -19,9 +19,11 @@
                                     style="padding: 0;"
                                     type="link"
                                     :disabled="i.disabled"
+                                    :loading="i.loading"
                                     @click="i.onClick && i.onClick(data)"
                                 >
                                     <AIcon
+                                        v-if="!i.loading"
                                         :type="i.icon"
                                         style="color: var(--app-text); font-size: 12px"
                                     />

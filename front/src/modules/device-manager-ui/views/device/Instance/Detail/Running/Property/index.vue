@@ -43,9 +43,10 @@
                 style='padding: 0'
                 type='link'
                 :disabled='i.disabled'
+                :loading='i.loading'
                 @click='i.onClick && i.onClick(slotProps)'
               >
-                <AIcon :type='i.icon' />
+                <AIcon v-if='!i.loading' :type='i.icon' />
               </a-button>
             </a-tooltip>
             <j-permission-button
@@ -139,6 +140,7 @@ const instanceStore = useInstanceStore()
 const indicatorVisible = ref<boolean>(false) // 指标
 const loading = ref<boolean>(false)
 const propertyValue = ref<Record<string, any>>({})
+const readingPropertyIds = reactive(new Set<string>())
 const _params = reactive({
   name: ''
 })
@@ -188,21 +190,32 @@ const getActions = (data: Partial<Record<string, any>>, _metric: string[]) => {
     })
   }
   if (data.expands?.type?.includes('read')) {
+    const propertyId = data.id as string
+    const reading = readingPropertyIds.has(propertyId)
     arr.push({
       key: 'read',
       tooltip: {
         title: $t('Property.index.076208-2')
       },
       icon: 'SyncOutlined',
+      loading: reading,
+      disabled: reading,
       onClick: async () => {
-        if (instanceStore.current.id && data.id) {
-          const resp = await getProperty(
-            instanceStore.current.id,
-            data.id
-          )
+        const deviceId = instanceStore.current?.id
+        if (!deviceId || !propertyId || readingPropertyIds.has(propertyId)) return
+
+        readingPropertyIds.add(propertyId)
+        try {
+          const resp = await getProperty(deviceId, propertyId)
           if (resp.status === 200) {
             onlyMessage($t('Product.index.660348-18'))
+          } else {
+            onlyMessage(resp?.message || '属性读取失败', 'error')
           }
+        } catch (error: any) {
+          onlyMessage(error?.message || '属性读取失败', 'error')
+        } finally {
+          readingPropertyIds.delete(propertyId)
         }
       }
     })

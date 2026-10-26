@@ -127,7 +127,7 @@
         <FullPage :fixed="false">
             <div style="height: 100%; padding: 24px">
                 <component
-                    :is="tabs[productStore.tabActiveKey]"
+                    :is="activeTab"
                     :class="
                         productStore.tabActiveKey === 'Metadata'
                             ? 'metedata'
@@ -164,6 +164,7 @@ const menuStory = useMenuStore();
 const route = useRoute();
 const productStore = useProductStore();
 const routerParams = useRouterParams();
+const activeTab = computed(() => tabs[productStore.tabActiveKey as keyof typeof tabs] || tabs.Info);
 
 const list = ref([
     {
@@ -178,6 +179,10 @@ const list = ref([
     {
         key: 'Device',
         tab: $t('Detail.index.478940-11'),
+    },
+    {
+        key: 'HistoryStatistics',
+        tab: '历史统计配置',
     },
 ]);
 
@@ -254,6 +259,10 @@ const getProtocol = async () => {
         {
             key: 'Device',
             tab: $t('Detail.index.478940-11'),
+        },
+        {
+            key: 'HistoryStatistics',
+            tab: '历史统计配置',
         },
     ];
     // if (productStore.current?.messageProtocol) {

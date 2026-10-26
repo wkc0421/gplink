@@ -18,7 +18,6 @@ package org.jetlinks.community.device.web.request;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetlinks.community.device.service.data.DeviceDataService;
-import org.springframework.util.Assert;
 
 import java.util.List;
 
@@ -30,9 +29,9 @@ public class AggRequest {
     private DeviceDataService.AggregationRequest query;
 
     public void validate(){
-        Assert.notNull(columns,"columns can not be null");
-        Assert.notNull(query,"query can not be null");
-        Assert.notEmpty(columns,"columns can not be empty");
+        if (columns == null || columns.isEmpty() || query == null || columns.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new org.hswebframework.web.exception.BusinessException("columns 和 query 不能为空", 400);
+        }
         columns.forEach(DeviceDataService.DevicePropertyAggregation::validate);
     }
 }

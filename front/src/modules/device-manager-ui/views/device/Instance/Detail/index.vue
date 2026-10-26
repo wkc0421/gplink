@@ -126,6 +126,10 @@
 <script lang="ts" setup>
 import { useInstanceStore } from '../../../../store/instance';
 import { _deploy, _disconnect } from '../../../../api/instance';
+import {
+    getDeviceActionErrorMessage,
+    isDeviceActionSuccess,
+} from '../utils';
 import { onlyMessage } from '@jetlinks-web/utils';
 import { openEdgeUrl } from '@/utils/utils';
 import { wsClient } from '@jetlinks-web/core';
@@ -395,9 +399,17 @@ const handleAction = () => {
     if (instanceStore.current?.id) {
         const response = _deploy(instanceStore.current?.id);
         response.then((resp) => {
-            if (resp.status === 200) {
+            if (isDeviceActionSuccess(resp)) {
                 onlyMessage($t('Detail.index.957187-27'));
                 instanceStore.refresh(instanceStore.current?.id);
+            } else {
+                onlyMessage(
+                    getDeviceActionErrorMessage(
+                        resp,
+                        $t('Instance.index.133466-25'),
+                    ),
+                    'error',
+                );
             }
         });
         return response;

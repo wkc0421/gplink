@@ -7,7 +7,7 @@
 #     16GB → 40M 行 / 833 ≈ 13.3h → chunk: 12h
 #     32GB → 80M 行 / 833 ≈ 26.7h → chunk: 1d
 #
-# cagg 策略：start=2h, end=1h → 每次只刷新上一个完整小时（1h~2h 前）
+# cagg 策略：小时/日/月层均回看原始保留期，通过增量刷新修复历史补报
 
 spring:
   r2dbc:
@@ -16,6 +16,7 @@ spring:
 
 timescaledb:
   things-data:
+    retention-policy: 5y
     chunk-time-interval: 12h     # 16GB RAM 选此值
     # chunk-time-interval: 1d    # 32GB RAM 选此值
     compress: true
@@ -23,12 +24,24 @@ timescaledb:
     cagg:
       enabled: true
       refresh-interval: 1h
-      start-offset: 2h
-      end-offset: 1h
-      retention: 3y
+      start-offset: 5y      # 兼容字段；实际回看窗口由 things-data.retention-policy 决定
+      end-offset: 1h        # 跳过最近未完整的小时桶，查询以实时聚合补齐
+      retention: 5y
       daily-enabled: true
-      daily-start-offset: 3d
+      daily-start-offset: 5y  # 兼容字段；日/月层同样覆盖原始数据保留期
       monthly-enabled: true
+    counter-snapshot:
+      enabled: true
+      hour-chunk-interval: 30d
+      day-chunk-interval: 365d
+      retention: 5y
+      poll-interval: 5m
+      boundary-delay: 5m
+      batch-devices: 50
+      batch-boundaries: 24
+      concurrency: 2
+      late-cagg-threshold: 24
+      sql-timeout: 30s
   write-buffer:
     parallelism: 2
     size: 500

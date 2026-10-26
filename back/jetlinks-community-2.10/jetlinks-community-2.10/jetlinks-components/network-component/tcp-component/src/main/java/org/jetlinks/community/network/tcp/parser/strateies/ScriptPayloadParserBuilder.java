@@ -19,6 +19,7 @@ import lombok.SneakyThrows;
 import org.jetlinks.community.network.tcp.parser.PayloadParser;
 import org.jetlinks.community.network.tcp.parser.PayloadParserBuilderStrategy;
 import org.jetlinks.community.network.tcp.parser.PayloadParserType;
+import org.jetlinks.community.network.tcp.parser.PayloadParserLimits;
 import org.jetlinks.community.ValueObject;
 import org.jetlinks.community.script.CompiledScript;
 import org.jetlinks.community.script.Script;
@@ -57,6 +58,7 @@ public class ScriptPayloadParserBuilder implements PayloadParserBuilderStrategy 
     @Override
     @SneakyThrows
     public Supplier<PayloadParser> buildLazy(ValueObject config) {
+        int maximum = PayloadParserLimits.maxFrameLength(config);
         String script = config.getString("script")
                               .orElseThrow(() -> new IllegalArgumentException("script不能为空"));
         String lang = config.getString("lang")
@@ -67,12 +69,17 @@ public class ScriptPayloadParserBuilder implements PayloadParserBuilderStrategy 
             .compile(Script.of("tcp-network-payload-parser", script));
 
         return () -> {
-            PipePayloadParser parser = new PipePayloadParser();
+            PipePayloadParser parser = new PipePayloadParser(maximum);
 
             Map<String, Object> ctx = new HashMap<>();
             ctx.put("parser", parser);
 
-            compiledScript.call(ctx);
+            try {
+                compiledScript.call(ctx);
+            } catch (Throwable error) {
+                parser.close();
+                throw error;
+            }
             return parser;
         };
     }

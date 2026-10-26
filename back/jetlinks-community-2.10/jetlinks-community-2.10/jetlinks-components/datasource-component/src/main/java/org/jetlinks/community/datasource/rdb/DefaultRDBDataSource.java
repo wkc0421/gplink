@@ -68,6 +68,10 @@ public class DefaultRDBDataSource extends AbstractDataSource<RDBDataSourceProper
 
     private DatabaseOperator operator;
 
+    /** The actual pool, for consumers that need an independently cancellable read connection. */
+    @lombok.Getter
+    private io.r2dbc.spi.ConnectionFactory connectionFactory;
+
     private String validateSql;
 
     private final QueryHelper queryHelper;
@@ -217,6 +221,7 @@ public class DefaultRDBDataSource extends AbstractDataSource<RDBDataSourceProper
         mapper.from(pool.getValidationQuery()).whenHasText().to(builder::validationQuery);
 
         ConnectionPool connectionPool = new ConnectionPool(builder.build());
+        connectionFactory = connectionPool;
         closeables.add(() -> connectionPool.close().subscribe());
         transactionalOperator = TransactionalOperator.create(new R2dbcTransactionManager(connectionPool));
 
@@ -287,6 +292,7 @@ public class DefaultRDBDataSource extends AbstractDataSource<RDBDataSourceProper
     }
 
     synchronized void initJdbc() {
+        connectionFactory = null;
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl(getConfig().getUrl());
         dataSource.setUsername(getConfig().getUsername());

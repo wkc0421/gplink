@@ -43,6 +43,9 @@
                             :actions="batchActions"
                             @change="onCheckChange"
                         />
+                        <a-button @click="menuStory.jumpPage('device/Instance/DataQueryTest', {})">
+                            数据接口测试
+                        </a-button>
                     </a-space>
                 </template>
                 <template #card="slotProps">
@@ -52,13 +55,7 @@
                         @click="handleClick"
                         :actions="getActions(slotProps, 'card')"
                         :active="_selectedRowKeys.includes(slotProps.id)"
-                        :status="slotProps.state?.value"
-                        :statusText="slotProps.state?.text"
-                        :statusNames="{
-                            online: 'success',
-                            offline: 'error',
-                            notActive: 'warning',
-                        }"
+                        :showStatus="false"
                     >
                         <template #img>
                             <Image
@@ -80,6 +77,16 @@
                                 <j-ellipsis class="device-card-product">
                                     {{ slotProps.productName || '--' }}
                                 </j-ellipsis>
+                                <j-badge-status
+                                    class="device-card-status"
+                                    :status="slotProps.state?.value"
+                                    :text="slotProps.state?.text"
+                                    :statusNames="{
+                                        online: 'success',
+                                        offline: 'error',
+                                        notActive: 'warning',
+                                    }"
+                                />
                             </div>
                         </template>
                         <template #actions="item">
@@ -207,6 +214,10 @@ import {
 import { queryTree } from '../../../api/category';
 import { useMenuStore } from '@/store/menu';
 import type { ActionsType } from './typings';
+import {
+    getDeviceActionErrorMessage,
+    isDeviceActionSuccess,
+} from './utils';
 import dayjs from 'dayjs';
 import BatchDropdown from '@/components/BatchDropdown/index.vue';
 import type { BatchActionsType } from '@/components/BatchDropdown/types';
@@ -552,11 +563,17 @@ const getActions = (
                     } else {
                         response = await _deploy(data.id);
                     }
-                    if (response && response.status === 200) {
+                    if (isDeviceActionSuccess(response)) {
                         onlyMessage($t('Instance.index.133466-24'));
                         instanceRef.value?.reload();
                     } else {
-                        onlyMessage($t('Instance.index.133466-25'), 'error');
+                        onlyMessage(
+                            getDeviceActionErrorMessage(
+                                response,
+                                $t('Instance.index.133466-25'),
+                            ),
+                            'error',
+                        );
                     }
                 },
             },
@@ -978,8 +995,9 @@ onMounted(() => {
 
     :deep(.card-item-avatar) {
         position: relative;
-        width: 80px;
-        height: 80px;
+        flex: 0 0 96px;
+        width: 96px;
+        height: 96px;
         margin-right: 20px;
 
         &::before {
@@ -997,45 +1015,19 @@ onMounted(() => {
     :deep(.card-item-avatar img) {
         position: relative;
         z-index: 1;
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
         filter: drop-shadow(0 5px 10px rgba(47, 128, 255, 0.28));
+    }
+
+    :deep(.card-item-avatar .card-list-img-80) {
+        width: 96px;
+        height: 96px;
     }
 
     :deep(.card-item-body) {
         min-width: 0;
-    }
-
-    :deep(.card-state) {
-        top: 24px;
-        right: -14px;
-        padding-right: 22px;
-        padding-left: 18px;
-    }
-
-    :deep(.card-state-content .ant-badge-status-dot) {
-        width: 14px;
-        min-width: 14px;
-        height: 14px;
-        margin-right: 9px;
-        border-radius: 50%;
-    }
-
-    :deep(.card-state-content .ant-badge-status-success) {
-        box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.16), 0 0 12px rgba(53, 208, 127, 0.58);
-    }
-
-    :deep(.card-state-content .ant-badge-status-error) {
-        box-shadow: 0 0 0 3px rgba(255, 100, 116, 0.15), 0 0 12px rgba(255, 100, 116, 0.5);
-    }
-
-    :deep(.card-state-content .ant-badge-status-warning) {
-        box-shadow: 0 0 0 3px rgba(255, 180, 84, 0.15), 0 0 12px rgba(255, 180, 84, 0.5);
-    }
-
-    :deep(.card-state-content .ant-badge-status-text) {
-        color: @app-text !important;
-        font-size: 13px;
-        font-weight: @app-font-weight-semibold;
-        line-height: 20px;
     }
 
     .device-card-content {
@@ -1046,6 +1038,40 @@ onMounted(() => {
         min-width: 0;
         gap: 6px;
         padding: 2px 0;
+    }
+
+    .device-card-status {
+        display: flex;
+        align-items: center;
+        min-height: 18px;
+        white-space: nowrap;
+
+        :deep(.ant-badge-status-dot) {
+            width: 10px;
+            min-width: 10px;
+            height: 10px;
+            margin-right: 7px;
+            border-radius: 50%;
+        }
+
+        :deep(.ant-badge-status-success) {
+            box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.16), 0 0 10px rgba(53, 208, 127, 0.52);
+        }
+
+        :deep(.ant-badge-status-error) {
+            box-shadow: 0 0 0 3px rgba(255, 100, 116, 0.15), 0 0 10px rgba(255, 100, 116, 0.45);
+        }
+
+        :deep(.ant-badge-status-warning) {
+            box-shadow: 0 0 0 3px rgba(255, 180, 84, 0.15), 0 0 10px rgba(255, 180, 84, 0.45);
+        }
+
+        :deep(.ant-badge-status-text) {
+            color: @app-text !important;
+            font-size: 13px;
+            font-weight: @app-font-weight-semibold;
+            line-height: 18px;
+        }
     }
 
     .device-card-id,

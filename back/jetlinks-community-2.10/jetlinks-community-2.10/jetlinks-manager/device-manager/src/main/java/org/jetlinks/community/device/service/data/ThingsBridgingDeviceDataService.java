@@ -27,6 +27,7 @@ import org.jetlinks.community.device.entity.DeviceOperationLogEntity;
 import org.jetlinks.community.device.entity.DeviceProperty;
 import org.jetlinks.community.things.ThingsDataRepository;
 import org.jetlinks.community.things.data.PropertyAggregation;
+import org.jetlinks.community.things.data.PropertyBoundaryValues;
 import org.jetlinks.community.things.data.operations.ColumnModeQueryOperations;
 import org.jetlinks.community.things.data.operations.SaveOperations;
 import org.jetlinks.community.things.data.operations.TemplateOperations;
@@ -102,6 +103,19 @@ public class ThingsBridgingDeviceDataService implements DeviceDataService ,Devic
 
     @Nonnull
     @Override
+    public Mono<PropertyBoundaryValues> queryPropertyAtBoundaries(@Nonnull String deviceId,
+                                                                   @Nonnull String property,
+                                                                   long startTime,
+                                                                   long endTime,
+                                                                   @Nonnull java.util.List<Long> boundaries) {
+        return repository
+            .opsForThing(thingType, deviceId)
+            .flatMap(opt -> opt.forQuery()
+                .queryPropertyAtBoundaries(startTime, endTime, boundaries, property));
+    }
+
+    @Nonnull
+    @Override
     public Flux<DeviceProperty> queryPropertyByProductId(@Nonnull String productId, @Nonnull QueryParamEntity query, @Nonnull String... property) {
         return repository
             .opsForTemplate(thingType, productId)
@@ -126,7 +140,7 @@ public class ThingsBridgingDeviceDataService implements DeviceDataService ,Devic
             .opsForTemplate(thingType, productId)
             .flatMapMany(opt -> opt.forQuery()
                                    .aggregationProperties(
-                                       FastBeanCopier.copy(request, new org.jetlinks.community.things.data.AggregationRequest()),
+                                       toThingsAggregationRequest(request),
                                        Stream
                                            .of(properties)
                                            .map(prop -> FastBeanCopier.copy(prop, new PropertyAggregation()))
@@ -140,11 +154,19 @@ public class ThingsBridgingDeviceDataService implements DeviceDataService ,Devic
             .flatMapMany(opt -> opt
                 .forQuery()
                 .aggregationProperties(
-                    FastBeanCopier.copy(request, new org.jetlinks.community.things.data.AggregationRequest()),
+                    toThingsAggregationRequest(request),
                     Stream
                         .of(properties)
                         .map(prop -> FastBeanCopier.copy(prop, new PropertyAggregation()))
                         .toArray(PropertyAggregation[]::new)));
+    }
+
+    private static org.jetlinks.community.things.data.AggregationRequest toThingsAggregationRequest(AggregationRequest request) {
+        org.jetlinks.community.things.data.AggregationRequest converted =
+            FastBeanCopier.copy(request, new org.jetlinks.community.things.data.AggregationRequest());
+        // FastBeanCopier skips the primitive int -> Integer limit conversion.
+        converted.setLimit(request.getLimit());
+        return converted;
     }
 
     @Nonnull

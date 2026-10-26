@@ -18,7 +18,7 @@
       <a-tabs @change="handleConvertMetadata" destroy-inactive-tab-pane>
         <a-tab-pane v-for="item in codecs" :key="item.id" :tab="item.name">
           <div class="cat-panel">
-            <monaco-editor v-model="monacoValue" lang="javascript" style="height: 100%" theme="vs"></monaco-editor>
+            <monaco-editor v-model="monacoValue" lang="javascript" style="height: 100%" theme="vs-dark"></monaco-editor>
           </div>
         </a-tab-pane>
       </a-tabs>
@@ -188,6 +188,7 @@ watch(() => metadata.value, () => {
 
 .cat-panel {
   border: 1px solid var(--app-border);
+  background: var(--app-elevated);
   height: 670px;
   width: 650px;
 }

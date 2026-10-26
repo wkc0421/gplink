@@ -1,10 +1,13 @@
 package gp.saas.legacy.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+// Legacy consumers use field presence to decide whether a boundary can participate in a delta.
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DeviceIntervalDataEntity {
 
     private String deviceId;
@@ -15,9 +18,19 @@ public class DeviceIntervalDataEntity {
 
     private Long endTime;
 
-    private Object startValue;
+    protected Object startValue;
 
-    private Object endValue;
+    protected Object endValue;
+
+    // A delta is available only when both readings exist. Apply the same rule
+    // to raw queries, counter snapshots, cache copies and JSON serialization.
+    public Object getStartValue() {
+        return startValue != null && endValue != null ? startValue : null;
+    }
+
+    public Object getEndValue() {
+        return startValue != null && endValue != null ? endValue : null;
+    }
 
     public DeviceIntervalDataEntity() {
     }

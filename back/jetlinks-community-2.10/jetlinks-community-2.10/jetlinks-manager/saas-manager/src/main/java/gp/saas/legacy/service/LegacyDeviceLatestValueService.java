@@ -9,8 +9,10 @@ import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -55,6 +57,47 @@ public class LegacyDeviceLatestValueService {
             .onErrorResume(e -> {
                 log.warn("Legacy Redis latest read failed: device={}, property={}", deviceId, property, e);
                 return Mono.empty();
+            });
+    }
+
+    public Mono<Map<String, LatestValue>> readProperties(String deviceId, List<String> properties) {
+        if (properties == null || properties.isEmpty()) {
+            return Mono.just(Collections.emptyMap());
+        }
+
+        List<String> propertyIds = new ArrayList<>(properties.size());
+        List<String> fields = new ArrayList<>(properties.size());
+        for (String property : properties) {
+            if (property != null && !propertyIds.contains(property)) {
+                propertyIds.add(property);
+                fields.add(FIELD_PREFIX + property);
+            }
+        }
+        if (fields.isEmpty()) {
+            return Mono.just(Collections.emptyMap());
+        }
+
+        return redisTemplate
+            .<String, String>opsForHash()
+            .multiGet(buildKey(deviceId), fields)
+            .map(values -> {
+                Map<String, LatestValue> result = new LinkedHashMap<>();
+                int size = Math.min(propertyIds.size(), values.size());
+                for (int i = 0; i < size; i++) {
+                    String value = values.get(i);
+                    if (value != null) {
+                        result.put(propertyIds.get(i), decode(value));
+                    }
+                }
+                return result;
+            })
+            .defaultIfEmpty(Collections.emptyMap())
+            .onErrorResume(e -> {
+                log.warn("Legacy Redis latest multiGet failed: device={}, properties={}",
+                         deviceId,
+                         propertyIds.size(),
+                         e);
+                return Mono.just(Collections.emptyMap());
             });
     }
 

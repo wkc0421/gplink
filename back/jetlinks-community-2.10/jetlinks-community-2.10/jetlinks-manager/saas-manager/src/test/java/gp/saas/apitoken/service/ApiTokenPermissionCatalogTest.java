@@ -50,6 +50,11 @@ class ApiTokenPermissionCatalogTest {
         assertEquals("device-opt-api", history.resource());
         assertEquals("query", history.action());
 
+        for (String type : new String[]{"week", "quarter"}) {
+            assertTarget("/api/v1/device-data/devices/interval/" + type + "/history",
+                HttpMethod.POST, "device-opt-api", "query");
+        }
+
         var deviceTest = ApiTokenPermissionCatalog
             .resolve("/api/v1/device/test", HttpMethod.POST)
             .orElseThrow();
@@ -67,5 +72,35 @@ class ApiTokenPermissionCatalogTest {
             .orElseThrow();
         assertEquals("alarm-config", alarmUnbind.resource());
         assertEquals("delete", alarmUnbind.action());
+    }
+
+    @Test
+    void historyStatisticsAliasesUseProductPermissionWithoutChangingLegacyRoutes() {
+        for (String base : new String[]{
+            "/api/v1/device-product/product-1/history-statistics",
+            "/api/v1/device/product/product-1/history-statistics"
+        }) {
+            assertEquals("product-1", ApiTokenPermissionCatalog
+                .historyStatisticsProductId(base).orElseThrow());
+            assertTarget(base, HttpMethod.GET, "device-product", "query");
+            assertTarget(base + "/energy", HttpMethod.PUT, "device-product", "save");
+            assertTarget(base + "/energy/_rebuild", HttpMethod.POST, "device-product", "save");
+            assertTarget(base + "/tasks/task-1", HttpMethod.GET, "device-product", "query");
+            assertTarget(base + "/tasks/task-1/_cancel", HttpMethod.POST,
+                "device-product", "save");
+        }
+        assertFalse(ApiTokenPermissionCatalog.historyStatisticsProductId(
+            "/api/v1/device-product/product-1/history-statistics-extra").isPresent());
+        assertTarget("/api/v1/device/product/product-1", HttpMethod.GET,
+            "device-instance", "delete");
+        assertTarget("/api/v1/device/_query", HttpMethod.POST,
+            "device-instance", "query");
+    }
+
+    private void assertTarget(String path, HttpMethod method,
+                              String resource, String action) {
+        var actual = ApiTokenPermissionCatalog.resolve(path, method).orElseThrow();
+        assertEquals(resource, actual.resource());
+        assertEquals(action, actual.action());
     }
 }

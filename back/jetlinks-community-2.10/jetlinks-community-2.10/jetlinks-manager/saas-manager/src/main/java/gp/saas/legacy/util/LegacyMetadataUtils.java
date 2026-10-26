@@ -20,7 +20,11 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 
 public final class LegacyMetadataUtils {
 
@@ -49,6 +53,45 @@ public final class LegacyMetadataUtils {
     public static JSONArray getArray(JSONObject metadata, String key) {
         JSONArray array = metadata.getJSONArray(key);
         return array == null ? new JSONArray() : array;
+    }
+
+    public static List<JSONObject> completePropertySortIndexes(List<JSONObject> properties) {
+        Set<Double> used = new HashSet<>();
+        for (JSONObject property : properties) {
+            Double index = validSortIndex(property.get("sortsIndex"));
+            if (index != null) {
+                used.add(index);
+            }
+        }
+        List<JSONObject> result = new ArrayList<>(properties.size());
+        // Metadata is displayed in descending order; keep unsorted import rows in file order.
+        int next = properties.size();
+        for (JSONObject property : properties) {
+            if (validSortIndex(property.get("sortsIndex")) != null) {
+                result.add(property);
+                continue;
+            }
+            while (used.contains((double) next)) {
+                next--;
+            }
+            JSONObject completed = new JSONObject(new LinkedHashMap<>(property));
+            completed.put("sortsIndex", next);
+            used.add((double) next--);
+            result.add(completed);
+        }
+        return result;
+    }
+
+    private static Double validSortIndex(Object value) {
+        if (!(value instanceof Number) && !(value instanceof String)) {
+            return null;
+        }
+        try {
+            double index = Double.parseDouble(value.toString().trim());
+            return Double.isFinite(index) && index >= 0 ? index : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     public static String replaceProperties(String metadata, List<JSONObject> properties) {

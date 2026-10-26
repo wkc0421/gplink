@@ -33,15 +33,33 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class ErrorControllerAdvice {
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public Mono<ResponseEntity<ResponseMessage<Object>>> handleException(ResponseStatusException e) {
+        int status = e.getStatusCode().value();
+        HttpStatus knownStatus = HttpStatus.resolve(status);
+        String code = knownStatus == null
+            ? "http_error"
+            : knownStatus.name().toLowerCase(Locale.ROOT);
+        String message = e.getReason();
+        if (message == null || message.isBlank()) {
+            message = knownStatus == null ? "HTTP " + status : knownStatus.getReasonPhrase();
+        }
+        return Mono.just(ResponseEntity
+                             .status(e.getStatusCode())
+                             .body(ResponseMessage.error(status, code, message)));
+    }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)

@@ -35,12 +35,14 @@ import org.jetlinks.community.network.mqtt.client.MqttClient;
 import org.jetlinks.community.network.mqtt.gateway.device.session.UnknownDeviceMqttClientSession;
 import org.jetlinks.community.gateway.DeviceGatewayHelper;
 import org.jetlinks.supports.server.DecodedClientMessageHandler;
+import org.springframework.util.Assert;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -62,6 +64,8 @@ public class MqttClientDeviceGateway extends AbstractDeviceGateway {
     private Mono<DeviceMessageCodec> codecMono;
 
     private final DeviceGatewayHelper helper;
+
+    private volatile Duration keepAliveTimeout = MqttClientSession.DEFAULT_KEEP_ALIVE_TIMEOUT;
 
     private final Map<RouteKey, Tuple2<Integer, Disposable>> routes = new ConcurrentHashMap<>();
 
@@ -85,6 +89,12 @@ public class MqttClientDeviceGateway extends AbstractDeviceGateway {
     public void setProtocol(Mono<ProtocolSupport> protocol) {
         this.protocol = Objects.requireNonNull(protocol, "protocol");
         this.codecMono = protocol.flatMap(p -> p.getMessageCodec(getTransport()));
+    }
+
+    public void setKeepAliveTimeout(Duration timeout) {
+        Assert.isTrue(timeout != null && !timeout.isZero() && !timeout.isNegative(),
+                      "MQTT device keep alive timeout must be positive");
+        this.keepAliveTimeout = timeout;
     }
 
     protected Mono<Void> reload() {
@@ -174,8 +184,7 @@ public class MqttClientDeviceGateway extends AbstractDeviceGateway {
         return helper
             .handleDeviceMessage(message,
                                  device -> createDeviceSession(device, mqttClient),
-                                 ignore -> {
-                                 },
+                                 DeviceGatewayHelper.applySessionKeepaliveTimeout(message, () -> keepAliveTimeout),
                                  () -> log.warn("can not get device info from message:{},{}", mqttMessage.print(), message)
             )
             .then();
@@ -190,6 +199,7 @@ public class MqttClientDeviceGateway extends AbstractDeviceGateway {
 
     private MqttClientSession createDeviceSession(DeviceOperator device, MqttClient client) {
         MqttClientSession session = new MqttClientSession(device.getDeviceId(), device, client, monitor);
+        session.setKeepAliveTimeout(keepAliveTimeout);
         session.setGatewayId(getId());
         return session;
     }

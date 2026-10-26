@@ -80,56 +80,55 @@ public class TcpServerDeviceGatewayProvider implements DeviceGatewayProvider {
         return DefaultTransport.TCP;
     }
 
-    @Override
-    public Mono<DeviceGateway> createDeviceGateway(DeviceGatewayProperties properties) {
-        return networkManager
-            .<TcpServer>getNetwork(getNetworkType(), properties.getChannelId())
-            .map(mqttServer -> {
-                String protocol = properties.getProtocol();
+    private List<String> children(DeviceGatewayProperties properties) {
+        Object value = properties.getConfiguration().get("childDeviceIds");
+        java.util.stream.Stream<?> stream = value instanceof Iterable
+            ? java.util.stream.StreamSupport.stream(((Iterable<?>) value).spliterator(), false)
+            : value == null ? java.util.stream.Stream.empty() : java.util.Arrays.stream(String.valueOf(value).split(","));
+        return stream.map(String::valueOf).map(String::trim).filter(id -> !id.isEmpty()).distinct().collect(Collectors.toList());
+    }
 
-                Assert.hasText(protocol, "protocol can not be empty");
-
-                Object configuredChildren = properties.getConfiguration().get("childDeviceIds");
-                List<String> childDeviceIds = configuredChildren instanceof Iterable
-                    ? java.util.stream.StreamSupport.stream(((Iterable<?>) configuredChildren).spliterator(), false)
-                        .map(String::valueOf)
-                        .filter(id -> !id.isEmpty())
-                        .collect(Collectors.toList())
-                    : configuredChildren == null
-                        ? java.util.Collections.emptyList()
-                        : java.util.Arrays.stream(String.valueOf(configuredChildren).split(","))
-                            .map(String::trim)
-                            .filter(id -> !id.isEmpty())
-                            .collect(Collectors.toList());
-
-                return new TcpServerDeviceGateway(
-                    properties.getId(),
-                    Mono.defer(() -> protocolSupports.getProtocol(protocol)),
-                    registry,
-                    messageHandler,
-                    sessionManager,
-                    mqttServer,
-                    (String) properties.getConfiguration().get("deviceId"),
-                    childDeviceIds
-                );
-            });
+    private Mono<Void> validate(DeviceGatewayProperties properties) {
+        return Mono.defer(() -> {
+            Assert.hasText(properties.getId(), "gateway id can not be empty");
+            Assert.hasText(properties.getProtocol(), "protocol can not be empty");
+            Assert.hasText(properties.getChannelId(), "network channel can not be empty");
+            Object device = properties.getConfiguration().get("deviceId");
+            Assert.isTrue(device == null || device instanceof String, "deviceId must be a string");
+            return protocolSupports.getProtocol(properties.getProtocol())
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Protocol does not exist: " + properties.getProtocol())))
+                .then(device == null || ((String) device).isEmpty() ? Mono.empty()
+                    : registry.getDevice((String) device).flatMap(ignored -> TcpSessionOwner.validateAccess(
+                        registry, (String) device, properties.getId(), true)))
+                .then(TcpSessionOwner.validateChildren(registry, (String) device, children(properties)));
+        });
     }
 
     @Override
-    public Mono<? extends DeviceGateway> reloadDeviceGateway(DeviceGateway gateway,
-                                                             DeviceGatewayProperties properties) {
-        TcpServerDeviceGateway deviceGateway = ((TcpServerDeviceGateway) gateway);
-        //网络组件发生变化
-        if (!Objects.equals(deviceGateway.tcpServer.getId(), properties.getChannelId())) {
-            return gateway
-                .shutdown()
-                .then(this.createDeviceGateway(properties))
-                .flatMap(newer -> newer.startup().thenReturn(newer));
-        }
-        //更新协议
-        String protocol = properties.getProtocol();
-        deviceGateway.protocol = Mono.defer(() -> protocolSupports.getProtocol(protocol));
+    public Mono<DeviceGateway> createDeviceGateway(DeviceGatewayProperties properties) {
+        return validate(properties).then(Mono.defer(() -> networkManager
+            .<TcpServer>getNetwork(getNetworkType(), properties.getChannelId())
+            .map(server -> {
+                String protocol = properties.getProtocol();
+                return new TcpServerDeviceGateway(properties.getId(),
+                    Mono.defer(() -> protocolSupports.getProtocol(protocol)),
+                    registry, messageHandler, sessionManager, server,
+                    (String) properties.getConfiguration().get("deviceId"), children(properties));
+            })));
+    }
 
-        return Mono.just(gateway);
+    @Override
+    public Mono<? extends DeviceGateway> reloadDeviceGateway(DeviceGateway gateway, DeviceGatewayProperties properties) {
+        TcpServerDeviceGateway current = (TcpServerDeviceGateway) gateway;
+        return validate(properties).then(Mono.defer(() -> {
+            if (!Objects.equals(current.tcpServer.getId(), properties.getChannelId())
+                || !Objects.equals(current.getGatewayDeviceId(), properties.getConfiguration().get("deviceId"))) {
+                return TcpGatewayReload.replace(current, createDeviceGateway(properties));
+            }
+            String protocol = properties.getProtocol();
+            return current.reloadChildDevices(children(properties))
+                .doOnSuccess(ignored -> current.protocol = Mono.defer(() -> protocolSupports.getProtocol(protocol)))
+                .thenReturn(gateway);
+        }));
     }
 }

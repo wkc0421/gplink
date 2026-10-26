@@ -2,6 +2,7 @@ import type {
     ByteOrder,
     DeviceMetadata,
     ImportResult,
+    QuickCreatedResources,
     RegisterDataType,
     RegisterMappingRow,
     SlaveRow,
@@ -137,6 +138,59 @@ export const buildTcpAccessPayload = (
     },
 })
 
+// Only connection fields belong to the quick-create form. Preserve parser and
+// other network settings when correcting a partially completed wizard.
+export const normalizeTcpConnectionConfiguration = (
+    mode: TcpQuickCreateMode,
+    configuration: Record<string, any> = {},
+) => {
+    const tlsKey = mode === 'tcp-client' ? 'ssl' : 'secure'
+    const tlsEnabled = [true, 1, 'true', '1'].includes(configuration[tlsKey])
+    return {
+        host: String(configuration.host ?? '').trim(),
+        port: Number(configuration.port),
+        ...(mode === 'tcp-server' ? {
+            publicHost: String(configuration.publicHost ?? '').trim(),
+            publicPort: Number(configuration.publicPort),
+        } : {}),
+        [tlsKey]: tlsEnabled,
+        ...(tlsEnabled ? { certId: configuration.certId } : {}),
+    }
+}
+
+export const buildTcpNetworkConfigurationUpdate = (
+    mode: TcpQuickCreateMode,
+    form: TcpQuickConfigForm,
+    previous: Record<string, any>,
+) => {
+    const configuration = {
+        ...previous,
+        ...normalizeTcpConnectionConfiguration(mode, buildTcpNetworkPayload(mode, form).configuration),
+    }
+    if (!form.tlsEnabled) delete configuration.certId
+    return configuration
+}
+
+export const assertQuickTcpResourceOwnership = (
+    mode: TcpQuickCreateMode,
+    created: Pick<QuickCreatedResources, 'networkId' | 'accessId'>,
+    gatewayDeviceId: string,
+    network: any,
+    access?: any,
+) => {
+    if (!created.networkId || network?.id !== created.networkId
+        || network.type !== TCP_NETWORK_TYPE[mode] || network.shareCluster === false
+        || !network.configuration || typeof network.configuration !== 'object' || Array.isArray(network.configuration)) {
+        throw new Error('本次创建的网络组件已不存在或类型发生变化，请在网络组件管理页确认')
+    }
+    if (created.accessId && (access?.id !== created.accessId
+        || access.channel !== 'network' || access.channelId !== created.networkId
+        || access.provider !== TCP_GATEWAY_PROVIDER[mode]
+        || access.configuration?.deviceId !== gatewayDeviceId)) {
+        throw new Error('本次创建的接入网关归属已变化，不能在向导中修改网络配置')
+    }
+}
+
 export const formatTcpEndpoint = (mode: TcpQuickCreateMode, form: TcpQuickConfigForm) => {
     if (mode === 'tcp-server') {
         return `${form.host || '--'}:${form.port || '--'}（公网 ${form.publicHost || '--'}:${form.publicPort || '--'}）`
@@ -148,6 +202,26 @@ export const ensureQuickResourceId = async (
     existingId: string | undefined,
     create: () => Promise<string>,
 ) => existingId || create()
+
+export async function waitForDeviceState(
+    loadState: () => Promise<string>,
+    expectedState = 'online',
+    attempts = 20,
+    intervalMs = 500,
+) {
+    let lastState = ''
+    const expected = expectedState.toLowerCase()
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        lastState = String(await loadState() || '')
+        if (lastState.toLowerCase() === expected) {
+            return { matched: true, state: lastState }
+        }
+        if (attempt + 1 < attempts) {
+            await new Promise(resolve => setTimeout(resolve, intervalMs))
+        }
+    }
+    return { matched: false, state: lastState }
+}
 
 const DATA_TYPE_MIN_QUANTITY: Record<RegisterDataType, number> = {
     BIT: 1,
@@ -529,6 +603,24 @@ const parseMetadata = (metadata?: string | DeviceMetadata): DeviceMetadata => {
     }
 }
 
+const completePropertySortIndexes = (properties: any[]) => {
+    const sortIndex = (value: unknown) => {
+        if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return undefined
+        const parsed = Number(value)
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+    }
+    const used = new Set(properties.map(item => sortIndex(item.sortsIndex)))
+    // The metadata table sorts descending. Assign larger values to earlier rows.
+    let next = properties.length
+    return properties.map(item => {
+        if (sortIndex(item.sortsIndex) !== undefined) return item
+        while (used.has(next)) next -= 1
+        const sortsIndex = next--
+        used.add(sortsIndex)
+        return { ...item, sortsIndex }
+    })
+}
+
 export const buildMetadataFromRegisterMap = (
     rows: RegisterMappingRow[],
     existingMetadata?: string | DeviceMetadata,
@@ -575,7 +667,7 @@ export const buildMetadataFromRegisterMap = (
 
     return {
         ...metadata,
-        properties: [...properties, ...generated.values()],
+        properties: completePropertySortIndexes([...properties, ...generated.values()]),
         functions: Array.isArray(metadata.functions) ? metadata.functions : [],
         events: Array.isArray(metadata.events) ? metadata.events : [],
         tags: Array.isArray(metadata.tags) ? metadata.tags : [],

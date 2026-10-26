@@ -17,6 +17,7 @@ package org.jetlinks.community.network.tcp.parser.strateies;
 
 import io.vertx.core.parsetools.RecordParser;
 import org.jetlinks.community.network.tcp.parser.PayloadParserType;
+import org.jetlinks.community.network.tcp.parser.PayloadParserLimits;
 import org.jetlinks.community.ValueObject;
 
 import java.util.function.Supplier;
@@ -37,7 +38,8 @@ public class FixLengthPayloadParserBuilder extends VertxPayloadParserBuilder {
     protected Supplier<RecordParser> createParser(ValueObject config) {
         int size = config.getInt("size")
                          .orElseThrow(() -> new IllegalArgumentException("size can not be null"));
-
+        if (size < 1) throw new IllegalArgumentException("size must be positive");
+        PayloadParserLimits.check(size, PayloadParserLimits.maxFrameLength(config));
         return () -> RecordParser.newFixed(size);
     }
 

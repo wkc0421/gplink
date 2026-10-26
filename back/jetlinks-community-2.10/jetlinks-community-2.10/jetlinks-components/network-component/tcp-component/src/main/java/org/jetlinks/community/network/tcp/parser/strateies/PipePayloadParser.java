@@ -19,6 +19,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.RecordParser;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.community.network.tcp.parser.PayloadParser;
+import org.jetlinks.community.network.tcp.parser.PayloadParserLimits;
 import org.jetlinks.core.utils.Reactors;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -70,6 +71,21 @@ public class PipePayloadParser implements PayloadParser {
     private Consumer<RecordParser> firstInit;
 
     private volatile int currentPipe;
+    private final int maxFrameLength;
+    private long resultLength;
+    private long directBytes;
+    private boolean closed;
+
+    public PipePayloadParser() {
+        this(PayloadParserLimits.DEFAULT_MAX_FRAME_LENGTH);
+    }
+
+    public PipePayloadParser(int maxFrameLength) {
+        if (maxFrameLength < 1 || maxFrameLength > PayloadParserLimits.MAX_FRAME_LENGTH) {
+            throw new IllegalArgumentException("invalid maxFrameLength: " + maxFrameLength);
+        }
+        this.maxFrameLength = maxFrameLength;
+    }
 
     public Buffer newBuffer() {
         return Buffer.buffer();
@@ -95,16 +111,22 @@ public class PipePayloadParser implements PayloadParser {
 
 
     public PipePayloadParser delimited(String delimited) {
+        if (delimited == null || delimited.isEmpty()) {
+            throw new IllegalArgumentException("delimiter must not be empty");
+        }
+        ensureRemaining(1);
         if (recordParser == null) {
             setParser(RecordParser.newDelimited(delimited));
             firstInit = (parser -> parser.delimitedMode(delimited));
             return this;
         }
         recordParser.delimitedMode(delimited);
+        updateRecordLimit();
         return this;
     }
 
     public PipePayloadParser fixed(int size) {
+        ensureRemaining(size);
         if (size == 0) {
             complete();
             return this;
@@ -115,6 +137,7 @@ public class PipePayloadParser implements PayloadParser {
             return this;
         }
         recordParser.fixedSizeMode(size);
+        updateRecordLimit();
         return this;
     }
 
@@ -134,44 +157,78 @@ public class PipePayloadParser implements PayloadParser {
 
     private void setParser(RecordParser parser) {
         this.recordParser = parser;
-        this.recordParser.handler(buffer -> getNextHandler().accept(buffer, this));
+        updateRecordLimit();
+        this.recordParser.handler(buffer -> {
+            ensureRemaining(buffer.length());
+            getNextHandler().accept(buffer, this);
+        });
+    }
+
+    private void ensureRemaining(long length) {
+        if (closed) throw new IllegalStateException("TCP parser is closed");
+        PayloadParserLimits.check(length, maxFrameLength);
+        PayloadParserLimits.check(resultLength + length, maxFrameLength);
+    }
+
+    private void updateRecordLimit() {
+        if (recordParser != null) {
+            // Vert.x treats zero as unlimited. Full frames must complete before reading more.
+            recordParser.maxRecordSize((int) Math.max(1L, maxFrameLength - resultLength));
+        }
     }
 
     public PipePayloadParser complete() {
+        directBytes = 0;
         CURRENT_PIPE.set(this, 0);
-        if (recordParser != null) {
-            firstInit.accept(recordParser);
-        }
+        Buffer completed = null;
         if (!this.result.isEmpty()) {
-            Buffer buffer = Buffer.buffer();
+            completed = Buffer.buffer();
             for (Buffer buf : this.result) {
-                buffer.appendBuffer(buf);
+                completed.appendBuffer(buf);
             }
             this.result.clear();
-            sink.emitNext(buffer, Reactors.emitFailureHandler());
         }
+        resultLength = 0;
+        if (recordParser != null) {
+            firstInit.accept(recordParser);
+            updateRecordLimit();
+        }
+        if (completed != null) sink.emitNext(completed, Reactors.emitFailureHandler());
         return this;
 
     }
 
     public PipePayloadParser result(Buffer buffer) {
+        ensureRemaining(buffer.length());
         this.result.add(buffer);
+        resultLength += buffer.length();
+        updateRecordLimit();
         return this;
     }
 
     @Override
     public synchronized void handle(Buffer buffer) {
+        if (closed) return;
         if (recordParser == null && directMapper == null) {
             log.error("record parser not init");
             return;
         }
-        if (recordParser != null) {
-            recordParser.handle(buffer);
-            return;
-        }
-        Buffer buf = directMapper.apply(buffer);
-        if (null != buf) {
-            sink.emitNext(buf, Reactors.emitFailureHandler());
+        try {
+            if (recordParser != null) {
+                recordParser.handle(buffer);
+                return;
+            }
+            directBytes += buffer.length();
+            Buffer buf = directMapper.apply(buffer);
+            if (null != buf) {
+                PayloadParserLimits.check(buf.length(), maxFrameLength);
+                directBytes = 0;
+                sink.emitNext(buf, Reactors.emitFailureHandler());
+            }
+            PayloadParserLimits.check(directBytes, maxFrameLength);
+        } catch (RuntimeException error) {
+            close();
+            throw error;
         }
     }
 
@@ -181,16 +238,31 @@ public class PipePayloadParser implements PayloadParser {
     }
 
     @Override
-    public void reset() {
+    public synchronized void reset() {
+        if (closed) return;
         this.result.clear();
-        complete();
+        resultLength = 0;
+        directBytes = 0;
+        CURRENT_PIPE.set(this, 0);
+        if (recordParser != null) {
+            RecordParser replacement = RecordParser.newFixed(1);
+            firstInit.accept(replacement);
+            setParser(replacement);
+        }
     }
 
     @Override
-    public void close() {
+    public synchronized void close() {
+        closed = true;
+        recordParser = null;
+        directMapper = null;
+        firstInit = null;
+        pipe.clear();
         sink.tryEmitComplete();
         CURRENT_PIPE.set(this, 0);
         this.result.clear();
+        resultLength = 0;
+        directBytes = 0;
     }
 
 }

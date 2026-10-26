@@ -45,10 +45,12 @@ public class DelimitedPayloadParserBuilder extends VertxPayloadParserBuilder {
             .getString("delimited")
             .map(String::trim)
             .orElseThrow(() -> new IllegalArgumentException("delimited can not be null"));
+        if (delimited.isEmpty()) throw new IllegalArgumentException("delimiter must not be empty");
 
         if (delimited.startsWith("0x")) {
 
             byte[] hex = Hex.decodeHex(delimited.substring(2));
+            if (hex.length == 0) throw new IllegalArgumentException("delimiter must not be empty");
             return () -> RecordParser
                 .newDelimited(Buffer.buffer(hex));
         }

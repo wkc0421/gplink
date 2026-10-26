@@ -1,0 +1,109 @@
+{
+    "schemaVersion":  1,
+    "bundleId":  "gplink2-windows-offline-2026.10.13-network-only-modbus-import-jdk-priority-fulljdk-nginx-config",
+    "packages":  [
+                     {
+                         "id":  "application",
+                         "file":  "application.jar",
+                         "version":  "2026.10.13",
+                         "architecture":  "any",
+                         "kind":  "jar",
+                         "sha256":  "3CA9A2400BEEC0FA872D8F17775D2755DA11C6477DDDCB6C575399BA95A3810E",
+                         "size":  274679959,
+                         "authenticode":  false,
+                         "sourceUrl":  null
+                     },
+                     {
+                         "id":  "protocol-modbus",
+                         "file":  "protocol-modbus.jar",
+                         "version":  "1.0.0",
+                         "architecture":  "any",
+                         "kind":  "protocol-jar",
+                         "sha256":  "5DD617A72F61173396816B8888BBA3D700FEBB1D2F9667D9EB908C89B8C51387",
+                         "size":  73567,
+                         "authenticode":  false,
+                         "sourceUrl":  null
+                     },
+                     {
+                         "id":  "java",
+                         "file":  "OpenJDK17U-jdk_x64_windows_hotspot.zip",
+                         "version":  "17.0.20.1+1",
+                         "architecture":  "x64",
+                         "kind":  "jdk-zip",
+                         "sha256":  "E53A79C3C3D86865BD7E787903884331068E71321714FFD44F145785AFFC7CB0",
+                         "size":  190817615,
+                         "authenticode":  false,
+                         "sourceUrl":  "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_x64_windows_hotspot_17.0.20.1_1.zip"
+                     },
+                     {
+                         "id":  "postgresql",
+                         "file":  "postgresql-16.15-windows-x64.exe",
+                         "version":  "16.15-1",
+                         "architecture":  "x64",
+                         "kind":  "installer",
+                         "sha256":  "DE926FEFAD00E313E212CD438C0F04BF033E200099AD56C012724EFCEBED79F2",
+                         "size":  364821360,
+                         "authenticode":  true,
+                         "postgresMajor":  16,
+                         "sourceUrl":  "https://get.enterprisedb.com/postgresql/postgresql-16.15-1-windows-x64.exe"
+                     },
+                     {
+                         "id":  "timescaledb",
+                         "file":  "timescaledb-postgresql-16-windows-amd64.zip",
+                         "version":  "2.29.1",
+                         "architecture":  "x64",
+                         "kind":  "timescaledb-zip",
+                         "sha256":  "F67E27DF97C578306DD0017B0ABB940FD4D8B27009248ECD1A67086ACEEC6877",
+                         "size":  8333274,
+                         "authenticode":  false,
+                         "postgresMajor":  16,
+                         "sourceUrl":  "https://github.com/timescale/timescaledb/releases/download/2.29.1/timescaledb-postgresql-16-windows-amd64.zip"
+                     },
+                     {
+                         "id":  "vcredist",
+                         "file":  "VC_redist.x64.exe",
+                         "version":  "14.44.35211.0",
+                         "architecture":  "x64",
+                         "kind":  "installer",
+                         "sha256":  "CC0FF0EB1DC3F5188AE6300FAEF32BF5BEEBA4BDD6E8E445A9184072096B713B",
+                         "size":  25635768,
+                         "authenticode":  true,
+                         "sourceUrl":  "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+                     },
+                     {
+                         "id":  "openssl",
+                         "file":  "FireDaemon-OpenSSL-x64-3.5.7.exe",
+                         "version":  "3.5.7",
+                         "architecture":  "x64",
+                         "kind":  "installer",
+                         "sha256":  "649F2B178B726F533A959CCC4B1F881AA852DB3363A14574D295990BEF1AA6D9",
+                         "size":  17845744,
+                         "authenticode":  true,
+                         "sourceUrl":  "https://download.firedaemon.com/FireDaemon-OpenSSL/FireDaemon-OpenSSL-x64-3.5.7.exe"
+                     },
+                     {
+                         "id":  "nssm",
+                         "file":  "nssm.exe",
+                         "version":  "2.24",
+                         "architecture":  "x64",
+                         "kind":  "executable",
+                         "sha256":  "F689EE9AF94B00E9E3F0BB072B34CAAF207F32DCB4F5782FC9CA351DF9A06C97",
+                         "size":  331264,
+                         "authenticode":  false,
+                         "sourceUrl":  "http://nssm.cc/release/nssm-2.24.zip",
+                         "archiveMember":  "nssm-2.24/win64/nssm.exe"
+                     },
+                     {
+                         "id":  "baseline-sql",
+                         "file":  "gplink-baseline.sql",
+                         "version":  "2026.09.03-network-only",
+                         "architecture":  "any",
+                         "kind":  "sql",
+                         "sha256":  "E36DC1E4F3AB800814A888E47C756B1D8FA8CA7780A8AE601146C962A4D9DBE4",
+                         "size":  6648,
+                         "authenticode":  false,
+                         "sensitive":  true,
+                         "sourceUrl":  null
+                     }
+                 ]
+}

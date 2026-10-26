@@ -52,46 +52,51 @@ public class LengthFieldPayloadParserBuilder implements PayloadParserBuilderStra
         boolean le = config.getBoolean("little")
                            .orElse(false);
 
+        int maximum = PayloadParserLimits.maxFrameLength(config);
+        if (offset < 0) throw new IllegalArgumentException("offset must not be negative");
+        PayloadParserLimits.check((long) offset + len, maximum);
         int initLength = offset + len;
 
-        Function<Buffer, Integer> lengthParser;
+        Function<Buffer, Long> lengthParser;
         switch (len) {
             case 1:
-                lengthParser = buffer -> (int) buffer.getUnsignedByte(offset);
+                lengthParser = buffer -> (long) buffer.getUnsignedByte(offset);
                 break;
             case 2:
                 lengthParser =
-                    le ? buffer -> buffer.getUnsignedShortLE(offset)
-                        : buffer -> buffer.getUnsignedShort(offset);
+                    le ? buffer -> (long) buffer.getUnsignedShortLE(offset)
+                        : buffer -> (long) buffer.getUnsignedShort(offset);
                 break;
             case 3:
                 lengthParser =
-                    le ? buffer -> buffer.getUnsignedMediumLE(offset)
-                        : buffer -> (int) buffer.getUnsignedMedium(offset);
+                    le ? buffer -> (long) buffer.getUnsignedMediumLE(offset)
+                        : buffer -> (long) buffer.getUnsignedMedium(offset);
                 break;
             case 4:
                 lengthParser =
-                    le ? buffer -> buffer.getIntLE(offset)
-                        : buffer -> (int) buffer.getInt(offset);
+                    le ? buffer -> buffer.getUnsignedIntLE(offset)
+                        : buffer -> buffer.getUnsignedInt(offset);
                 break;
             case 8:
                 lengthParser =
-                    le ? buffer -> (int) buffer.getLongLE(offset)
-                        : buffer -> (int) buffer.getLong(offset);
+                    le ? buffer -> buffer.getLongLE(offset)
+                        : buffer -> buffer.getLong(offset);
                 break;
             default:
                 throw new IllegalArgumentException("illegal length:" + len);
         }
 
 
-        return () -> new PipePayloadParser()
+        return () -> new PipePayloadParser(maximum)
             //先读取初始长度
             .fixed(initLength)
             .handler((buffer, parser) -> {
                 //获取长度字段，然后读取接下来的长度
-                int next = lengthParser.apply(buffer);
+                long next = lengthParser.apply(buffer);
+                PayloadParserLimits.check(next, maximum);
+                PayloadParserLimits.check((long) initLength + next, maximum);
                 parser.result(buffer)
-                      .fixed(next);
+                      .fixed((int) next);
             })
             .handler((buffer, parser) -> parser
                 .result(buffer)

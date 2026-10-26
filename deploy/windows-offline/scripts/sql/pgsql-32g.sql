@@ -1,0 +1,10 @@
+ALTER SYSTEM SET shared_buffers = '4GB';
+ALTER SYSTEM SET effective_cache_size = '16GB';
+ALTER SYSTEM SET work_mem = '64MB';
+ALTER SYSTEM SET maintenance_work_mem = '512MB';
+ALTER SYSTEM SET max_wal_size = '4GB';
+ALTER SYSTEM SET checkpoint_completion_target = '0.9';
+ALTER SYSTEM SET wal_buffers = '64MB';
+ALTER SYSTEM SET autovacuum_max_workers = '3';
+ALTER SYSTEM SET autovacuum_vacuum_cost_delay = '2ms';
+SELECT pg_reload_conf();

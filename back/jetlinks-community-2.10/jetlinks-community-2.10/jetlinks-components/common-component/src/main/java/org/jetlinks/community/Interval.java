@@ -185,7 +185,7 @@ public class Interval {
      * @return 取整后的值
      */
     public long round(long timestamp) {
-        return getUnit().truncatedTo(timestamp, number.intValue());
+        return getUnit().truncatedTo(timestamp, number.intValueExact());
     }
 
     /**
@@ -196,7 +196,7 @@ public class Interval {
      * @return 迭代器
      */
     public Iterable<Long> iterate(long from, long to) {
-        return getUnit().iterate(from, to, number.intValue());
+        return getUnit().iterate(from, to, number.intValueExact());
     }
 
     public <T> Flux<T> generate(long from, long to, Function<Long, T> converter) {

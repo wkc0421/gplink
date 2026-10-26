@@ -79,10 +79,9 @@ public class ModbusProtocolSupportProvider implements ProtocolSupportProvider {
                                 .getSession(request.getGatewayId())
                                 .filter(session -> session.isAlive())
                                 .delaySubscription(Duration.ofMillis(frameInterval(request)))
-                                .flatMap(session -> executor.isSendAllowed(request)
-                                        ? session.send(EncodedMessage.simple(
-                                                Unpooled.wrappedBuffer(request.getRequest().toAdu())))
-                                        : Mono.just(false))
+                                .flatMap(session -> executor.sendIfCurrent(request,
+                                        () -> session.send(EncodedMessage.simple(
+                                                Unpooled.wrappedBuffer(request.getRequest().toAdu())))))
                                 .defaultIfEmpty(false));
                         Disposable sessionListener = manager.listenEvent(event -> {
                             if (event.getType() == DeviceSessionEvent.Type.unregister) {
@@ -112,7 +111,7 @@ public class ModbusProtocolSupportProvider implements ProtocolSupportProvider {
                         support.doOnDispose(leaseListener);
                     });
             ModbusRtuCodec codec = new ModbusRtuCodec(executor);
-            support.doOnDispose(executor::dispose);
+            support.doOnDispose(codec::dispose);
             support.addMessageCodecSupport(DefaultTransport.TCP, codec);
             support.addConfigMetadata(DefaultTransport.TCP, GATEWAY_CONFIG.merge(SLAVE_CONFIG));
 

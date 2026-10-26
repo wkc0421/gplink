@@ -57,6 +57,9 @@ export interface SlaveRow {
     autoDeviceId?: boolean
     autoDeviceName?: boolean
     pollOverrideEnabled?: boolean
+    persisted?: boolean
+    sourceDevice?: Record<string, any>
+    createdDevice?: boolean
 }
 
 export interface ImportResult<T> {
@@ -68,9 +71,30 @@ export interface TestResultRow {
     key: string
     deviceId: string
     propertyId: string
-    status: 'success' | 'error'
+    status: 'success' | 'error' | 'waiting' | 'skipped'
+    productName?: string
+    productId?: string
     value?: unknown
     message?: string
+}
+
+export interface ProductGroup {
+    key: string
+    mode: 'select' | 'create'
+    productId?: string
+    form: { id: string; name: string }
+    registerRows: RegisterMappingRow[]
+    slaveRows: SlaveRow[]
+    pollingConfig: Record<string, any>
+    testPropertyIds: string[]
+    testDeviceIds: string[]
+    sourceProduct?: Record<string, any>
+    savedSignature?: string
+    createdProduct?: boolean
+    locked?: boolean
+    status: string
+    loadVersion: number
+    loading?: boolean
 }
 
 export interface DeviceMetadata {

@@ -346,6 +346,7 @@ import {
   queryList,
   getConfigView,
   getConfigMetadata,
+  getAccessConfig,
   productGuide,
   productGuideSave,
   getStoragList,
@@ -416,7 +417,9 @@ const formData = reactive<Record<string, any>>({
 });
 
 const isModbusProduct = computed(() =>
-  String(productStore.current?.messageProtocol || '').toLowerCase().includes('modbus'),
+  String(access.value?.protocol || productStore.current?.messageProtocol || '')
+    .toLowerCase()
+    .includes('modbus'),
 )
 
 const modbusReadableProperties = computed(() => {
@@ -628,27 +631,35 @@ const getStream = (record: any) => {
  * 查询接入方式
  */
 const queryAccessDetail = async (id: string) => {
-  const res = await queryList({
+  const res: any = await queryList({
     terms: [
       {
         column: "id",
         value: id,
       },
     ],
-  }).then((res: any) => {
-    if (res.status === 200) {
-      access.value = res.result.data[0];
-      if (access.value?.transportDetail?.metadata) {
-        const metadata = JSON.parse(access.value?.transportDetail?.metadata);
-        productData.metadata = pick(metadata, [
-          "functions",
-          "properties",
-          "events",
-          "tags",
-        ]);
-      }
-    }
   });
+
+  if (res.status !== 200) {
+    return undefined;
+  }
+
+  const detail = res.result?.data?.[0];
+  if (!detail) {
+    return undefined;
+  }
+
+  access.value = detail;
+  if (detail.transportDetail?.metadata) {
+    const accessMetadata = JSON.parse(detail.transportDetail.metadata);
+    productData.metadata = pick(accessMetadata, [
+      "functions",
+      "properties",
+      "events",
+      "tags",
+    ]);
+  }
+  return detail;
 };
 
 const handleColumns = () => {
@@ -682,19 +693,55 @@ const handleColumns = () => {
 /**
  * 查询协议信息
  */
-const getConfigDetail = (
+const getConfigDetail = async (
   messageProtocol: string,
   transportProtocol: string,
 ) => {
-  getConfigView(messageProtocol, transportProtocol).then((resp) => {
-    if (resp.status === 200) {
-      config.value = resp.result;
-      handleColumns();
-      if (config.value?.document) {
-        markdownToHtml.value = marked(config.value.document);
-      }
+  if (!messageProtocol || !transportProtocol) {
+    config.value = {};
+    markdownToHtml.value = "";
+    return;
+  }
+
+  const resp = await getConfigView(messageProtocol, transportProtocol);
+  if (resp.status === 200) {
+    config.value = resp.result;
+    handleColumns();
+    if (config.value?.document) {
+      markdownToHtml.value = marked(config.value.document);
+    } else {
+      markdownToHtml.value = "";
     }
-  });
+  }
+};
+
+const applyMetadataResponse = (resp: any, showGuide = false) => {
+  metadata.value = resp?.result || [
+    {
+      properties: [],
+    },
+  ];
+
+  // 流传输模式由接入方式决定，不作为产品配置项展示。
+  if (metadata.value.length) {
+    metadata.value = metadata.value.map((itemGroup: any) => {
+      itemGroup.properties = itemGroup?.properties?.filter((item: any) => {
+        if (
+          item.name === "流传输模式" &&
+          (!productStore.current?.configuration ||
+            !productStore.current?.configuration.hasOwnProperty(item.property))
+        ) {
+          formData.data[item.property] = item.type.expands?.defaultValue;
+        }
+        return item.name !== "流传输模式";
+      });
+      return itemGroup;
+    });
+  }
+
+  if (showGuide) {
+    getGuide(metadata.value.length);
+  }
 };
 
 const getRules = (item: any) => {
@@ -819,45 +866,25 @@ const getProvidersList = async () => {
  */
 const getData = async (accessId?: string) => {
   const _accessId = accessId || productStore.current?.accessId;
-  if (productStore.current?.id) {
+  // 有接入方式时，配置元数据必须按接入方式读取，避免使用产品中可能过期的协议ID。
+  if (productStore.current?.id && !_accessId) {
     getConfigMetadata(productStore.current?.id).then((resp: any) => {
-      metadata.value = resp?.result || [
-        {
-          properties: [],
-        },
-      ];
-      // 流传输模式 初始为udp模式
-      if (metadata.value.length) {
-        metadata.value = metadata.value.map((i: any) => {
-          i.properties = i?.properties.filter((item: any) => {
-            if (
-              item.name === "流传输模式" &&
-              (!productStore.current?.configuration ||
-                !productStore.current?.configuration.hasOwnProperty(
-                  item.property,
-                ))
-            ) {
-              formData.data[item.property] = item.type.expands?.defaultValue;
-            }
-            return item.name !== "流传输模式";
-          });
-          return i;
-        });
-      }
-      if (accessId) {
-        // 切换接入方式之后获取是否显示引导
-        getGuide(resp?.result.length); //
-      }
+      applyMetadataResponse(resp, Boolean(accessId));
     });
   }
   if (_accessId) {
-    // 有设备接入
-    // const metadataResp = await getConfigMetadata(productStore.current!.id)
-    // if (metadataResp.success) {
-    //   metadata.value = (metadataResp.result?.[0] as ConfigMetadata[]) || [];
-    // }
-    queryAccessDetail(_accessId);
-    if (productStore.current?.accessProvider === "plugin_gateway") {
+    const accessDetail = await queryAccessDetail(_accessId).catch(() => undefined);
+    if (productStore.current?.id && accessDetail?.provider !== "plugin_gateway") {
+      const metadataResp: any = await getAccessConfig(
+        productStore.current.id,
+        _accessId,
+      ).catch(() => undefined);
+      applyMetadataResponse(metadataResp, Boolean(accessId));
+    }
+    if (
+      accessDetail?.provider === "plugin_gateway" ||
+      productStore.current?.accessProvider === "plugin_gateway"
+    ) {
       queryPluginAccessDetail(_accessId).then(async (res) => {
         //
         if (res.success) {
@@ -890,9 +917,9 @@ const getData = async (accessId?: string) => {
         }
       });
     } else {
-      getConfigDetail(
-        productStore.current?.messageProtocol || "",
-        productStore.current?.transportProtocol || "",
+      await getConfigDetail(
+        accessDetail?.protocol || "",
+        accessDetail?.transport || "",
       );
     }
   }
@@ -956,27 +983,34 @@ const updateAccessData = async (id: string, values: any) => {
   } else if (productData.metadata && Object.keys(productData.metadata).length) {
     _metadata = JSON.stringify(productData.metadata);
   }
+  const selectedAccessId = access.value?.id || accessId.value;
+  const selectedProtocol = String(access.value?.protocol || '').trim();
+  const selectedTransport = String(access.value?.transport || '').trim();
+  if (!selectedAccessId || !selectedProtocol || !selectedTransport) {
+    submitLoading.value = false;
+    onlyMessage('当前接入方式缺少协议或传输协议，无法保存', 'error');
+    return;
+  }
   // 更新选择设备(设备接入)
   const accessObj = {
     ...productStore.current,
     metadata: _metadata,
-    transportProtocol: access.value?.transport,
+    transportProtocol: selectedTransport,
     protocolName: access.value?.protocolDetail?.name,
-    accessId: access.value?.id,
+    accessId: selectedAccessId,
     accessName: access.value?.name,
     accessProvider: access.value?.provider,
-    messageProtocol: access.value?.protocol,
+    messageProtocol: selectedProtocol,
   };
   submitLoading.value = true;
   const pollingBefore: any = isModbusProduct.value
     ? await getModbusPollingStatus().catch(() => undefined)
     : undefined;
-  const updateDeviceResp = await updateDevice(accessObj).catch(() => {
-    submitLoading.value = false;
-  });
+  const updateDeviceResp = await updateDevice(accessObj).catch(() => undefined);
 
-  if (!updateDeviceResp.success) {
+  if (!updateDeviceResp?.success) {
     submitLoading.value = false;
+    return;
   }
 
   if (access.value?.provider === "plugin_gateway" && productData.id) {

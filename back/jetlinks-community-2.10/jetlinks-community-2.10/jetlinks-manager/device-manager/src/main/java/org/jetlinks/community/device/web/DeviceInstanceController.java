@@ -880,6 +880,7 @@ public class DeviceInstanceController implements
                                                        @RequestBody Mono<AggRequest> param) {
 
         return param
+            .doOnNext(AggRequest::validate)
             .flatMapMany(request -> deviceDataService
                 .aggregationPropertiesByDevice(deviceId,
                                                request.getQuery(),

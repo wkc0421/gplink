@@ -17,6 +17,7 @@ package org.jetlinks.community.network.tcp.client;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetClient;
@@ -68,7 +69,13 @@ public class VertxTcpClient implements TcpClient {
 
     private final List<Runnable> disconnectListener = new CopyOnWriteArrayList<>();
 
-    private final Sinks.Many<TcpMessage> sink = Reactors.createMany(MESSAGE_BUFFER_SIZE, false);
+    // The multicast queue owns heap snapshots. Each subscriber gets its own
+    // reference-counted view; slow/cancelled subscribers cannot release another's frame.
+    private final Sinks.Many<ReceivedFrame> sink = Reactors.createMany(MESSAGE_BUFFER_SIZE, false);
+
+    private final Sinks.Many<Boolean> connectionStateSink = Sinks.many().replay().latest();
+
+    private boolean connected;
 
     private final AtomicLong connectionVersion = new AtomicLong();
 
@@ -124,7 +131,15 @@ public class VertxTcpClient implements TcpClient {
                 try {
                     current.write(buffer, r -> {
                         if (r.succeeded()) {
-                            keepAlive();
+                            // For an outbound TCP client a successful local write only
+                            // means that the bytes entered the operating-system buffer.
+                            // It does not prove that the remote server is still responsive.
+                            // Refresh outbound-client liveness only when data is received;
+                            // otherwise periodic Modbus requests can keep a silent/broken
+                            // connection alive forever and prevent reconnection.
+                            if (serverClient) {
+                                keepAlive();
+                            }
                             sink.success();
                         } else {
                             sink.error(r.cause());
@@ -165,12 +180,18 @@ public class VertxTcpClient implements TcpClient {
     public VertxTcpClient(String id, boolean serverClient) {
         this.id = id;
         this.serverClient = serverClient;
+        connectionStateSink.tryEmitNext(false);
     }
 
     protected void received(TcpMessage message) {
-        Sinks.EmitResult result = sink.tryEmitNext(message);
-        if (result != Sinks.EmitResult.OK) {
+        byte[] bytes;
+        try {
+            bytes = ByteBufUtil.getBytes(message.getPayload());
+        } finally {
             ReferenceCountUtil.safeRelease(message.getPayload());
+        }
+        Sinks.EmitResult result = sink.tryEmitNext(new ReceivedFrame(connectionVersion.get(), bytes));
+        if (result != Sinks.EmitResult.OK) {
             log.warn("drop tcp client [{}] payload because receive buffer rejected it: {}",
                      id,
                      result);
@@ -179,7 +200,35 @@ public class VertxTcpClient implements TcpClient {
 
     @Override
     public Flux<TcpMessage> subscribe() {
-        return sink.asFlux();
+        return sink.asFlux()
+            .filter(frame -> frame.version == connectionVersion.get())
+            .map(frame -> new TcpMessage(Unpooled.copiedBuffer(frame.bytes)));
+    }
+
+    private static final class ReceivedFrame {
+        final long version;
+        final byte[] bytes;
+
+        private ReceivedFrame(long version, byte[] bytes) {
+            this.version = version;
+            this.bytes = bytes;
+        }
+    }
+
+    @Override
+    public Flux<Boolean> connectionState() {
+        return connectionStateSink.asFlux();
+    }
+
+    private void updateConnectionStateLocked(boolean state) {
+        if (connected == state) {
+            return;
+        }
+        connected = state;
+        Sinks.EmitResult result = connectionStateSink.tryEmitNext(state);
+        if (result.isFailure()) {
+            log.warn("emit tcp client [{}] connection state [{}] failed: {}", id, state, result);
+        }
     }
 
     private void execute(Runnable runnable) {
@@ -206,12 +255,23 @@ public class VertxTcpClient implements TcpClient {
 
     @Override
     public void shutdown() {
+        shutdown(null, -1, null);
+    }
+
+    private void shutdown(NetSocket expectedSocket, long expectedVersion, PayloadParser expectedParser) {
         NetClient currentClient;
         NetSocket currentSocket;
         PayloadParser currentParser;
         Disposable currentSubscription;
+        List<Runnable> disconnectListeners;
 
         synchronized (this) {
+            if (expectedSocket != null && (socket != expectedSocket || connectionVersion.get() != expectedVersion)) {
+                return;
+            }
+            if (expectedParser != null && payloadParser != expectedParser) {
+                return;
+            }
             connectionVersion.incrementAndGet();
             currentClient = client;
             currentSocket = socket;
@@ -221,6 +281,8 @@ public class VertxTcpClient implements TcpClient {
             socket = null;
             payloadParser = null;
             payloadSubscription = null;
+            disconnectListeners = drainDisconnectListenersLocked();
+            updateConnectionStateLocked(false);
         }
 
         if (currentClient != null || currentSocket != null) {
@@ -228,7 +290,7 @@ public class VertxTcpClient implements TcpClient {
         }
 
         closeResources(currentClient, currentSocket, currentParser, currentSubscription);
-        notifyDisconnectListeners();
+        notifyDisconnectListeners(disconnectListeners);
 
         // Accepted TCP server connections are one-shot. Outbound TCP clients
         // are reusable and must keep their receive stream alive across reload.
@@ -245,6 +307,7 @@ public class VertxTcpClient implements TcpClient {
         Objects.requireNonNull(client, "client");
         NetClient previousClient;
         NetSocket previousSocket;
+        List<Runnable> disconnectListeners;
         long version;
         synchronized (this) {
             previousClient = this.client;
@@ -253,6 +316,8 @@ public class VertxTcpClient implements TcpClient {
             this.socket = null;
             version = connectionVersion.incrementAndGet();
             keepAlive();
+            disconnectListeners = drainDisconnectListenersLocked();
+            updateConnectionStateLocked(false);
         }
 
         if (previousSocket != null) {
@@ -261,6 +326,7 @@ public class VertxTcpClient implements TcpClient {
         if (previousClient != null && previousClient != client) {
             execute(previousClient::close);
         }
+        notifyDisconnectListeners(disconnectListeners);
         return version;
     }
 
@@ -272,7 +338,7 @@ public class VertxTcpClient implements TcpClient {
             previousParser = this.payloadParser;
             previousSubscription = this.payloadSubscription;
             this.payloadParser = payloadParser;
-            this.payloadSubscription = payloadParser
+            Disposable nextSubscription = payloadParser
                 .handlePayload()
                 .subscribe(
                     buffer -> {
@@ -282,7 +348,16 @@ public class VertxTcpClient implements TcpClient {
                             ReferenceCountUtil.safeRelease(buffer.getByteBuf());
                         }
                     },
-                    error -> log.warn("tcp client [{}] payload parser error", id, error));
+                    error -> {
+                        log.warn("tcp client [{}] payload parser error", id, error);
+                        shutdown(null, -1, payloadParser);
+                    });
+            // A parser may fail synchronously during subscription and clear itself.
+            if (this.payloadParser == payloadParser) {
+                this.payloadSubscription = nextSubscription;
+            } else {
+                nextSubscription.dispose();
+            }
         }
 
         if (previousSubscription != null) {
@@ -314,6 +389,7 @@ public class VertxTcpClient implements TcpClient {
                 previousSocket = this.socket;
                 this.socket = socket;
                 keepAlive();
+                updateConnectionStateLocked(true);
             }
         }
 
@@ -331,6 +407,7 @@ public class VertxTcpClient implements TcpClient {
     public void handleConnectFailure(NetClient failedClient, long version) {
         PayloadParser currentParser = null;
         Disposable currentSubscription = null;
+        List<Runnable> disconnectListeners = List.of();
         boolean currentConnection;
 
         synchronized (this) {
@@ -344,6 +421,8 @@ public class VertxTcpClient implements TcpClient {
                 currentSubscription = this.payloadSubscription;
                 this.payloadParser = null;
                 this.payloadSubscription = null;
+                disconnectListeners = drainDisconnectListenersLocked();
+                updateConnectionStateLocked(false);
             }
         }
 
@@ -354,19 +433,11 @@ public class VertxTcpClient implements TcpClient {
         if (currentParser != null) {
             execute(currentParser::close);
         }
-        if (currentConnection) {
-            notifyDisconnectListeners();
-        }
+        notifyDisconnectListeners(disconnectListeners);
     }
 
     private void handleSocketClosed(NetSocket closedSocket, long version) {
-        boolean currentConnection;
-        synchronized (this) {
-            currentConnection = socket == closedSocket && connectionVersion.get() == version;
-        }
-        if (currentConnection) {
-            shutdown();
-        }
+        shutdown(closedSocket, version, null);
     }
 
     private void handleSocketPayload(NetSocket source, long version, Buffer buffer) {
@@ -394,7 +465,7 @@ public class VertxTcpClient implements TcpClient {
             parser.handle(buffer);
         } catch (Throwable error) {
             log.warn("tcp client [{}] payload parser failed", id, error);
-            shutdown();
+            shutdown(source, version, parser);
         }
     }
 
@@ -416,12 +487,13 @@ public class VertxTcpClient implements TcpClient {
         }
     }
 
-    private void notifyDisconnectListeners() {
-        List<Runnable> listeners;
-        synchronized (this) {
-            listeners = List.copyOf(disconnectListener);
-            disconnectListener.clear();
-        }
+    private List<Runnable> drainDisconnectListenersLocked() {
+        List<Runnable> listeners = List.copyOf(disconnectListener);
+        disconnectListener.clear();
+        return listeners;
+    }
+
+    private void notifyDisconnectListeners(List<Runnable> listeners) {
         for (Runnable listener : listeners) {
             execute(listener);
         }

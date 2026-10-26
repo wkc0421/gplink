@@ -35,6 +35,15 @@ public class DateMathParser {
 
     @SneakyThrows
     public static long parse(String text, LongSupplier now) {
+        return parse(text, now, ZoneId.systemDefault(), false);
+    }
+
+    /** Explicit-zone variant for APIs whose calendar semantics must not depend on the host. */
+    public static long parse(String text, LongSupplier now, ZoneId zone) {
+        return parse(text, now, zone, true);
+    }
+
+    private static long parse(String text, LongSupplier now, ZoneId zone, boolean explicitZone) {
         long time;
         String mathString;
         if (text.startsWith("now()")) {
@@ -46,17 +55,18 @@ public class DateMathParser {
         } else {
             int index = text.indexOf("||");
             if (index == -1) {
-                return parseDateTime(text);
+                return explicitZone ? parseDateTime(text, zone) : parseDateTime(text);
             }
-            time = parseDateTime(text.substring(0, index));
+            time = explicitZone ? parseDateTime(text.substring(0, index), zone)
+                                : parseDateTime(text.substring(0, index));
             mathString = text.substring(index + 2);
         }
 
-        return parseMath(mathString, time);
+        return parseMath(mathString, time, zone);
     }
 
-    private static long parseMath(final String mathString, final long time) {
-        ZonedDateTime dateTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault());
+    private static long parseMath(final String mathString, final long time, ZoneId zone) {
+        ZonedDateTime dateTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(time), zone);
         for (int i = 0; i < mathString.length(); ) {
             char c = mathString.charAt(i++);
             final boolean round;
@@ -168,5 +178,20 @@ public class DateMathParser {
             throw new IllegalArgumentException("cannot parse empty date");
         }
         return DateTimeType.GLOBAL.convert(value).getTime();
+    }
+
+    private static long parseDateTime(String value, ZoneId zone) {
+        String text = value.trim().replace(' ', 'T');
+        if (text.matches("-?\\d+")) {
+            return Long.parseLong(text);
+        }
+        try {
+            return OffsetDateTime.parse(text).toInstant().toEpochMilli();
+        } catch (java.time.format.DateTimeParseException ignored) {
+            if (text.length() == 10) {
+                return LocalDate.parse(text).atStartOfDay(zone).toInstant().toEpochMilli();
+            }
+            return LocalDateTime.parse(text).atZone(zone).toInstant().toEpochMilli();
+        }
     }
 }

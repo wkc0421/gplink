@@ -766,10 +766,30 @@ const rightMenuClick = (
   }
 };
 
-const handleSaveClick = async (next?: Function) => {
-  let resp = await tableRef.value.validate();
+const getSaveErrorMessage = (error: any): string => {
+  if (Array.isArray(error)) {
+    return getSaveErrorMessage(error.find(Boolean));
+  }
 
-  if (resp) {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error?.message) {
+    return String(error.message);
+  }
+
+  return "物模型保存失败，请检查填写内容后重试";
+};
+
+const handleSaveClick = async (next?: Function) => {
+  try {
+    const resp = await tableRef.value?.validate();
+
+    if (!resp) {
+      return;
+    }
+
     const virtual: any[] = [];
     const arr = resp.map((item: any) => {
       if (item.expands?.virtualRule) {
@@ -790,6 +810,8 @@ const handleSaveClick = async (next?: Function) => {
       };
       // return item
     });
+    loading.value = true;
+
     // 保存规则
     if (virtual.length) {
       let res = undefined;
@@ -821,24 +843,29 @@ const handleSaveClick = async (next?: Function) => {
 
     const _detail: ProductItem | DeviceInstance =
       _target === "device" ? instanceStore.detail : productStore.current;
-    let _data = updateMetadata(props.type!, arr, _detail, updateStore);
-    loading.value = true;
+    // Keep the store on the persisted model until the save request succeeds.
+    const _data = updateMetadata(props.type!, arr, { ..._detail });
 
-    const result = await asyncUpdateMetadata(_target, _data).finally(() => {
-      loading.value = false;
-    });
-    if (result.success) {
-      // dataSource.value = resp
-      // tableRef.value.cleanEditStatus()
-      editStatus.value = false;
-      message.config({
-        getContainer() {
-          return getPopupContainer();
-        },
-      });
-      onlyMessage($t("Base.Base.640395-17"));
-      next?.();
+    const result = await asyncUpdateMetadata(_target, _data);
+    if (!result?.success) {
+      throw new Error(result?.message || "物模型保存失败，请稍后重试");
     }
+    updateStore(_data.metadata);
+
+    // dataSource.value = resp
+    // tableRef.value.cleanEditStatus()
+    editStatus.value = false;
+    message.config({
+      getContainer() {
+        return getPopupContainer();
+      },
+    });
+    onlyMessage($t("Base.Base.640395-17"));
+    next?.();
+  } catch (error) {
+    onlyMessage(getSaveErrorMessage(error), "error");
+  } finally {
+    loading.value = false;
   }
 };
 

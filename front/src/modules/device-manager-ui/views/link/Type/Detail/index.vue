@@ -290,6 +290,36 @@
                         />
                       </a-form-item>
                     </a-col>
+                    <template v-if="formData.type === 'TCP_CLIENT'">
+                      <a-col :span="12">
+                        <a-form-item
+                          :name="['cluster', index, 'configuration', 'host']"
+                          :rules="Rules.remoteHost"
+                          :label="$t('Detail.index.258513-24')"
+                        >
+                          <a-input
+                            v-model:value="cluster.configuration.host"
+                            :placeholder="$t('Detail.index.258513-25')"
+                          />
+                        </a-form-item>
+                      </a-col>
+                      <a-col :span="12">
+                        <a-form-item
+                          :name="['cluster', index, 'configuration', 'port']"
+                          :rules="Rules.remotePort"
+                          :label="$t('Detail.index.258513-26')"
+                        >
+                          <a-input-number
+                            v-model:value="cluster.configuration.port"
+                            :placeholder="$t('Detail.index.258513-27')"
+                            style="width: 100%"
+                            :min="1"
+                            :max="65535"
+                            :precision="0"
+                          />
+                        </a-form-item>
+                      </a-col>
+                    </template>
                     <a-col
                       :span="12"
                       v-if="isVisible('remoteHost', formData.type)"
@@ -450,14 +480,14 @@
                             ? $t('Detail.index.258513-39')
                             : $t('Detail.index.258513-40')
                         "
-                        :name="['cluster', index, 'configuration', 'secure']"
+                        :name="['cluster', index, 'configuration', tlsField]"
                         :rules="Rules.secure"
                         @change="
-                          changeSecure(cluster.configuration.secure, index)
+                          changeSecure(cluster.configuration[tlsField], index)
                         "
                       >
                         <a-radio-group
-                          v-model:value="cluster.configuration.secure"
+                          v-model:value="cluster.configuration[tlsField]"
                         >
                           <a-radio :value="true">{{ $t('Detail.index.258513-41') }}</a-radio>
                           <a-radio :value="false">{{ $t('Detail.index.258513-42') }}</a-radio>
@@ -465,7 +495,7 @@
                       </a-form-item>
                     </a-col>
                     <div class="form2-row">
-                      <a-col :span="12" v-if="cluster.configuration.secure">
+                      <a-col :span="12" v-if="cluster.configuration[tlsField]">
                         <a-form-item
                           :label="$t('Detail.index.258513-43')"
                           :name="['cluster', index, 'configuration', 'certId']"
@@ -482,7 +512,7 @@
                           />
                         </a-form-item>
                       </a-col>
-                      <a-col :span="12" v-if="cluster.configuration.secure">
+                      <a-col :span="12" v-if="cluster.configuration[tlsField] && formData.type !== 'TCP_CLIENT'">
                         <a-form-item
                           :label="$t('Detail.index.258513-45')"
                           :name="[
@@ -814,7 +844,7 @@ import {
 } from "../../../../api/link/type";
 import {
   ParserConfiguration,
-  Configuration,
+  createConfiguration,
   FormStates,
   FormStates2,
   ParserTypeOptions,
@@ -834,6 +864,7 @@ import { storeToRefs } from "pinia";
 import NodeSelect from "./NodeSelect.vue";
 import { useI18n } from "vue-i18n";
 import { useTabSaveSuccessBack } from '@/hooks'
+import { getNetworkType, getNetworkTypeLabel } from '../utils';
 
 const { t: $t } = useI18n();
 const route = useRoute();
@@ -852,9 +883,11 @@ const { configRef, resourcesClusters } = storeToRefs(_typeStore);
 const formData = ref<FormDataType>({
   ...FormStates,
 });
+const tlsField = computed(() => formData.value.type === 'TCP_CLIENT' ? 'ssl' : 'secure');
+const tcpClientLabel = () => $t('Type.tcpClient');
 const hostOptionsIndex: any = ref([]);
 const clustersListIndex: any = ref([]);
-const typeOptions = ref([]);
+const typeOptions = ref<{ label: string; value: string }[]>([]);
 const portOptionsIndex: any = ref([]);
 // let portOptionsConst: any = [];
 const certIdOptions = ref([]);
@@ -918,6 +951,7 @@ const addCluster = () => {
   const id = Date.now();
   dynamicValidateForm.cluster.push({
     ...cloneDeep(FormStates2),
+    configuration: createConfiguration(formData.value.type),
     index: dynamicValidateForm.cluster.length,
     id,
   });
@@ -997,20 +1031,20 @@ const getPortOptions = (portOptions: any, index = 0) => {
 const changeShareCluster = (value: boolean) => {
   shareCluster.value = value;
   activeKey.value = ["1"];
-  dynamicValidateForm.cluster = [{ ...cloneDeep(FormStates2), id: "1", index: 1 }];
+  dynamicValidateForm.cluster = [{ ...cloneDeep(FormStates2), configuration: createConfiguration(formData.value.type), id: "1", index: 1 }];
 };
 
 const changeType = (value: string) => {
   getResourcesCurrent();
-  dynamicValidateForm.cluster = [{ ...cloneDeep(FormStates2), id: "1", index: 1 }];
-  if (value !== "MQTT_CLIENT") {
+  dynamicValidateForm.cluster = [{ ...cloneDeep(FormStates2), configuration: createConfiguration(value), id: "1", index: 1 }];
+  if (!['MQTT_CLIENT', 'TCP_CLIENT'].includes(value)) {
     const { configuration } = dynamicValidateForm.cluster[0];
     value && (configuration.host = "0.0.0.0");
-  } else if (isNoCommunity) {
+  } else if (value === 'MQTT_CLIENT' && isNoCommunity) {
     formData.value.shareCluster = false;
     changeShareCluster(formData.value.shareCluster);
   }
-  if (value === "TCP_SERVER") {
+  if (['TCP_SERVER', 'TCP_CLIENT'].includes(value)) {
     getTs().then((res: any) => {
       if (res.status === 200) {
         typescriptTip.typescript = res.result;
@@ -1095,7 +1129,7 @@ const changeParserType = (value: string | undefined, index: number) => {
     ? (configuration.parserConfiguration.lang = "javascript")
     : "";
 };
-const changeSecure = (value: string | undefined, index: number) => {
+const changeSecure = (value: boolean, index: number) => {
   if (!value) {
     const configuration: any = dynamicValidateForm.cluster[index].configuration;
     configuration.certId = undefined;
@@ -1119,7 +1153,8 @@ const saveData = async () => {
     return onlyMessage($t('Detail.index.258513-64'), "error");
   }
 
-  const { configuration } = formRef2Data?.cluster[0];
+  // Form validation only returns registered fields; retain parser/connection settings too.
+  const { configuration } = dynamicValidateForm.cluster[0];
   const params = shareCluster.value
     ? { ...formData.value, configuration }
     : { ...formData.value, ...dynamicValidateForm };
@@ -1155,13 +1190,12 @@ const getSupports = async () => {
   if (res.status === 200) {
     const queryTypeArr = route.query.type?.includes(',') && route.query.type.split(',')
     typeOptions.value = res.result.filter(item => {
-      console.log(queryTypeArr)
       if (queryTypeArr) {
         return queryTypeArr.includes(item.id);
       }
       return true
     }).map((item: any) => ({
-      label: item.name,
+      label: getNetworkTypeLabel({ type: item.id, typeObject: item }, tcpClientLabel()),
       value: item.id,
     }));
     if (
@@ -1170,6 +1204,7 @@ const getSupports = async () => {
       id === ':id'
     ) {
       formData.value.type = typeOptions.value[0].value;
+      changeType(formData.value.type);
     }
   }
 };
@@ -1235,16 +1270,19 @@ const getDetail = () => {
       if (resp.status === 200) {
         const result: any = resp.result;
         const { configuration, cluster } = result;
-        formData.value = { ...result };
+        const type = getNetworkType(result);
+        formData.value = { ...result, type };
+        if (type === 'TCP_CLIENT' && !typeOptions.value.some((item: any) => item.value === type)) {
+          typeOptions.value.push({ label: tcpClientLabel(), value: type });
+        }
         shareCluster.value = result.shareCluster;
         activeKey.value = ["1"];
         if (result.shareCluster) {
-          dynamicValidateForm.cluster[0].configuration = {
-            ...cloneDeep(Configuration), //防止编辑时，表单字段不完善，导致输入/选择框新出现时找不到
-            ...configuration,
-          };
+          dynamicValidateForm.cluster[0].configuration = createConfiguration(type, configuration);
         } else {
-          dynamicValidateForm.cluster = cluster;
+          dynamicValidateForm.cluster = (cluster || []).map((item: FormData2Type) => ({
+            ...item, configuration: createConfiguration(type, item.configuration),
+          }));
           // const arr = cluster.map((item: any) => item.configuration.serverId)
           //遍历数据更新对应的本地端口
           // setTimeout(() => {
@@ -1273,7 +1311,7 @@ watch(
   (value) => {
     const { cluster } = dynamicValidateForm;
     if (cluster) {
-      value && (cluster[0].configuration.host = "0.0.0.0");
+      value && !['TCP_CLIENT', 'MQTT_CLIENT'].includes(formData.value.type) && (cluster[0].configuration.host = "0.0.0.0");
       updateClustersListIndex();
     }
   },
@@ -1309,7 +1347,10 @@ watch(
     if (_value) {
       const { cluster } = dynamicValidateForm;
       formData.value.type = _value;
-      cluster[0].configuration.host = "0.0.0.0";
+      cluster[0].configuration = createConfiguration(_value);
+      if (!['TCP_CLIENT', 'MQTT_CLIENT'].includes(_value)) {
+        cluster[0].configuration.host = "0.0.0.0";
+      }
       if (_value === "MQTT_CLIENT" && isNoCommunity) {
         formData.value.shareCluster = false;
         changeShareCluster(formData.value.shareCluster);
@@ -1320,7 +1361,7 @@ watch(
 );
 
 onMounted(async () => {
-  getSupports();
+  await getSupports().catch(() => {});
   getCertificates();
 
   if (isNoCommunity) {

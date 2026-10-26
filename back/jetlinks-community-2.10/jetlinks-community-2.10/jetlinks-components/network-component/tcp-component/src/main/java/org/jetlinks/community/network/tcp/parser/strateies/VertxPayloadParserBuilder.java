@@ -20,6 +20,7 @@ import io.vertx.core.parsetools.RecordParser;
 import org.jetlinks.community.network.tcp.parser.PayloadParser;
 import org.jetlinks.community.network.tcp.parser.PayloadParserBuilderStrategy;
 import org.jetlinks.community.network.tcp.parser.PayloadParserType;
+import org.jetlinks.community.network.tcp.parser.PayloadParserLimits;
 import org.jetlinks.core.utils.Reactors;
 import org.jetlinks.community.ValueObject;
 import reactor.core.publisher.Flux;
@@ -35,24 +36,34 @@ public abstract class VertxPayloadParserBuilder implements PayloadParserBuilderS
 
     @Override
     public Supplier<PayloadParser> buildLazy(ValueObject config) {
+        int maximum = PayloadParserLimits.maxFrameLength(config);
         Supplier<RecordParser> parser = createParser(config);
-        return () -> new RecordPayloadParser(parser);
+        return () -> new RecordPayloadParser(() -> parser.get().maxRecordSize(maximum), maximum);
     }
 
     static class RecordPayloadParser implements PayloadParser {
         private final Supplier<RecordParser> recordParserSupplier;
+        private final int maximum;
         private final Sinks.Many<Buffer> sink = Reactors.createMany();
 
         private RecordParser recordParser;
+        private boolean closed;
 
-        public RecordPayloadParser(Supplier<RecordParser> recordParserSupplier) {
+        public RecordPayloadParser(Supplier<RecordParser> recordParserSupplier, int maximum) {
             this.recordParserSupplier = recordParserSupplier;
+            this.maximum = maximum;
             reset();
         }
 
         @Override
-        public void handle(Buffer buffer) {
-            recordParser.handle(buffer);
+        public synchronized void handle(Buffer buffer) {
+            if (closed) return;
+            try {
+                recordParser.handle(buffer);
+            } catch (RuntimeException error) {
+                close();
+                throw error;
+            }
         }
 
         @Override
@@ -61,14 +72,18 @@ public abstract class VertxPayloadParserBuilder implements PayloadParserBuilderS
         }
 
         @Override
-        public void close() {
-            sink.emitComplete(Reactors.emitFailureHandler());
+        public synchronized void close() {
+            closed = true;
+            recordParser = null;
+            sink.tryEmitComplete();
         }
 
         @Override
-        public void reset() {
+        public synchronized void reset() {
+            if (closed) return;
             this.recordParser = recordParserSupplier.get();
             this.recordParser.handler(payload -> {
+                PayloadParserLimits.check(payload.length(), maximum);
                 sink.emitNext(payload, Reactors.emitFailureHandler());
             });
         }

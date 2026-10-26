@@ -178,7 +178,7 @@
                 </template>
                 <MonacoEditor
                     v-model:modelValue="formModel.import"
-                    theme="vs"
+                    theme="vs-dark"
                     style="height: 300px"
                     lang="json"
                 ></MonacoEditor>

@@ -1,5 +1,6 @@
 package org.jetlinks.community.device.modbus;
 
+import org.jetlinks.core.message.Headers;
 import org.jetlinks.core.message.property.ReportPropertyMessage;
 import org.junit.jupiter.api.Test;
 
@@ -7,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class ModbusPollReportPublisherTest {
 
@@ -73,5 +75,7 @@ class ModbusPollReportPublisherTest {
 
         assertEquals("success", report.getHeader("pollResult").orElse(null));
         assertEquals(0, report.getHeader("pollFailedCount").orElse(null));
+        assertFalse(report.getHeaderOrDefault(Headers.ignoreLog));
+        assertFalse(report.getHeaderOrDefault(Headers.ignoreStorage));
     }
 }

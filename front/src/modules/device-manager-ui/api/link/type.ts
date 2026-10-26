@@ -5,7 +5,7 @@ export const queryNetworkConfig = (params: object) =>
 
 export const remove = (id: string) => request.remove(`/network/config/${id}`);
 
-export const shutdown = (data: object) =>
+export const shutdown = (data: string) =>
     request.post(`/network/config/${data}/_shutdown`);
 
 export const start = (data: string) =>

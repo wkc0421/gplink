@@ -356,11 +356,18 @@ public class DeviceMessageConnector implements DecodedClientMessageHandler {
     public Mono<Boolean> handleMessage(DeviceOperator device, @Nonnull Message message) {
         Mono<Boolean> then;
         if (message instanceof ChildDeviceMessageReply) {
-            then = this
-                    .doReply(((ChildDeviceMessageReply) message))
-                    .then(
-                            handleChildrenDeviceMessageReply(((ChildDeviceMessageReply) message))
-                    );
+            // The operation broker recursively handles the nested child reply.
+            // Dispatching it again consumes a second fragment and can complete
+            // a multi-frame read before the remaining properties arrive.
+            ChildDeviceMessageReply reply = (ChildDeviceMessageReply) message;
+            then = doReply(reply).flatMap(handled -> {
+                // An unidentified envelope can be rejected before the broker
+                // visits its child. Correlation fills in its message ID when
+                // accepted; only an envelope still missing its ID needs fallback.
+                return StringUtils.hasText(reply.getMessageId())
+                    ? Mono.just(handled)
+                    : handleChildrenDeviceMessageReply(reply);
+            });
         } else if (message instanceof ChildDeviceMessage) {
             then = handleChildrenDeviceMessageReply(((ChildDeviceMessage) message));
         } else if (message instanceof DeviceMessageReply) {

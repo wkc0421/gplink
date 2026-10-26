@@ -16,13 +16,11 @@
 package org.jetlinks.community.network.tcp.gateway.device;
 
 import lombok.Getter;
-import lombok.Setter;
 import org.jetlinks.community.gateway.monitor.DeviceGatewayMonitor;
 import org.jetlinks.core.device.DeviceOperator;
 import org.jetlinks.core.message.codec.EncodedMessage;
 import org.jetlinks.core.message.codec.Transport;
 import org.jetlinks.core.server.session.DeviceSession;
-import org.jetlinks.community.gateway.monitor.DeviceGatewayMonitor;
 import org.jetlinks.community.network.tcp.TcpMessage;
 import org.jetlinks.community.network.tcp.client.TcpClient;
 import reactor.core.publisher.Mono;
@@ -31,16 +29,16 @@ import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 
 class TcpDeviceSession implements DeviceSession {
 
 
     @Getter
-    @Setter
-    private DeviceOperator operator;
+    private final DeviceOperator operator;
 
-    @Setter
-    private TcpClient client;
+    private final TcpClient client;
 
     @Getter
     private final Transport transport;
@@ -51,7 +49,10 @@ class TcpDeviceSession implements DeviceSession {
 
     private final DeviceGatewayMonitor monitor;
 
-    private volatile boolean shutdownClientOnClose;
+    private final boolean shutdownClientOnClose;
+    private final TcpSessionOwner owner;
+    private volatile boolean closed;
+    private final List<Runnable> closeListeners = new ArrayList<>();
 
     TcpDeviceSession(DeviceOperator operator,
                      TcpClient client,
@@ -65,15 +66,21 @@ class TcpDeviceSession implements DeviceSession {
                      Transport transport,
                      DeviceGatewayMonitor monitor,
                      boolean shutdownClientOnClose) {
+        this(operator, client, transport, monitor, shutdownClientOnClose, new TcpSessionOwner("legacy", null));
+    }
+
+    TcpDeviceSession(DeviceOperator operator, TcpClient client, Transport transport,
+                     DeviceGatewayMonitor monitor, boolean shutdownClientOnClose, TcpSessionOwner owner) {
         this.operator = operator;
         this.client = client;
         this.transport = transport;
         this.monitor=monitor;
         this.shutdownClientOnClose = shutdownClientOnClose;
+        this.owner = owner;
     }
 
-    void setShutdownClientOnClose(boolean shutdownClientOnClose) {
-        this.shutdownClientOnClose = shutdownClientOnClose;
+    TcpSessionOwner owner() {
+        return owner;
     }
 
     @Override
@@ -98,12 +105,29 @@ class TcpDeviceSession implements DeviceSession {
 
     @Override
     public Mono<Boolean> send(EncodedMessage encodedMessage) {
-        monitor.sentMessage();
-        return client.send(new TcpMessage(encodedMessage.getPayload()));
+        // A publisher created before disconnect may be subscribed after reconnect.
+        return Mono.defer(() -> {
+            if (!isAlive()) {
+                io.netty.util.ReferenceCountUtil.safeRelease(encodedMessage.getPayload());
+                return Mono.error(new IllegalStateException("TCP device session has closed"));
+            }
+            monitor.sentMessage();
+            return client.send(new TcpMessage(encodedMessage.getPayload()));
+        });
     }
 
     @Override
     public void close() {
+        List<Runnable> listeners;
+        synchronized (this) {
+            if (closed) return;
+            closed = true;
+            listeners = new ArrayList<>(closeListeners);
+            closeListeners.clear();
+        }
+        for (Runnable listener : listeners) {
+            try { listener.run(); } catch (Throwable ignored) { }
+        }
         if (shutdownClientOnClose) {
             client.shutdown();
         }
@@ -111,6 +135,7 @@ class TcpDeviceSession implements DeviceSession {
 
     @Override
     public void ping() {
+        if (closed || !owner.isActive()) return;
         lastPingTime = System.currentTimeMillis();
         client.keepAlive();
     }
@@ -122,7 +147,7 @@ class TcpDeviceSession implements DeviceSession {
 
     @Override
     public boolean isAlive() {
-        return client.isAlive();
+        return !closed && owner.isActive() && client.isAlive();
     }
 
     @Override
@@ -132,15 +157,19 @@ class TcpDeviceSession implements DeviceSession {
 
     @Override
     public void onClose(Runnable call) {
-        client.onDisconnect(call);
+        synchronized (this) {
+            if (!closed) {
+                closeListeners.add(call);
+                return;
+            }
+        }
+        call.run();
     }
 
     @Override
     public boolean isChanged(DeviceSession another) {
         if (another.isWrapFrom(TcpDeviceSession.class)) {
-            return !this
-                .client
-                .equals(another.unwrap(TcpDeviceSession.class).client);
+            return this.owner != another.unwrap(TcpDeviceSession.class).owner;
         }
         return true;
     }
@@ -151,11 +180,11 @@ class TcpDeviceSession implements DeviceSession {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TcpDeviceSession session = (TcpDeviceSession) o;
-        return Objects.equals(client, session.client);
+        return owner == session.owner && Objects.equals(getDeviceId(), session.getDeviceId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(client);
+        return Objects.hash(owner, getDeviceId());
     }
 }

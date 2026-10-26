@@ -38,6 +38,7 @@ BackMap.set('websocket-server', access.Websocket);
 BackMap.set('modbus-tcp', access.Modbus);
 BackMap.set('coap-server-gateway', access.Coap);
 BackMap.set('tcp-server-gateway', access.Tcp);
+BackMap.set('tcp-client-gateway', access.Tcp);
 BackMap.set('Ctwing', access.Ctwing);
 BackMap.set('plugin_gateway', access.Plugin);
 BackMap.set('child-device', access.ChildDevice);

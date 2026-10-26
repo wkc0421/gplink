@@ -35,6 +35,8 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -121,18 +123,22 @@ public class DefaultDeviceConfigMetadataSupplier implements DeviceConfigMetadata
     protected <T> Mono<T> computeDeviceProtocol(String productId, BiFunction<ProtocolSupport, Transport, T> computer) {
         return productService
             .createQuery()
-            .select(DeviceProductEntity::getMessageProtocol, DeviceProductEntity::getTransportProtocol)
+            .select(DeviceProductEntity::getMessageProtocol,
+                    DeviceProductEntity::getTransportProtocol,
+                    DeviceProductEntity::getAccessId)
             .where(DeviceProductEntity::getId, productId)
             .fetchOne()
             .flatMap(product -> {
                 return Mono
                     .zip(
                         //消息协议
-                        Mono.justOrEmpty(product.getMessageProtocol())
+                        resolveProductProtocol(product)
+                            .map(Tuple2::getT1)
                             .flatMap(protocolSupports::getProtocol)
                             .onErrorMap(e -> new BusinessException("error.unable_to_load_protocol_by_access_id", 404, product.getMessageProtocol())),
                         //传输协议
-                        Mono.justOrEmpty(product.getTransportProtocol())
+                        resolveProductProtocol(product)
+                            .map(Tuple2::getT2)
                             .map(Transport::of),
                         computer
                     );
@@ -143,10 +149,31 @@ public class DefaultDeviceConfigMetadataSupplier implements DeviceConfigMetadata
     private Flux<ConfigMetadata> getProductConfigMetadata0(String productId) {
         return DeviceCacheUtils
             .getProductOrLoad(productId, productService::findById)
-            .filter(product -> StringUtils.hasText(product.getMessageProtocol()))
-            .flatMapMany(product -> protocolSupports
-                .getProtocol(product.getMessageProtocol())
-                .onErrorMap(e -> new BusinessException("error.unable_to_load_protocol_by_access_id", 404, product.getMessageProtocol()))
-                .flatMap(support -> support.getConfigMetadata(Transport.of((product.getTransportProtocol())))));
+            .flatMapMany(product -> resolveProductProtocol(product)
+                .filter(protocol -> StringUtils.hasText(protocol.getT1()))
+                .flatMapMany(protocol -> protocolSupports
+                    .getProtocol(protocol.getT1())
+                    .onErrorMap(e -> new BusinessException("error.unable_to_load_protocol_by_access_id", 404, protocol.getT1()))
+                    .filter(support -> StringUtils.hasText(protocol.getT2()))
+                    .flatMap(support -> support.getConfigMetadata(Transport.of(protocol.getT2())))));
+    }
+
+    /** Resolve protocol and transport from the selected gateway when present. */
+    private Mono<Tuple2<String, String>> resolveProductProtocol(DeviceProductEntity product) {
+        Tuple2<String, String> stored = Tuples.of(
+            StringUtils.hasText(product.getMessageProtocol()) ? product.getMessageProtocol() : "",
+            StringUtils.hasText(product.getTransportProtocol()) ? product.getTransportProtocol() : "");
+        if (!StringUtils.hasText(product.getAccessId())) {
+            return Mono.just(stored);
+        }
+        return gatewayPropertiesManager
+            .getProperties(product.getAccessId())
+            .filter(properties -> StringUtils.hasText(properties.getProtocol()))
+            .map(properties -> Tuples.of(
+                properties.getProtocol(),
+                StringUtils.hasText(properties.getTransport())
+                    ? properties.getTransport()
+                    : (StringUtils.hasText(product.getTransportProtocol()) ? product.getTransportProtocol() : "")))
+            .defaultIfEmpty(stored);
     }
 }

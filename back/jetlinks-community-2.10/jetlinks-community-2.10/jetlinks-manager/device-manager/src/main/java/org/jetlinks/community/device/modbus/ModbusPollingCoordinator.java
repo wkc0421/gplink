@@ -16,13 +16,16 @@ import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Owns one plan-only worker for every locally active parent gateway session.
@@ -41,9 +44,12 @@ public class ModbusPollingCoordinator implements CommandLineRunner, DisposableBe
     private final ModbusPollReportPublisher reportPublisher;
     private final EventBus eventBus;
     private final Map<String, GatewayPollingWorker> workers = new ConcurrentHashMap<>();
+    private final Map<String, Mono<Void>> stoppingWorkers = new ConcurrentHashMap<>();
+    private final Set<GatewayPollingWorker> retiringWorkers = ConcurrentHashMap.newKeySet();
     private final ModbusPollingReloadGate reloadGate;
 
-    private volatile Disposable sessionListener;
+    private final Disposable.Swap sessionListener = Disposables.swap();
+    private final Disposable.Swap initialEnumeration = Disposables.swap();
     private volatile boolean shuttingDown;
 
     public ModbusPollingCoordinator(DeviceSessionManager sessionManager,
@@ -63,16 +69,19 @@ public class ModbusPollingCoordinator implements CommandLineRunner, DisposableBe
 
     @Override
     public void run(String... args) {
-        sessionManager
+        if (shuttingDown) {
+            return;
+        }
+        initialEnumeration.update(sessionManager
                 .getSessions()
                 .flatMap(session -> startWorker(session.getDeviceId()))
-                .subscribe();
-        sessionListener = sessionManager.listenEvent(event -> {
+                .subscribe(null, error -> log.warn("Failed to enumerate Modbus sessions", error)));
+        sessionListener.update(sessionManager.listenEvent(event -> {
             if (event.getType() == DeviceSessionEvent.Type.register) {
                 return startWorker(event.getSession().getDeviceId());
             }
             return stopWorker(event.getSession().getDeviceId());
-        });
+        }));
     }
 
     @EventListener
@@ -100,48 +109,68 @@ public class ModbusPollingCoordinator implements CommandLineRunner, DisposableBe
         event.async(reloadGate.request());
     }
 
-    private Mono<Void> startWorker(String gatewayId) {
+    private synchronized Mono<Void> startWorker(String gatewayId) {
         if (shuttingDown || gatewayId == null || workers.containsKey(gatewayId)) {
             return Mono.empty();
         }
-        return planResolver
+        GatewayPollingWorker worker = new GatewayPollingWorker(
+                gatewayId,
+                sessionManager.getCurrentServerId(),
+                leaseService,
+                planResolver,
+                registry,
+                reportPublisher,
+                eventBus);
+        // Track startup before asynchronous lookup so an offline event can stop it too.
+        workers.put(gatewayId, worker);
+        return stoppingWorkers.getOrDefault(gatewayId, Mono.empty())
+                .then(Mono.defer(() -> planResolver
                 .isModbusGateway(gatewayId)
-                .filter(Boolean.TRUE::equals)
-                .flatMap(ignore -> {
-                    GatewayPollingWorker worker = new GatewayPollingWorker(
-                            gatewayId,
-                            sessionManager.getCurrentServerId(),
-                            leaseService,
-                            planResolver,
-                            registry,
-                            reportPublisher,
-                            eventBus);
-                    GatewayPollingWorker existing = workers.putIfAbsent(gatewayId, worker);
-                    if (existing != null) {
+                .takeUntilOther(worker.whenStopped())
+                .defaultIfEmpty(false)
+                .flatMap(modbus -> {
+                    if (!modbus) {
+                        workers.remove(gatewayId, worker);
+                        worker.shutdownLocally();
                         return Mono.empty();
                     }
                     return worker
                             .start()
-                            .doOnNext(started -> {
-                                if (!started) {
-                                    workers.remove(gatewayId, worker);
-                                }
-                            })
-                            .then();
-                })
+                            .flatMap(started -> started ? Mono.<Void>empty() : stopWorker(gatewayId, worker));
+                })))
+                .doOnCancel(() -> stopWorker(gatewayId, worker).subscribe(null,
+                        error -> log.warn("Failed to stop cancelled Modbus worker [{}]", gatewayId, error)))
                 .onErrorResume(error -> {
-                    GatewayPollingWorker worker = workers.get(gatewayId);
-                    if (worker != null) {
-                        workers.remove(gatewayId, worker);
-                    }
                     log.warn("Failed to start Modbus poll worker [{}]", gatewayId, error);
-                    return Mono.empty();
+                    return stopWorker(gatewayId, worker).onErrorResume(releaseError -> Mono.empty());
                 });
     }
 
-    private Mono<Void> stopWorker(String gatewayId) {
-        GatewayPollingWorker worker = workers.remove(gatewayId);
-        return worker == null ? Mono.empty() : worker.stop();
+    private synchronized Mono<Void> stopWorker(String gatewayId) {
+        return stopWorker(gatewayId, workers.get(gatewayId));
+    }
+
+    private synchronized Mono<Void> stopWorker(String gatewayId, GatewayPollingWorker worker) {
+        if (worker == null || !workers.remove(gatewayId, worker)) {
+            return stoppingWorkers.getOrDefault(gatewayId, Mono.empty());
+        }
+        if (shuttingDown) {
+            worker.shutdownLocally();
+            return Mono.empty();
+        }
+        retiringWorkers.add(worker);
+        Mono<Void> previous = stoppingWorkers.getOrDefault(gatewayId, Mono.empty());
+        AtomicReference<Mono<Void>> reference = new AtomicReference<>();
+        Mono<Void> stop = Mono.whenDelayError(previous, worker.stop())
+                .doFinally(ignore -> {
+                    stoppingWorkers.remove(gatewayId, reference.get());
+                    retiringWorkers.remove(worker);
+                })
+                .cache();
+        reference.set(stop);
+        // A fast reconnect must acquire its lease after the old owner releases it.
+        stoppingWorkers.put(gatewayId, stop);
+        return stop;
     }
 
     private Mono<Void> reloadWorkers() {
@@ -178,11 +207,14 @@ public class ModbusPollingCoordinator implements CommandLineRunner, DisposableBe
             return;
         }
         shuttingDown = true;
-        if (sessionListener != null) {
-            sessionListener.dispose();
-            sessionListener = null;
-        }
+        // Mark every generation before cancelling callers: cancellation cleanup
+        // must not access Redis or the event bus while those services shut down.
         workers.values().forEach(GatewayPollingWorker::shutdownLocally);
+        retiringWorkers.forEach(GatewayPollingWorker::shutdownLocally);
+        sessionListener.dispose();
+        initialEnumeration.dispose();
         workers.clear();
+        stoppingWorkers.clear();
+        retiringWorkers.clear();
     }
 }

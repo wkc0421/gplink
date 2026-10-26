@@ -142,6 +142,20 @@
                   />
                 </a-form-item>
                 <a-form-item
+                  v-if="props.provider.id === 'mqtt-client-gateway'"
+                  label="设备离线超时（分钟）"
+                  v-bind="validateInfos.keepAliveTimeoutMinutes"
+                  extra="设备连续未上报消息达到此时长后自动离线，默认 15 分钟。"
+                >
+                  <a-input-number
+                    v-model:value="formData.keepAliveTimeoutMinutes"
+                    :min="1"
+                    :max="10080"
+                    :precision="0"
+                    style="width: 100%"
+                  />
+                </a-form-item>
+                <a-form-item
                   :label="$t('Network.index.041705-10')"
                   v-bind="validateInfos.description"
                 >
@@ -321,6 +335,7 @@ const columnsHTTP = ref(<TableColumnType>[]);
 const formData = ref({
   name: "",
   description: "",
+  keepAliveTimeoutMinutes: 15,
 });
 const loading = ref(false);
 
@@ -358,6 +373,15 @@ const { resetFields, validate, validateInfos } = useForm(
       },
     ],
     description: [{ max: 200, message: $t("Network.index.041705-21") }],
+    keepAliveTimeoutMinutes: [{
+      validator: (_rule: unknown, value: number) => {
+        if (props.provider.id !== 'mqtt-client-gateway' ||
+            (Number.isInteger(value) && value >= 1 && value <= 10080)) {
+          return Promise.resolve();
+        }
+        return Promise.reject('请输入 1 至 10080 之间的整数分钟数');
+      },
+    }],
   }),
 );
 
@@ -468,9 +492,16 @@ const transport = computed(() => {
 const saveData = () => {
   validate()
     .then(async (values) => {
+      const { keepAliveTimeoutMinutes, ...basicValues } = values;
       const params = {
         ...props.data,
-        ...values,
+        ...basicValues,
+        ...(props.provider.id === 'mqtt-client-gateway' ? {
+          configuration: {
+            ...props.data.configuration,
+            keepAliveTimeout: keepAliveTimeoutMinutes * 60,
+          },
+        } : {}),
         protocol: procotolCurrent.value,
         channel: "network", // 网络组件
         channelId: networkCurrent.value,
@@ -632,6 +663,7 @@ onMounted(() => {
     formData.value = {
       name: props.data.name,
       description: props.data.description,
+      keepAliveTimeoutMinutes: Number(props.data.configuration?.keepAliveTimeout || 900) / 60,
     };
   }
 });

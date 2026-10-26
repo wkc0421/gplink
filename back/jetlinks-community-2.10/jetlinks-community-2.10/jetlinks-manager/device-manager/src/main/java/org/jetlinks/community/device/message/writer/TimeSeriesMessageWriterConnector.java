@@ -21,6 +21,7 @@ import org.jetlinks.community.device.service.data.DeviceDataService;
 import org.jetlinks.community.gateway.annotation.Subscribe;
 import org.jetlinks.community.things.data.ThingsDataWriter;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.Headers;
 import org.jetlinks.core.message.property.PropertyMessage;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -47,6 +48,10 @@ public class TimeSeriesMessageWriterConnector {
     @Subscribe(topics = "/device/**", id = "device-message-ts-writer", priority = 100)
     @Generated
     public Mono<Void> writeDeviceMessageToTs(DeviceMessage message) {
+        if (message.getHeaderOrDefault(Headers.ignoreLog)
+            && message.getHeaderOrDefault(Headers.ignoreStorage)) {
+            return Mono.empty();
+        }
         return dataService
             .saveDeviceMessage(message)
             .then(writeToThingsDataWriter(message))

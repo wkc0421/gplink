@@ -1,0 +1,7 @@
+/config/deploy-config.psd1
+/packages/*
+!/packages/README.md
+/logs/*
+/GpLink2-Offline-*.zip
+/GpLink2-Offline-*.zip.sha256
+/Verify-GpLink2-Package.cmd

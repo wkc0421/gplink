@@ -19,6 +19,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import io.r2dbc.spi.R2dbcBadGrammarException;
 import io.r2dbc.spi.R2dbcException;
+import io.r2dbc.spi.ConnectionFactory;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,7 @@ import org.jetlinks.community.buffer.BufferSettings;
 import org.jetlinks.community.buffer.Buffered;
 import org.jetlinks.community.buffer.PersistenceBuffer;
 import org.jetlinks.community.timescaledb.TimescaleDBDataWriter;
+import org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService;
 import org.jetlinks.community.utils.ErrorUtils;
 import org.slf4j.Logger;
 import org.springframework.boot.CommandLineRunner;
@@ -40,6 +42,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.transaction.CannotCreateTransactionException;
+import org.springframework.r2dbc.connection.R2dbcTransactionManager;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -62,16 +66,30 @@ public class DefaultTimescaleDBDataWriter implements TimescaleDBDataWriter, Comm
     final PersistenceBuffer<Buffer> buffer;
 
     final DatabaseOperator database;
+    private final TransactionalOperator transactionalOperator;
+    private volatile CounterSnapshotService counterSnapshotService;
 
     public DefaultTimescaleDBDataWriter(DatabaseOperator database,
                                         BufferProperties properties) {
+        this(database, properties, null);
+    }
+
+    public DefaultTimescaleDBDataWriter(DatabaseOperator database,
+                                        BufferProperties properties,
+                                        ConnectionFactory connectionFactory) {
         this.database = database;
         this.properties = properties;
+        this.transactionalOperator = connectionFactory == null ? null :
+            TransactionalOperator.create(new R2dbcTransactionManager(connectionFactory));
         this.buffer = new PersistenceBuffer<>(
             BufferSettings.create(properties),
             Buffer::new,
             this::save0)
             .name("timescale-db-things-writer");
+    }
+
+    public void setCounterSnapshotService(CounterSnapshotService counterSnapshotService) {
+        this.counterSnapshotService = counterSnapshotService;
     }
 
     public void init() {
@@ -140,7 +158,7 @@ public class DefaultTimescaleDBDataWriter implements TimescaleDBDataWriter, Comm
 
     public Mono<Void> save0(String metric, Collection<Map<String, Object>> data) {
 
-        return database
+        Mono<Void> save = database
             .getMetadata()
             .getTableOrViewReactive(metric, false)
             .cast(RDBTableMetadata.class)
@@ -152,7 +170,12 @@ public class DefaultTimescaleDBDataWriter implements TimescaleDBDataWriter, Comm
                 .execute()
                 .reactive()
                 .then())
-            .contextWrite(ctx -> ctx.put(Logger.class, log));
+            .then(Mono.defer(() -> counterSnapshotService == null
+                ? Mono.empty() : counterSnapshotService.markRawBatch(metric, data)));
+        if (transactionalOperator != null) {
+            save = save.as(transactionalOperator::transactional);
+        }
+        return save.contextWrite(ctx -> ctx.put(Logger.class, log));
     }
 
     private boolean needRetry(Throwable err) {

@@ -3,6 +3,7 @@ export const tabs = {
   Info: defineAsyncComponent(() => import('./BasicInfo/index.vue')),
   Metadata: defineAsyncComponent(() => import('../../components/Metadata/index.vue')),
   Device: defineAsyncComponent(() => import('./DeviceAccess/index.vue')),
+  HistoryStatistics: defineAsyncComponent(() => import('./HistoryStatistics/index.vue')),
   DataAnalysis: defineAsyncComponent(() => import('./DataAnalysis/index.vue')),
   MetadataMap: defineAsyncComponent(() => import('./MetadataMap')),
   AlarmRecord: defineAsyncComponent(() => import('../../Instance/Detail/AlarmRecord/index.vue')),

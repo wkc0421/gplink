@@ -23,6 +23,7 @@ import org.hswebframework.web.exception.BusinessException;
 import org.hswebframework.web.id.IDGenerator;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
 import org.jetlinks.community.device.entity.DeviceProductEntity;
+import org.jetlinks.community.device.enums.DeviceProductState;
 import org.jetlinks.community.device.service.LocalDeviceInstanceService;
 import org.jetlinks.community.device.service.LocalDeviceProductService;
 import org.jetlinks.community.device.service.data.DeviceDataService;
@@ -30,10 +31,12 @@ import org.jetlinks.community.things.data.ThingsDataConstants;
 import org.jetlinks.community.things.utils.ThingsDatabaseUtils;
 import org.jetlinks.core.device.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceRegistry;
+import org.jetlinks.core.message.DeviceMessage;
 import org.jetlinks.core.message.property.ReportPropertyMessage;
 import org.jetlinks.core.metadata.PropertyMetadata;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,6 +48,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -88,7 +92,9 @@ public class LegacyDeviceController {
 
     @GetMapping("/{id:.+}")
     public Mono<DeviceInstanceEntity> getDevice(@PathVariable String id) {
-        return deviceService.findById(id);
+        return deviceService
+            .findById(id)
+            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "device not found")));
     }
 
     @GetMapping("/{id:.+}/status")
@@ -216,21 +222,60 @@ public class LegacyDeviceController {
 
     @PostMapping("/{id:.+}/{property:.+}/history/write")
     public Flux<Void> writeDeviceProperty(@PathVariable String id,
-                                          @PathVariable String property,
-                                          @RequestBody List<SimpleDeviceProperty> propertyList) {
+                                           @PathVariable String property,
+                                           @RequestBody List<SimpleDeviceProperty> propertyList) {
+        if (propertyList == null || propertyList.isEmpty()) {
+            return Flux.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "property data must not be empty"));
+        }
+        for (SimpleDeviceProperty item : propertyList) {
+            if (item == null || item.getValue() == null || item.getTimestamp() == null) {
+                return Flux.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "property value and timestamp are required"));
+            }
+        }
         return deviceService
             .findById(id)
             .switchIfEmpty(Mono.error(new BusinessException("device not found", "error.device_not_found")))
-            .flatMapMany(device -> Flux
-                .fromIterable(propertyList)
-                .flatMap(item -> {
-                    ReportPropertyMessage message = new ReportPropertyMessage();
-                    message.setDeviceId(id);
-                    message.setTimestamp(item.getTimestamp());
-                    message.setProperties(Map.of(property, item.getValue()));
-                    message.addHeader("productId", device.getProductId());
-                    return deviceDataService.saveDeviceMessage(message);
-                }));
+            .flatMap(device -> productService
+                .findById(device.getProductId())
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "device product not found")))
+                .flatMap(product -> {
+                    if (!DeviceProductState.registered.getValue().equals(product.getState())) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                            "device product is not deployed"));
+                    }
+                    return registry
+                        .getDevice(id)
+                        .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                            "device is not deployed")))
+                        .flatMap(operator -> operator
+                            .getMetadata()
+                            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                                "device metadata is not available")))
+                            .flatMap(metadata -> {
+                                PropertyMetadata propertyMetadata = metadata.getPropertyOrNull(property);
+                                if (propertyMetadata == null) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                        "device property not found: " + property));
+                                }
+                                if (ThingsDataConstants.propertyIsIgnoreStorage(propertyMetadata)) {
+                                    return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT,
+                                        "device property does not store history: " + property));
+                                }
+                                return deviceDataService.saveDeviceMessage(Flux
+                                    .fromIterable(propertyList)
+                                    .<DeviceMessage>map(item -> {
+                                        ReportPropertyMessage message = new ReportPropertyMessage();
+                                        message.setDeviceId(id);
+                                        message.setTimestamp(item.getTimestamp());
+                                        message.setProperties(Map.of(property, item.getValue()));
+                                        message.addHeader("productId", device.getProductId());
+                                        return message;
+                                    }));
+                            }));
+                }))
+            .flux();
     }
 
     @PostMapping("/{id:.+}/{property:.+}/history/update")

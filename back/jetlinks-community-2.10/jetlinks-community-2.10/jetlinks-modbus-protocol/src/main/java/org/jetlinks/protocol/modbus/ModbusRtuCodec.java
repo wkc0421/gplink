@@ -1,12 +1,17 @@
 package org.jetlinks.protocol.modbus;
 
+import com.google.common.base.Ticker;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.core.Value;
 import org.jetlinks.core.device.DeviceOperator;
 import org.jetlinks.core.message.DeviceMessage;
+import org.jetlinks.core.message.Headers;
 import org.jetlinks.core.message.ChildDeviceMessage;
 import org.jetlinks.core.message.ChildDeviceMessageReply;
 import org.jetlinks.core.message.codec.DefaultTransport;
@@ -16,6 +21,7 @@ import org.jetlinks.core.message.codec.FromDeviceMessageContext;
 import org.jetlinks.core.message.codec.MessageDecodeContext;
 import org.jetlinks.core.message.codec.MessageEncodeContext;
 import org.jetlinks.core.message.codec.Transport;
+import org.jetlinks.core.message.codec.ToDeviceMessageContext;
 import org.jetlinks.core.message.function.FunctionInvokeMessage;
 import org.jetlinks.core.message.function.FunctionInvokeMessageReply;
 import org.jetlinks.core.message.property.ReadPropertyMessage;
@@ -25,7 +31,6 @@ import org.jetlinks.core.message.property.WritePropertyMessageReply;
 import org.jetlinks.core.server.session.DeviceSession;
 import org.jetlinks.protocol.modbus.frame.ModbusExceptionCode;
 import org.jetlinks.protocol.modbus.frame.ModbusFunctionCode;
-import org.jetlinks.protocol.modbus.frame.ModbusCrc16;
 import org.jetlinks.protocol.modbus.frame.ModbusRequest;
 import org.jetlinks.protocol.modbus.frame.ModbusResponse;
 import org.jetlinks.protocol.modbus.mapping.RegisterCodec;
@@ -37,7 +42,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -45,6 +49,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.lang.ref.WeakReference;
 
 /**
  * Modbus RTU codec for TCP transport. Converts JetLinks device messages into
@@ -55,6 +62,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 public class ModbusRtuCodec implements DeviceMessageCodec {
+
+    public static final String CODEC_REVISION = "20261022-fragments-tcp-stream";
 
     public static final String CONFIG_SLAVE_ID = "slaveId";
     public static final String CONFIG_REGISTER_MAP = "registerMap";
@@ -89,16 +98,42 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
     static final int HARD_MAX_READ_BITS = 2000;
 
     private final ModbusGatewayRequestExecutor requestExecutor;
-    private final Set<String> closeListeners = ConcurrentHashMap.newKeySet();
+    private final Map<String, SessionState> closeListeners = new ConcurrentHashMap<>();
+    private final AtomicBoolean activationLogged = new AtomicBoolean();
 
-    private final Map<String, RegisterMappingTable> mappingCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Cache<String, RegisterMappingTable> mappingCache;
+    private volatile boolean disposed;
 
     public ModbusRtuCodec() {
         this(new ModbusGatewayRequestExecutor());
     }
 
     public ModbusRtuCodec(ModbusGatewayRequestExecutor requestExecutor) {
+        this(requestExecutor, Ticker.systemTicker());
+    }
+
+    ModbusRtuCodec(ModbusGatewayRequestExecutor requestExecutor, Ticker ticker) {
         this.requestExecutor = requestExecutor;
+        this.mappingCache = CacheBuilder.newBuilder()
+                .maximumSize(1024)
+                .expireAfterAccess(30, TimeUnit.MINUTES)
+                .ticker(ticker)
+                .build();
+    }
+
+    public void dispose() {
+        synchronized (this) {
+            disposed = true;
+            mappingCache.invalidateAll();
+            closeListeners.values().forEach(state -> state.stream.close());
+            closeListeners.clear();
+        }
+        requestExecutor.dispose();
+    }
+
+    synchronized long cachedMappingCount() {
+        mappingCache.cleanUp();
+        return mappingCache.size();
     }
 
     public ModbusGatewayRequestExecutor getRequestExecutor() {
@@ -113,6 +148,7 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
     @NonNull
     @Override
     public Publisher<? extends EncodedMessage> encode(@NonNull MessageEncodeContext context) {
+        if (disposed) return Mono.empty();
         if (!(context.getMessage() instanceof DeviceMessage)) {
             return Mono.empty();
         }
@@ -142,19 +178,21 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                         resolveSessionId(context)
                 )
                 .flatMapMany(tuple -> buildRequests(encodedMessage, tuple.getT2(), tuple.getT3(), tuple.getT5())
-                        .map(prepared -> {
+                        .collectList()
+                        .flatMapMany(requests -> Flux.fromIterable(requests).map(prepared -> {
                             String effectiveId = prepared.messageIdOverride != null
                                     ? prepared.messageIdOverride
                                     : encodedMessage.getMessageId();
                             return trackAndEncode(tuple.getT6(), encodedMessage.getDeviceId(),
                                     effectiveId, encodedMessage.getMessageId(), prepared, tuple.getT4(),
-                                    encodedMessage, context);
-                        }));
+                                    requests.size(), encodedMessage, context);
+                        })));
     }
 
     @NonNull
     @Override
     public Publisher<? extends DeviceMessage> decode(@NonNull MessageDecodeContext context) {
+        if (disposed) return Mono.empty();
         if (!(context instanceof FromDeviceMessageContext)) {
             return Mono.empty();
         }
@@ -163,17 +201,21 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
         if (session == null) {
             return Mono.empty();
         }
-        registerCloseListener(session);
+        SessionState state = registerCloseListener(session);
+        if (state == null) return Flux.empty();
         ByteBuf payload = context.getMessage().getPayload();
         byte[] bytes = new byte[payload.readableBytes()];
         payload.getBytes(payload.readerIndex(), bytes);
 
-        // TCP is a byte stream. A fast Modbus slave may return multiple ADUs
-        // in one read, especially when a property read is split by function
-        // code. Decode each complete response independently instead of
-        // treating the whole TCP chunk as one frame.
+        ModbusResponseStream.Result result = state.stream.accept(bytes);
+        if (result.discardedBytes > 0) {
+            log.warn("Invalid Modbus stream bytes on session {}: chunkBytes={} discarded={} crcFailures={} buffered={} head={}",
+                    session.getId(), bytes.length, result.discardedBytes, result.crcFailures, result.bufferedBytes,
+                    ByteBufUtil.hexDump(bytes, 0, Math.min(bytes.length, 16)));
+        }
+        // Only complete CRC-valid ADUs leave the connection's bounded buffer.
         return Flux
-                .fromIterable(splitFrames(bytes))
+                .fromIterable(result.frames)
                 .concatMap(frame -> decodeFrame(fromCtx, session, frame));
     }
 
@@ -209,8 +251,11 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
         }
 
         String gatewayId = pending.getGatewayId();
-        requestExecutor.acknowledge(gatewayId, pending.getRequestToken());
-        final ModbusGatewayRequestExecutor.PendingRequest matched = pending;
+        final ModbusGatewayRequestExecutor.PendingRequest matched =
+                requestExecutor.acknowledge(gatewayId, pending.getRequestToken());
+        // Timeout/drain can win between response lookup and acknowledgement.
+        // Only the request actually removed by acknowledgement may produce a reply.
+        if (matched == null) return Flux.empty();
 
         return fromCtx.getDevice(matched.getDeviceId())
                 .switchIfEmpty(Mono.justOrEmpty(fromCtx.getDevice()))
@@ -224,56 +269,6 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                 .switchIfEmpty(Flux.empty());
     }
 
-    private List<byte[]> splitFrames(byte[] bytes) {
-        if (bytes.length == 0) {
-            return Collections.emptyList();
-        }
-        List<byte[]> frames = new ArrayList<>();
-        int offset = 0;
-        while (offset < bytes.length) {
-            int length = frameLength(bytes, offset);
-            int remaining = bytes.length - offset;
-            if (length <= 0 || length > remaining
-                    || !ModbusCrc16.validate(bytes, offset, length)) {
-                // Preserve the existing invalid-frame diagnostic for a
-                // fragmented or malformed chunk. A future stream buffer can
-                // retry this chunk when more bytes arrive.
-                return frames.isEmpty()
-                        ? Collections.singletonList(bytes)
-                        : Collections.singletonList(Arrays.copyOfRange(bytes, offset, bytes.length));
-            }
-            frames.add(Arrays.copyOfRange(bytes, offset, offset + length));
-            offset += length;
-        }
-        return frames;
-    }
-
-    private int frameLength(byte[] bytes, int offset) {
-        int remaining = bytes.length - offset;
-        if (remaining < 3) {
-            return -1;
-        }
-        int function = bytes[offset + 1] & 0xFF;
-        if ((function & 0x80) != 0) {
-            return 5;
-        }
-        switch (function) {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-                return 5 + (bytes[offset + 2] & 0xFF);
-            case 5:
-            case 6:
-                return 8;
-            case 15:
-            case 16:
-                return remaining < 7 ? -1 : 9 + (bytes[offset + 6] & 0xFF);
-            default:
-                return -1;
-        }
-    }
-
     private DeviceMessage wrapChildReply(FromDeviceMessageContext context,
                                           ModbusGatewayRequestExecutor.PendingRequest pending,
                                           DeviceMessage reply) {
@@ -282,12 +277,24 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                 || pending.getDeviceId().equals(gateway.getDeviceId())) {
             return reply;
         }
+        return wrapChildReply(gateway.getDeviceId(), pending.getDeviceId(), reply);
+    }
+
+    private ChildDeviceMessageReply wrapChildReply(String gatewayId, String deviceId, DeviceMessage reply) {
         ChildDeviceMessageReply wrapped = new ChildDeviceMessageReply();
-        wrapped.setDeviceId(gateway.getDeviceId());
-        wrapped.setChildDeviceId(pending.getDeviceId());
+        wrapped.setDeviceId(gatewayId);
+        wrapped.setChildDeviceId(deviceId);
         wrapped.setMessageId(reply.getMessageId());
         wrapped.setTimestamp(reply.getTimestamp());
         wrapped.setChildDeviceMessage(reply);
+        if (reply instanceof ReadPropertyMessageReply) {
+            wrapped.addHeader(Headers.ignoreLog, true);
+            wrapped.addHeader(Headers.ignoreStorage, true);
+            reply.getHeader(Headers.fragmentBodyMessageId)
+                    .ifPresent(id -> wrapped.addHeader(Headers.fragmentBodyMessageId, id));
+            reply.getHeader(Headers.fragmentNumber)
+                    .ifPresent(count -> wrapped.addHeader(Headers.fragmentNumber, count));
+        }
         return wrapped;
     }
 
@@ -365,10 +372,7 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
             }
         }
 
-        ReadPropertyMessageReply reply = new ReadPropertyMessageReply();
-        reply.setDeviceId(pending.getDeviceId());
-        reply.setMessageId(pending.getReplyMessageId());
-        reply.setTimestamp(System.currentTimeMillis());
+        ReadPropertyMessageReply reply = createReadReply(pending);
         reply.setProperties(properties);
         reply.setSuccess(!properties.isEmpty());
         return Collections.singletonList(reply);
@@ -392,10 +396,7 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
     private DeviceMessage buildReadReply(ModbusGatewayRequestExecutor.PendingRequest pending,
                                           String propertyId,
                                           Object value) {
-        ReadPropertyMessageReply reply = new ReadPropertyMessageReply();
-        reply.setDeviceId(pending.getDeviceId());
-        reply.setMessageId(pending.getReplyMessageId());
-        reply.setTimestamp(System.currentTimeMillis());
+        ReadPropertyMessageReply reply = createReadReply(pending);
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put(propertyId, value);
         reply.setProperties(properties);
@@ -442,10 +443,7 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
             reply.setMessage(message);
             return reply;
         }
-        ReadPropertyMessageReply reply = new ReadPropertyMessageReply();
-        reply.setDeviceId(pending.getDeviceId());
-        reply.setMessageId(pending.getReplyMessageId());
-        reply.setTimestamp(System.currentTimeMillis());
+        ReadPropertyMessageReply reply = createReadReply(pending);
         reply.setSuccess(false);
         reply.setCode(code);
         reply.setMessage(message);
@@ -458,14 +456,24 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                                            String replyMessageId,
                                            PendingEncoded prepared,
                                            long timeoutMs,
+                                           int replyFragments,
                                            DeviceMessage sourceMessage,
                                            MessageEncodeContext encodeContext) {
+        if (activationLogged.compareAndSet(false, true)) {
+            log.info("Modbus codec active: revision={} gateway={} device={}",
+                    CODEC_REVISION, sessionId, deviceId);
+        }
         ModbusGatewayRequestExecutor.Source source = sourceMessage
                 .getHeader(HEADER_REQUEST_SOURCE)
                 .map(String::valueOf)
                 .filter("POLLING"::equalsIgnoreCase)
                 .map(ignore -> ModbusGatewayRequestExecutor.Source.POLLING)
                 .orElse(ModbusGatewayRequestExecutor.Source.MANUAL);
+
+        Map<String, Object> attributes = requestAttributes(sourceMessage);
+        if (sourceMessage instanceof ReadPropertyMessage && replyFragments > 1) {
+            attributes.put(Headers.fragmentNumber.getKey(), replyFragments);
+        }
 
         ModbusGatewayRequestExecutor.PendingRequest pending =
                 ModbusGatewayRequestExecutor.PendingRequest
@@ -484,13 +492,21 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                         .propertyId(prepared.propertyId)
                         .batchPropertyIds(prepared.batchPropertyIds)
                         .batchStartAddress(prepared.batchStartAddress)
-                        .attributes(requestAttributes(sourceMessage))
+                        .attributes(attributes)
                         .onCompletion(completion -> onRequestCompletion(completion, sourceMessage, encodeContext))
                         .build();
 
-        byte[] adu = requestExecutor.submit(pending)
-                ? pending.getRequest().toAdu()
-                : new byte[0];
+        boolean first = requestExecutor.submit(pending);
+        if (first && encodeContext instanceof ToDeviceMessageContext) {
+            // The production context supports direct writes. Own the first send
+            // subscription as well, so timeout/drain can cancel a delayed write.
+            ToDeviceMessageContext target = (ToDeviceMessageContext) encodeContext;
+            requestExecutor.sendInitial(pending, () -> target.sendToDevice(
+                    EncodedMessage.simple(Unpooled.wrappedBuffer(pending.getRequest().toAdu()))));
+            return EncodedMessage.empty();
+        }
+        // Pure encoding contexts have no transport and retain the encoded-frame API.
+        byte[] adu = first ? pending.getRequest().toAdu() : new byte[0];
         return EncodedMessage.simple(Unpooled.wrappedBuffer(adu));
     }
 
@@ -740,6 +756,13 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
         if (completion.getType() == ModbusGatewayRequestExecutor.CompletionType.RESPONSE) {
             return;
         }
+        if (encodeContext instanceof ToDeviceMessageContext) {
+            DeviceSession session = ((ToDeviceMessageContext) encodeContext).getSession();
+            if (session != null) {
+                SessionState state = closeListeners.get(sessionKey(session));
+                if (state != null && state.identity.get() == session) state.stream.reset();
+            }
+        }
         ModbusGatewayRequestExecutor.PendingRequest request = completion.getRequest();
         DeviceMessage reply = buildLifecycleErrorReply(
                 request,
@@ -747,13 +770,7 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                 completion.getMessage());
         if (encodeContext.getMessage() instanceof ChildDeviceMessage) {
             ChildDeviceMessage child = (ChildDeviceMessage) encodeContext.getMessage();
-            ChildDeviceMessageReply wrapped = new ChildDeviceMessageReply();
-            wrapped.setDeviceId(child.getDeviceId());
-            wrapped.setChildDeviceId(child.getChildDeviceId());
-            wrapped.setMessageId(reply.getMessageId());
-            wrapped.setTimestamp(reply.getTimestamp());
-            wrapped.setChildDeviceMessage(reply);
-            reply = wrapped;
+            reply = wrapChildReply(child.getDeviceId(), child.getChildDeviceId(), reply);
         }
         encodeContext
                 .reply(reply)
@@ -776,13 +793,30 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
             reply.setMessage(message);
             return reply;
         }
+        ReadPropertyMessageReply reply = createReadReply(pending);
+        reply.setSuccess(false);
+        reply.setCode(code);
+        reply.setMessage(message);
+        return reply;
+    }
+
+    private ReadPropertyMessageReply createReadReply(ModbusGatewayRequestExecutor.PendingRequest pending) {
         ReadPropertyMessageReply reply = new ReadPropertyMessageReply();
         reply.setDeviceId(pending.getDeviceId());
         reply.setMessageId(pending.getReplyMessageId());
         reply.setTimestamp(System.currentTimeMillis());
-        reply.setSuccess(false);
-        reply.setCode(code);
-        reply.setMessage(message);
+        Object fragmentCount = pending.getAttributes().get(Headers.fragmentNumber.getKey());
+        if (fragmentCount instanceof Integer && (Integer) fragmentCount > 1) {
+            // The platform otherwise completes the logical read on the first frame.
+            // Count terminal error replies too, so a later timeout/disconnect cannot
+            // leave the requester waiting forever. Counting also tolerates reordering.
+            reply.addHeader(Headers.fragmentBodyMessageId, pending.getReplyMessageId());
+            reply.addHeader(Headers.fragmentNumber, (Integer) fragmentCount);
+        }
+        // Keep the request/reply correlation for APIs and the polling accumulator.
+        // Only the aggregated ReportPropertyMessage should persist poll results.
+        reply.addHeader(Headers.ignoreLog, true);
+        reply.addHeader(Headers.ignoreStorage, true);
         return reply;
     }
 
@@ -799,15 +833,51 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
         return attributes;
     }
 
-    private void registerCloseListener(DeviceSession session) {
-        String listenerKey = session.getId() + "@" + session.getDeviceId();
-        if (!closeListeners.add(listenerKey)) {
-            return;
+    private synchronized SessionState registerCloseListener(DeviceSession session) {
+        if (disposed) return null;
+        String deviceId = sessionKey(session);
+        SessionState previous = closeListeners.get(deviceId);
+        if (previous != null && previous.identity.get() == session) {
+            return previous;
         }
+        if (previous != null) previous.stream.close();
+        SessionState state = new SessionState(session);
+        closeListeners.put(deviceId, state);
+        WeakReference<ModbusRtuCodec> codec = new WeakReference<>(this);
         session.onClose(() -> {
-            closeListeners.remove(listenerKey);
-            requestExecutor.drain(session.getDeviceId(), "gateway connection interrupted");
+            ModbusRtuCodec current = codec.get();
+            if (current != null) current.onSessionClosed(deviceId, state);
         });
+        return state;
+    }
+
+    private synchronized void onSessionClosed(String deviceId, SessionState state) {
+        state.stream.close();
+        if (closeListeners.remove(deviceId, state)) {
+            requestExecutor.drain(deviceId, "gateway connection interrupted");
+        }
+    }
+
+    private static String sessionKey(DeviceSession session) {
+        String deviceId = session.getDeviceId();
+        return deviceId != null ? deviceId : "__unknown_session__" + System.identityHashCode(session);
+    }
+
+    int bufferedResponseBytes() {
+        return closeListeners.values().stream().mapToInt(state -> state.stream.bufferedBytes()).sum();
+    }
+
+    int responseStreamCount() {
+        return closeListeners.size();
+    }
+
+    private static final class SessionState {
+        final WeakReference<DeviceSession> identity;
+        final ModbusResponseStream stream = new ModbusResponseStream();
+
+        SessionState(DeviceSession session) {
+            this.identity = new WeakReference<>(session);
+        }
     }
 
     private Mono<ReadWindow> resolveReadWindow(DeviceOperator device) {
@@ -894,11 +964,14 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
                         .getConfig(CONFIG_REGISTER_MAP)
                         .map(Value::asString)
                         .map(this::parseTable))
-                .switchIfEmpty(Mono.fromSupplier(() -> mappingCache.getOrDefault(device.getDeviceId(), RegisterMappingTable.empty())));
+                .switchIfEmpty(Mono.fromSupplier(() -> mappingCache.asMap().getOrDefault(device.getDeviceId(), RegisterMappingTable.empty())));
     }
 
-    private RegisterMappingTable parseTable(String json) {
-        return mappingCache.computeIfAbsent(json, RegisterMappingTable::parse);
+    synchronized RegisterMappingTable parseTable(String json) {
+        if (disposed) {
+            throw new IllegalStateException("Modbus codec disposed");
+        }
+        return mappingCache.asMap().computeIfAbsent(json, RegisterMappingTable::parse);
     }
 
     private Mono<Long> resolveTimeout(DeviceOperator device) {
@@ -979,8 +1052,8 @@ public class ModbusRtuCodec implements DeviceMessageCodec {
         if (pending == null) {
             return java.util.Collections.emptyList();
         }
-        requestExecutor.acknowledge(gatewayId, pending.getRequestToken());
-        return buildReplies(pending, response, table);
+        pending = requestExecutor.acknowledge(gatewayId, pending.getRequestToken());
+        return pending == null || pending.isCancelled() ? Collections.emptyList() : buildReplies(pending, response, table);
     }
 
     List<ModbusRequest> buildReadRequestsForTest(int slaveId,
