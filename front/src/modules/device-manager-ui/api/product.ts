@@ -39,6 +39,12 @@ export const importProductPropertyMetadata = (productId: string, fileUrl: string
     { params: { fileUrl } },
   )
 
+export const downloadPropertyMetadataTemplate = (format: 'xlsx' | 'csv') =>
+  request.get(`/v1/product/property-metadata/properties_template.${format}`, {}, { responseType: 'blob' })
+
+export const exportProductPropertyMetadata = (productId: string) =>
+  request.get(`/v1/product/${encodeURIComponent(productId)}/property-metadata/properties.xlsx`, {}, { responseType: 'blob' })
+
 /**
  *
  * @returns

@@ -32,6 +32,24 @@ public class ImportDeviceInstanceResult {
 
     private String detailFile;
 
+    /** Present only for createOnly imports: row, detailFile, complete. */
+    private String type;
+
+    private Long row;
+
+    private String deviceId;
+
+    private Long successCount;
+
+    private Long failureCount;
+
+    public ImportDeviceInstanceResult(SaveResult result, boolean success, String message, String detailFile) {
+        this.result = result;
+        this.success = success;
+        this.message = message;
+        this.detailFile = detailFile;
+    }
+
     @Generated
     public static ImportDeviceInstanceResult success(SaveResult result) {
         return new ImportDeviceInstanceResult(result, true, null, null);

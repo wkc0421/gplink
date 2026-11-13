@@ -5,10 +5,11 @@
     :open="visible"
     :overlay-class-name="{
       [warpClassNames]: true,
-      'metadata-table-popover-warp': true
+      'metadata-table-popover-warp': true,
+      [overlayClassName]: !!overlayClassName
     }"
-    :overlaystyle="{
-      'zIndex': 1070
+    :overlay-style="{
+      'zIndex': 1071
     }"
     :getPopupContainer="(node) => tableWrapperRef || node"
     @visibleChange="null"
@@ -37,6 +38,10 @@ import { useMask } from '../utils'
 import {useTableWrapper, useTableFullScreen} from "../../context";
 
 const props = defineProps({
+  overlayClassName: {
+    type: String,
+    default: ''
+  },
   placement: {
     type: String,
     default: 'top'

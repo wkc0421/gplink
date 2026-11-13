@@ -4,12 +4,15 @@ import com.alibaba.fastjson.JSON;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import gp.saas.legacy.dto.DeiceDataRequestEntity;
+import gp.saas.legacy.dto.DeviceExtremesRequest;
+import gp.saas.legacy.dto.DeviceExtremesData;
+import gp.saas.legacy.service.LegacyDeviceExtremesService;
 import gp.saas.legacy.dto.DeviceAggregationDataEntity;
 import gp.saas.legacy.dto.DeviceDataEntity;
 import gp.saas.legacy.dto.DeviceIntervalDataEntity;
 import gp.saas.legacy.service.LegacyDeviceLatestValueService;
-import gp.saas.legacy.service.LegacyDeviceLatestValueService.LatestValue;
 import gp.saas.legacy.service.LegacyIntervalSummaryService;
+import gp.saas.legacy.service.LegacyLatestPropertyQuery;
 import gp.saas.apitoken.service.ApiTokenScopeService;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.hswebframework.ezorm.core.param.Term;
@@ -33,7 +36,6 @@ import org.jetlinks.community.timescaledb.thing.counter.CounterBoundary;
 import org.jetlinks.community.timescaledb.thing.counter.CounterReadContext;
 import org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService;
 import org.jetlinks.core.metadata.DeviceMetadata;
-import org.jetlinks.core.metadata.PropertyMetadata;
 import org.jetlinks.reactor.ql.utils.CastUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -85,6 +87,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static gp.saas.legacy.service.LegacyLatestPropertyQuery.formatProperty;
+
 @RestController
 @RequestMapping({
     "/v1/device-data",
@@ -119,6 +123,7 @@ public class LegacyDeviceDataController {
     private final DeviceDataService deviceDataService;
     private final LocalDeviceInstanceService deviceService;
     private final LegacyDeviceLatestValueService latestValueService;
+    private final LegacyLatestPropertyQuery latestPropertyQuery;
     private final CounterSnapshotService counterSnapshotService;
     private final ApiTokenScopeService apiTokenScopeService;
     @Value("${device-data.interval.near-hour-snap-enabled:true}")
@@ -151,6 +156,19 @@ public class LegacyDeviceDataController {
         .build();
     private final ConcurrentMap<String, InflightRequest<List<DeviceAggregationDataEntity>>> aggregationInflight = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, InflightRequest<List<DeviceIntervalDataEntity>>> intervalHistoryInflight = new ConcurrentHashMap<>();
+
+    // Cache closed boundaries independently of the moving, millisecond-precise outer end.
+    private final Cache<String, HistoryPrefix> intervalPrefixCache = Caffeine.newBuilder()
+        .expireAfterWrite(LONG_CACHE_TTL)
+        .maximumWeight(INTERVAL_CACHE_MAX_WEIGHT_BYTES)
+        .weigher((String key, HistoryPrefix value) -> key.length() * 2 + 128
+            + value.points().values().stream().mapToInt(point -> 128
+                + (point.getValue() == null ? 0 : point.getValue().length() * 2)).sum())
+        .build();
+
+    private record HistoryPrefix(Map<Long, CounterBoundary> points, Object initialValue) { }
+    private record HistoryRead(Map<String, Map<Long, CounterBoundary>> points,
+                               Map<String, Object> initialValues) { }
 
     private record LatestQueryTarget(String deviceId,
                                      DeviceMetadata metadata,
@@ -320,6 +338,7 @@ public class LegacyDeviceDataController {
         this.deviceDataService = deviceDataService;
         this.deviceService = deviceService;
         this.latestValueService = latestValueService;
+        this.latestPropertyQuery = new LegacyLatestPropertyQuery(deviceDataService, latestValueService);
         this.counterSnapshotService = counterSnapshotService;
         this.apiTokenScopeService = apiTokenScopeService;
     }
@@ -455,8 +474,7 @@ public class LegacyDeviceDataController {
                 .flatMapMany(contexts -> Flux
                     .fromIterable(nullToEmpty(request.getDevices()))
                     .flatMap(deviceId -> {
-                        IntervalDevice device = devices.get(deviceId);
-                        CounterReadContext context = device == null ? null : contexts.get(device.productId());
+                        CounterReadContext context = contexts.get(deviceId);
                         boolean cacheable = deviceService == null || (
                             context != null && context.isEnabled()
                                 && Objects.equals(request.getProperties().get(0), columns[0].getProperty())
@@ -478,6 +496,52 @@ public class LegacyDeviceDataController {
                             return result;
                         });
                     }, 5)));
+    }
+
+    @PostMapping("/devices/extremes/_query")
+    @QueryAction
+    @io.swagger.v3.oas.annotations.Operation(summary = "批量查询属性最大值、最小值及最早发生时间",
+        description = "查询闭区间内有限数值的原始采样，返回毫秒时间戳；不分桶、不补值。")
+    public Flux<DeviceExtremesData> queryDeviceExtremes(@RequestBody DeviceExtremesRequest request) {
+        return Flux.defer(() -> {
+            DeviceExtremesRequest normalized = validateExtremesRequest(request);
+            DeiceDataRequestEntity roster = new DeiceDataRequestEntity();
+            roster.setDevices(normalized.getDevices());
+            return authorizedAggregationDevices(roster)
+                .thenMany(new LegacyDeviceExtremesService(deviceDataService, deviceService).query(normalized))
+                .collectList()
+                .timeout(QUERY_TIMEOUT)
+                .flatMapMany(Flux::fromIterable);
+        });
+    }
+
+    private DeviceExtremesRequest validateExtremesRequest(DeviceExtremesRequest request) {
+        if (request == null || request.getStartTime() == null || request.getEndTime() == null
+            || request.getStartTime() >= request.getEndTime()) {
+            throw new BusinessException("startTime and endTime are required, and endTime must be greater than startTime", 400);
+        }
+        int startYear = Instant.ofEpochMilli(request.getStartTime()).atZone(HISTORY_ZONE).getYear();
+        int endYear = Instant.ofEpochMilli(request.getEndTime()).atZone(HISTORY_ZONE).getYear();
+        if (startYear < 1 || endYear > 9999) {
+            throw new BusinessException("Time must be within years 1 through 9999", 400);
+        }
+        DeviceExtremesRequest normalized = new DeviceExtremesRequest();
+        normalized.setDevices(validateExtremesIds(request.getDevices(), "devices", MAX_DEVICE_QUERY_SIZE));
+        normalized.setProperties(validateExtremesIds(request.getProperties(), "properties", MAX_PROPERTY_QUERY_SIZE));
+        normalized.setStartTime(request.getStartTime());
+        normalized.setEndTime(request.getEndTime());
+        return normalized;
+    }
+
+    private List<String> validateExtremesIds(List<String> ids, String name, int maximum) {
+        if (ids == null || ids.isEmpty() || ids.stream().anyMatch(id -> id == null || id.isBlank())) {
+            throw new BusinessException(name + " must not be empty or contain blank ids", 400);
+        }
+        List<String> normalized = distinctInOrder(ids);
+        if (normalized.size() > maximum) {
+            throw new BusinessException("Too many " + name + ", max supported size is " + maximum, 400);
+        }
+        return normalized;
     }
 
     @PostMapping("/devices/interval")
@@ -567,79 +631,7 @@ public class LegacyDeviceDataController {
     }
 
     private Flux<DeviceProperty> queryLatestProperties(LatestQueryTarget target) {
-        if (target.metadata() == null || target.properties().isEmpty()) {
-            return Flux.empty();
-        }
-        Mono<Map<String, LatestValue>> redisValues = target.allProperties()
-            ? latestValueService.readAll(target.deviceId())
-            : latestValueService.readProperties(target.deviceId(), target.properties());
-        return redisValues.flatMapMany(values -> mergeLatestProperties(
-            target.deviceId(), target.properties(), values, target.metadata()));
-    }
-
-    private Flux<DeviceProperty> mergeLatestProperties(String deviceId,
-                                                       List<String> propertyIds,
-                                                       Map<String, LatestValue> redisValues,
-                                                       DeviceMetadata metadata) {
-        LinkedHashSet<String> missing = new LinkedHashSet<>();
-        for (String property : propertyIds) {
-            if (!isValidLatestValue(redisValues.get(property))) {
-                missing.add(property);
-            }
-        }
-
-        Mono<Map<String, DeviceProperty>> databaseValues;
-        if (missing.isEmpty()) {
-            databaseValues = Mono.just(Collections.emptyMap());
-        } else {
-            databaseValues = withQueryTimeout(deviceDataService
-                .queryEachOneProperties(deviceId, QueryParamEntity.of(), missing.toArray(new String[0])))
-                .collect(
-                    () -> new LinkedHashMap<String, DeviceProperty>(),
-                    (values, property) -> values.putIfAbsent(property.getProperty(), property));
-        }
-
-        return databaseValues.flatMapMany(fallback -> {
-            List<DeviceProperty> merged = new ArrayList<>(propertyIds.size());
-            for (String property : propertyIds) {
-                LatestValue redisValue = redisValues.get(property);
-                if (isValidLatestValue(redisValue)) {
-                    merged.add(toDeviceProperty(deviceId, property, redisValue, metadata));
-                    continue;
-                }
-                DeviceProperty databaseValue = fallback.get(property);
-                if (databaseValue != null) {
-                    merged.add(formatProperty(databaseValue, metadata));
-                }
-            }
-            return Flux.fromIterable(merged);
-        });
-    }
-
-    private boolean isValidLatestValue(LatestValue value) {
-        return value != null && value.getTimestamp() > 0;
-    }
-
-    private DeviceProperty toDeviceProperty(String deviceId,
-                                            String property,
-                                            LatestValue latestValue,
-                                            DeviceMetadata metadata) {
-        DeviceProperty deviceProperty = new DeviceProperty();
-        long timestamp = latestValue.getTimestamp();
-        deviceProperty.setDeviceId(deviceId);
-        deviceProperty.setProperty(property);
-        deviceProperty.setValue(latestValue.getValue());
-        deviceProperty.setTimestamp(timestamp);
-        deviceProperty.setCreateTime(timestamp);
-        return formatProperty(deviceProperty, metadata);
-    }
-
-    private DeviceProperty formatProperty(DeviceProperty property, DeviceMetadata metadata) {
-        if (metadata == null || property == null) {
-            return property;
-        }
-        PropertyMetadata propertyMetadata = metadata.getPropertyOrNull(property.getProperty());
-        return property.withProperty(propertyMetadata);
+        return latestPropertyQuery.query(target.deviceId(), target.metadata(), target.properties(), target.allProperties());
     }
 
     private Flux<DeviceProperty> queryHistoryNoPaging(String deviceId,
@@ -801,7 +793,7 @@ public class LegacyDeviceDataController {
                     }
                     return authorizeIntervalDevice(id, device);
                 })
-                .collectMap(IntervalDevice::deviceId));
+                .collectMap(IntervalDevice::deviceId, device -> device, LinkedHashMap::new));
     }
 
     private Mono<Map<String, CounterReadContext>> aggregationContexts(
@@ -810,12 +802,11 @@ public class LegacyDeviceDataController {
         if (counterSnapshotService == null || property == null) {
             return Mono.just(Collections.emptyMap());
         }
-        return Flux.fromIterable(devices.values())
-            .filter(device -> device.productId() != null)
-            .map(IntervalDevice::productId)
-            .distinct()
-            .flatMap(productId -> counterSnapshotService.readContext(productId, property)
-                .map(context -> Map.entry(productId, context)), 5)
+        return Flux.fromIterable(intervalDeviceGroups(new ArrayList<>(devices.values())).entrySet())
+            .filter(group -> group.getKey() != null)
+            .flatMap(group -> counterSnapshotService.readContexts(group.getKey(), property,
+                group.getValue().stream().map(IntervalDevice::deviceId).toList()), 5)
+            .flatMapIterable(Map::entrySet)
             .collectMap(Map.Entry::getKey, Map.Entry::getValue);
     }
 
@@ -922,13 +913,19 @@ public class LegacyDeviceDataController {
                         .flatMapSequential(member -> summaries.raw(
                             member.deviceId(), property, start, end), 5);
                 }
-                return counterSnapshotService.readContext(productId, property)
-                    .flatMapMany(context -> context.isEnabled()
-                        ? summaries.configured(productId, property,
-                            members.stream().map(IntervalDevice::deviceId).toList(), start, end, futureEnd,
-                            nearHourSnapEnabled, nearHourSnapSeconds)
-                        : Flux.fromIterable(members).flatMapSequential(member -> summaries.raw(
-                            member.deviceId(), property, start, end), 5));
+                return counterSnapshotService.readContexts(productId, property,
+                    members.stream().map(IntervalDevice::deviceId).toList())
+                    .flatMapMany(contexts -> {
+                        List<String> configured = members.stream()
+                            .filter(member -> counterEnabled(contexts, member.deviceId()))
+                            .map(IntervalDevice::deviceId).toList();
+                        Flux<DeviceIntervalDataEntity> snapshots = configured.isEmpty() ? Flux.empty()
+                            : summaries.configured(productId, property, configured, start, end, futureEnd,
+                                nearHourSnapEnabled, nearHourSnapSeconds);
+                        return snapshots.concatWith(Flux.fromIterable(members)
+                            .filter(member -> !counterEnabled(contexts, member.deviceId()))
+                            .flatMapSequential(member -> summaries.raw(member.deviceId(), property, start, end), 5));
+                    });
             }, 5)
             .collectMap(DeviceIntervalDataEntity::getDeviceId)
             .timeout(QUERY_TIMEOUT)
@@ -959,11 +956,18 @@ public class LegacyDeviceDataController {
                 if (productId == null || minuteHistory) {
                     return rawHistoryGroup(members, property, start, end, boundaries);
                 }
-                return counterSnapshotService.readContext(productId, property)
-                    .flatMapMany(context -> context.isEnabled()
-                        ? queryConfiguredHistoryGroup(
-                            productId, property, type, members, context, start, end, boundaries)
-                        : rawHistoryGroup(members, property, start, end, boundaries));
+                return counterSnapshotService.readContexts(productId, property,
+                    members.stream().map(IntervalDevice::deviceId).toList())
+                    .flatMapMany(contexts -> {
+                        List<IntervalDevice> configured = members.stream()
+                            .filter(member -> counterEnabled(contexts, member.deviceId())).toList();
+                        List<IntervalDevice> raw = members.stream()
+                            .filter(member -> !counterEnabled(contexts, member.deviceId())).toList();
+                        Flux<List<DeviceIntervalDataEntity>> snapshots = configured.isEmpty() ? Flux.empty()
+                            : queryConfiguredHistoryGroup(productId, property, type, configured,
+                                contexts, start, end, boundaries);
+                        return snapshots.concatWith(rawHistoryGroup(raw, property, start, end, boundaries));
+                    });
             }, 5)
             .collectMap(list -> list.get(0).getDeviceId())
             .timeout(QUERY_TIMEOUT)
@@ -989,11 +993,25 @@ public class LegacyDeviceDataController {
         return groups;
     }
 
+    private static boolean counterEnabled(Map<String, CounterReadContext> contexts, String deviceId) {
+        CounterReadContext context = contexts.get(deviceId);
+        return context != null && context.isEnabled();
+    }
+
+    private static boolean sameCounterVersion(Map<String, CounterReadContext> before,
+                                              Map<String, CounterReadContext> after,
+                                              String deviceId) {
+        CounterReadContext original = before.get(deviceId);
+        CounterReadContext current = after.get(deviceId);
+        return original != null && current != null && current.isEnabled()
+            && original.getVersion().equals(current.getVersion());
+    }
+
     private Flux<List<DeviceIntervalDataEntity>> queryConfiguredHistoryGroup(String productId,
                                                                               String property,
                                                                               String type,
                                                                               List<IntervalDevice> members,
-                                                                              CounterReadContext context,
+                                                                              Map<String, CounterReadContext> contexts,
                                                                               long start,
                                                                               long end,
                                                                               List<Long> boundaries) {
@@ -1002,7 +1020,7 @@ public class LegacyDeviceDataController {
         List<String> misses = new ArrayList<>();
         for (IntervalDevice member : members) {
             String key = intervalCacheKey(member.deviceId(), property, start, end,
-                type, productId, context.getVersion());
+                type, productId, contexts.get(member.deviceId()).getVersion());
             List<DeviceIntervalDataEntity> cached = cache.getIfPresent(key);
             if (cached == null) {
                 misses.add(member.deviceId());
@@ -1013,29 +1031,27 @@ public class LegacyDeviceDataController {
         if (misses.isEmpty()) {
             return Flux.fromIterable(result.values());
         }
-        Mono<Map<String, Map<Long, CounterBoundary>>> resolved = "day".equals(type)
-            ? counterSnapshotService.resolveBoundaries(productId, property, misses, boundaries, true)
-            : counterSnapshotService.resolveBoundaries(productId, property, misses, boundaries);
-        return resolved
-            .flatMap(rows -> counterRangeEndValues(productId, property, misses, rows, start, end)
+        return readConfiguredHistory(productId, property, type, misses, contexts, start, end, boundaries)
+            .flatMap(read -> counterRangeEndValues(productId, property, misses, read.points(), start, end)
                 .map(endValues -> {
                     for (String deviceId : misses) {
                         Map<Long, Object> values = new LinkedHashMap<>();
                         for (Long boundary : boundaries) {
-                            values.put(boundary, counterValue(rows, deviceId, boundary));
+                            values.put(boundary, counterValue(read.points(), deviceId, boundary));
                         }
                         values.put(end, endValues.get(deviceId));
                         result.put(deviceId, toIntervalHistory(
-                            deviceId, property, boundaries, values.get(start), values));
+                            deviceId, property, boundaries, read.initialValues().get(deviceId), values));
                     }
                     return result;
                 }))
-            .flatMap(values -> counterSnapshotService.readContext(productId, property)
+            .flatMap(values -> counterSnapshotService.readContexts(productId, property, misses)
                 .map(current -> {
-                    if (context.getVersion().equals(current.getVersion())) {
+                    if (!isHotWindow(end)) {
                         for (String deviceId : misses) {
+                            if (!sameCounterVersion(contexts, current, deviceId)) continue;
                             String key = intervalCacheKey(deviceId, property, start, end,
-                                type, productId, context.getVersion());
+                                type, productId, contexts.get(deviceId).getVersion());
                             putIntervalHistoryCache(cache, key,
                                 snapshotIntervalValues(values.get(deviceId)));
                         }
@@ -1043,6 +1059,92 @@ public class LegacyDeviceDataController {
                     return values;
                 }))
             .flatMapMany(values -> Flux.fromIterable(values.values()));
+    }
+
+    private Mono<Map<String, Map<Long, CounterBoundary>>> resolveHistoryBoundaries(
+        String product, String property, String type, List<String> devices, List<Long> boundaries) {
+        return "day".equals(type)
+            ? counterSnapshotService.resolveBoundaries(product, property, devices, boundaries, true)
+            : counterSnapshotService.resolveBoundaries(product, property, devices, boundaries);
+    }
+
+    private Mono<Map<String, Object>> counterRangeStartValues(
+        String product, String property, List<String> devices,
+        Map<String, Map<Long, CounterBoundary>> rows, long start, long end) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        List<String> missing = new ArrayList<>();
+        for (String device : devices) {
+            Object value = counterValue(rows, device, start);
+            values.put(device, value);
+            if (value == null) missing.add(device);
+        }
+        return fillInitialValues(product, property, missing, values, start, end);
+    }
+
+    private Mono<Map<String, Object>> fillInitialValues(
+        String product, String property, List<String> missing, Map<String, Object> values,
+        long start, long end) {
+        if (missing.isEmpty()) return Mono.just(values);
+        // A bucket's last value is not the first observed reading in the requested range.
+        return counterSnapshotService.firstValuesInRange(product, property, missing, start, end)
+            .map(first -> {
+                for (String device : missing) values.put(device, exactCounterValue(first.get(device)));
+                return values;
+            });
+    }
+
+    private Mono<HistoryRead> readConfiguredHistory(
+        String product, String property, String type, List<String> devices,
+        Map<String, CounterReadContext> contexts,
+        long start, long end, List<Long> boundaries) {
+        if (!isHotWindow(end) || boundaries.size() < 3) {
+            return resolveHistoryBoundaries(product, property, type, devices, boundaries)
+                .flatMap(rows -> counterRangeStartValues(product, property, devices, rows, start, end)
+                    .map(initial -> new HistoryRead(rows, initial)));
+        }
+        List<Long> closed = List.copyOf(boundaries.subList(0, boundaries.size() - 1));
+        long closedEnd = closed.get(closed.size() - 1);
+        Map<String, Map<Long, CounterBoundary>> points = new LinkedHashMap<>();
+        Map<String, Object> initial = new LinkedHashMap<>();
+        List<String> missing = new ArrayList<>();
+        for (String device : devices) {
+            HistoryPrefix cached = intervalPrefixCache.getIfPresent(
+                intervalCacheKey(device, property, start, closedEnd, type, product, contexts.get(device).getVersion()));
+            if (cached == null) {
+                missing.add(device);
+            } else {
+                points.put(device, new LinkedHashMap<>(cached.points()));
+                initial.put(device, cached.initialValue());
+            }
+        }
+        Mono<Void> prefix = missing.isEmpty() ? Mono.empty()
+            : resolveHistoryBoundaries(product, property, type, missing, closed)
+                .flatMap(rows -> counterRangeStartValues(product, property, missing, rows, start, closedEnd)
+                    .flatMap(values -> counterSnapshotService.readContexts(product, property, missing).doOnNext(current -> {
+                        for (String device : missing) {
+                            Map<Long, CounterBoundary> copy = new LinkedHashMap<>();
+                            rows.getOrDefault(device, Collections.emptyMap()).forEach((time, point) ->
+                                copy.put(time, new CounterBoundary(point.getBoundary(), point.getValue(),
+                                    point.getSampledAt(), point.getState(), point.getSource())));
+                            points.put(device, new LinkedHashMap<>(copy));
+                            initial.put(device, values.get(device));
+                            if (sameCounterVersion(contexts, current, device)) {
+                                intervalPrefixCache.put(intervalCacheKey(device, property, start, closedEnd,
+                                    type, product, contexts.get(device).getVersion()),
+                                    new HistoryPrefix(Map.copyOf(copy), values.get(device)));
+                            }
+                        }
+                    }))).then();
+        // Resolve only the actual outer end; never apply the successor fallback to a cached inner boundary.
+        return prefix.then(Mono.defer(() -> resolveHistoryBoundaries(product, property, type, devices, List.of(end))))
+            .flatMap(tail -> {
+                for (String device : devices) {
+                    points.get(device).putAll(tail.getOrDefault(device, Collections.emptyMap()));
+                }
+                List<String> noInitial = devices.stream().filter(device -> initial.get(device) == null).toList();
+                return fillInitialValues(product, property, noInitial, initial, closedEnd, end)
+                    .map(values -> new HistoryRead(points, values));
+            });
     }
 
     private Mono<Map<String, Object>> counterRangeEndValues(
@@ -1201,16 +1303,8 @@ public class LegacyDeviceDataController {
                                                              Map<Long, Object> bucketValues) {
         Object currentValue = startValue;
         // The legacy client subtracts adjacent startValue fields. Keep a continuous
-        // chain, including the current bucket, and seed a missing baseline from the
-        // first observed reading as GpLink 1.0 does. Never invent a zero reading.
-        if (currentValue == null) {
-            for (Long boundary : boundaries) {
-                if (bucketValues.get(boundary) != null) {
-                    currentValue = bucketValues.get(boundary);
-                    break;
-                }
-            }
-        }
+        // chain, but only the data reader can resolve the actual initial reading.
+        // A bucket's last value (or a successor outside the range) cannot supply it.
         List<DeviceIntervalDataEntity> data = new ArrayList<>();
         for (int i = 0; i < boundaries.size() - 1; i++) {
             Long bucketStart = boundaries.get(i);

@@ -27,10 +27,10 @@ class CounterSnapshotMetadataSynchronizerTest {
         @SuppressWarnings("unchecked")
         ObjectProvider<CounterSnapshotService> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(snapshots);
-        when(snapshots.registerDevices("product-1", List.of("device-1")))
-            .thenReturn(Mono.empty());
+        HistoryStatisticsMetadataService metadata = mock(HistoryStatisticsMetadataService.class);
+        when(metadata.syncDevice("device-1")).thenReturn(Mono.empty());
         CounterSnapshotMetadataSynchronizer synchronizer = new CounterSnapshotMetadataSynchronizer(
-            mock(LocalDeviceProductService.class), provider);
+            metadata, provider);
         DeviceInstanceEntity device = new DeviceInstanceEntity();
         device.setId("device-1");
         device.setProductId("product-1");
@@ -49,6 +49,6 @@ class CounterSnapshotMetadataSynchronizerTest {
         synchronizer.onDeviceSaved(saved);
         StepVerifier.create(saved.getAsync()).verifyComplete();
 
-        verify(snapshots, times(2)).registerDevices("product-1", List.of("device-1"));
+        verify(metadata, times(2)).syncDevice("device-1");
     }
 }

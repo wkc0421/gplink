@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetlinks.community.network.DefaultNetworkType;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.NetworkType;
 import org.jetlinks.core.message.codec.MqttMessage;
 import org.jetlinks.core.message.codec.SimpleMqttMessage;
@@ -55,7 +56,10 @@ import java.util.stream.Stream;
 public class VertxMqttClient implements MqttClient {
 
     @Getter
-    private io.vertx.mqtt.MqttClient client;
+    private volatile io.vertx.mqtt.MqttClient client;
+
+    @Setter
+    private volatile String remoteAddress;
 
     private final Topic<Tuple3<String, FluxSink<MqttMessage>, Integer>> subscriber = Topic.createRoot();
 
@@ -350,8 +354,21 @@ public class VertxMqttClient implements MqttClient {
     }
 
     @Override
+    public NetworkRuntimeDetails getRuntimeDetails() {
+        NetworkRuntimeDetails details = new NetworkRuntimeDetails();
+        io.vertx.mqtt.MqttClient current = client;
+        boolean connected = current != null && current.isConnected();
+        details.setConnected(connected);
+        details.setConnecting(!connected && loading);
+        details.setRemoteAddress(remoteAddress);
+        details.setClientId(current == null ? null : current.clientId());
+        return details;
+    }
+
+    @Override
     public boolean isAlive() {
-        return client != null && client.isConnected();
+        io.vertx.mqtt.MqttClient current = client;
+        return current != null && current.isConnected();
     }
 
     @Override

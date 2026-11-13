@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TCP 服务端接入向导</title>
+<style>:root{font-family:system-ui,sans-serif;line-height:1.8;color-scheme:light dark}body{margin:0;background:light-dark(#f5f7fa,#171b24);color:light-dark(#25324b,#e2e8f0)}main{max-width:960px;margin:32px auto;padding:20px}section{margin:20px 0;padding:24px;background:light-dark(white,#242b38);border-radius:12px}table{border-collapse:collapse;width:100%}td,th{padding:8px;border:1px solid #8492a655;text-align:left}code{overflow-wrap:anywhere}</style></head>
+<body><main><h1>TCP 服务端接入向导</h1><p>入口：设备管理 → TCP服务端向导。流程：接入配置 → 创建产品 → 导入设备列表。</p>
+<section><h2>1. 接入配置</h2><p>先直接选择“新建接入网关”或“选择已有接入网关”。复用网关只需选择网关，页面显示它绑定的组件和协议；点击“使用已有网关并继续”即可，无需填写辨识 ID、公网 IP、端口或重新选择协议。</p><p>新建网关时填写辨识 ID，直接选择新建或复用网络组件。仅新建组件时填写公网 IP、端口。然后选择支持 TCP 的已有协议或上传协议 JAR；上传协议名称可在顶部的“自定义配置”中修改。</p>
+<ul><li>辨识 ID：2～32 位，必须同时包含英文字母和数字，区分大小写。</li><li>公网 IP：设备连接平台时使用的 IP，不填写 tcp://、端口或路径。</li><li>端口：1～65535 的整数，同时作为本地监听端口与公网端口。向导不会自动配置防火墙或 NAT 转发。</li></ul>
+<p>IPv4 默认监听本机所有网卡 <code>0.0.0.0</code>；IPv6 默认监听 <code>::</code>。公网 IP 作为对外地址保存，不直接绑定为本地网卡地址。集群模式在当前节点创建监听。</p>
+<table><tr><th>资源</th><th>辨识 ID 为 abc123 时</th></tr><tr><td>组件 ID / 名称</td><td>tcp_server_abc123 / TCP服务端_abc123</td></tr><tr><td>网关 ID / 名称</td><td>tcp_gateway_abc123 / TCP网关_abc123</td></tr><tr><td>新上传协议名称</td><td>TCP协议_abc123</td></tr><tr><td>产品默认名称</td><td>TCP产品_abc123</td></tr></table>
+<p>新建组件和网关的 ID、名称自动生成。若 ID 已存在，需更换辨识 ID 或直接选择已有资源，不覆盖已有配置。协议必须提供 TCP 编解码能力，不需要 MQTT Topic/routes。</p>
+<p>默认使用 DIRECT 解析，将接收到的数据交给协议处理；协议需能正确处理 TCP 分片和粘包。需要固定长度、分隔符或其他解析方式时，在网络组件管理中配置后，选择已有网络组件进行复用。</p>
+<p>点击“保存接入并继续”完成协议检查、组件和网关创建、启动及状态校验。当前页面重试会继续使用已成功创建的资源。</p></section>
+<section><h2>2. 创建产品</h2><p>在步骤顶部直接选择“新建产品”或“选择已有产品”，再填写下方的产品信息。新建时确认产品名称，复用网关的默认产品名称为“TCP产品_网关ID”。产品 ID 可选，留空由系统生成；选择已有产品时，下方显示产品下拉框。继续后产品保存为普通设备类型，并绑定当前 TCP 网关和协议；复用产品会更新其接入绑定。</p><p>需要属性物模型时，下载 Excel 或 CSV 模板，填写后上传并点击“导入物模型”。导入会先保存产品及接入绑定，再将属性写入产品；检查表中的属性 ID、名称、地址、排序和精度后继续启用。复用已有产品时，导入会替换该产品的全部属性，并影响其他使用它的设备；不需要物模型时可跳过。</p></section>
+<section><h2>3. 导入设备列表</h2><p>下载当前产品的 Excel 或 CSV 模板，填写设备 ID、设备名称及协议配置列，再上传并点击“导入并启用”。上传文件本身不创建设备。</p>
+<p>设备 ID 必须与 TCP 协议从报文解析出的标识一致。已有设备 ID 不覆盖，重复行报错，其余合法行继续导入。结果区提供成功数量、失败原因及结果文件下载；断线不会自动重新执行导入，核对设备列表后仅重传失败行。</p>
+<p>若提示旧版接口，页面会显示接口报告的已处理数量和结果文件，但完成状态、仅新增和启用结果仍需核对。请更新匹配的后端版本，并先核对设备列表，避免重复导入已成功的数据。</p>
+<p>本步骤顶部的“自定义配置”保留单台设备添加、已有设备选择及关闭自动启用。完成配置不代表设备实际在线：还需真实设备连接公网 IP 和端口，发送符合协议的报文，再检查上线及数据。</p></section>
+</main></body></html>

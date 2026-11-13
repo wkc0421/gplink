@@ -11,6 +11,8 @@
     :options="options"
     optionFilterProp="label"
     :disabled="props.disabled"
+    :open="props.closeOnChange ? dropdownOpen : undefined"
+    @dropdownVisibleChange="onDropdownVisibleChange"
     @change="change"
   />
 </template>
@@ -40,24 +42,33 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  closeOnChange: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['update:value', 'change'])
 
 const myValue = ref(props.value)
+const dropdownOpen = ref(false)
 
 const options = useGetUnit()
 
 const formItemContext = Form.useInjectFormItemContext();
 
 const tableWrapperRef = useTableWrapper()
+const onDropdownVisibleChange = (open) => {
+  if (props.closeOnChange) dropdownOpen.value = open
+}
 const change = (v) => {
   const newValue = v.length > 1 ? v.pop() : v?.[0];
   myValue.value = [newValue];
   emit('update:value', newValue);
   emit('change', newValue);
   formItemContext.onFieldChange();
+  if (props.closeOnChange) dropdownOpen.value = false;
 };
 
 const filterOption = (v, option) => {

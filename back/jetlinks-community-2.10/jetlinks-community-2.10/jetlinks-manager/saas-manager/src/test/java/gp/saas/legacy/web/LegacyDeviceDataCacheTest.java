@@ -256,10 +256,10 @@ class LegacyDeviceDataCacheTest {
         CounterSnapshotService snapshots = mock(CounterSnapshotService.class);
         controller = new LegacyDeviceDataController(dataService, devices, null, snapshots, null);
         when(devices.findById(List.of("d1"))).thenReturn(Flux.just(device("d1", "product-1")));
-        when(snapshots.readContext("product-1", "p1")).thenReturn(
-            Mono.just(new CounterReadContext(true, 1, 1, 1)),
-            Mono.just(new CounterReadContext(true, 1, 1, 1)),
-            Mono.just(new CounterReadContext(true, 1, 2, 1)));
+        when(snapshots.readContexts("product-1", "p1", List.of("d1"))).thenReturn(
+            Mono.just(Map.of("d1", new CounterReadContext(true, 1, 1, 1))),
+            Mono.just(Map.of("d1", new CounterReadContext(true, 1, 1, 1))),
+            Mono.just(Map.of("d1", new CounterReadContext(true, 1, 2, 1))));
         when(dataService.aggregationPropertiesByDevice(
             eq("d1"), any(DeviceDataService.AggregationRequest.class),
             any(DeviceDataService.DevicePropertyAggregation[].class)))
@@ -275,9 +275,43 @@ class LegacyDeviceDataCacheTest {
             .extracting(DeviceAggregationDataEntity::getTime).isEqualTo("after");
 
         verify(devices, times(3)).findById(List.of("d1"));
-        verify(snapshots, times(3)).readContext("product-1", "p1");
+        verify(snapshots, times(3)).readContexts("product-1", "p1", List.of("d1"));
         verify(dataService, times(2)).aggregationPropertiesByDevice(
             eq("d1"), any(DeviceDataService.AggregationRequest.class),
+            any(DeviceDataService.DevicePropertyAggregation[].class));
+    }
+
+    @Test
+    void devicePolicyRevisionSeparatesAggregationCachesWithinOneProduct() {
+        LocalDeviceInstanceService devices = mock(LocalDeviceInstanceService.class);
+        CounterSnapshotService snapshots = mock(CounterSnapshotService.class);
+        controller = new LegacyDeviceDataController(dataService, devices, null, snapshots, null);
+        when(devices.findById(List.of("d1", "d2")))
+            .thenReturn(Flux.just(device("d1", "product-1"), device("d2", "product-1")));
+        AtomicInteger revision = new AtomicInteger(1);
+        when(snapshots.readContexts(eq("product-1"), eq("p1"), org.mockito.ArgumentMatchers.anyCollection()))
+            .thenAnswer(call -> {
+                CounterReadContext changed = new CounterReadContext(true, 1, 1, 1);
+                changed.setPolicyRevision(revision.get());
+                return Mono.just(Map.of("d1", changed, "d2", new CounterReadContext(true, 1, 1, 1)));
+            });
+        when(dataService.aggregationPropertiesByDevice(eq("d1"), any(DeviceDataService.AggregationRequest.class),
+            any(DeviceDataService.DevicePropertyAggregation[].class)))
+            .thenReturn(Flux.just(row("before", 1)), Flux.just(row("after", 2)));
+        when(dataService.aggregationPropertiesByDevice(eq("d2"), any(DeviceDataService.AggregationRequest.class),
+            any(DeviceDataService.DevicePropertyAggregation[].class)))
+            .thenReturn(Flux.just(row("unchanged", 3)));
+        DeiceDataRequestEntity request = request("yyyy-MM-dd");
+        request.setDevices(List.of("d1", "d2"));
+        controller.queryAggregation(request).collectList().block();
+        controller.queryAggregation(request).collectList().block();
+        revision.incrementAndGet();
+        List<Map<String, List<DeviceAggregationDataEntity>>> changed = controller.queryAggregation(request).collectList().block();
+        assertThat(changed.stream().filter(value -> value.containsKey("d1")).findFirst().orElseThrow().get("d1"))
+            .singleElement().extracting(DeviceAggregationDataEntity::getTime).isEqualTo("after");
+        verify(dataService, times(2)).aggregationPropertiesByDevice(eq("d1"), any(DeviceDataService.AggregationRequest.class),
+            any(DeviceDataService.DevicePropertyAggregation[].class));
+        verify(dataService, times(1)).aggregationPropertiesByDevice(eq("d2"), any(DeviceDataService.AggregationRequest.class),
             any(DeviceDataService.DevicePropertyAggregation[].class));
     }
 
@@ -287,8 +321,8 @@ class LegacyDeviceDataCacheTest {
         CounterSnapshotService snapshots = mock(CounterSnapshotService.class);
         controller = new LegacyDeviceDataController(dataService, devices, null, snapshots, null);
         when(devices.findById(List.of("d1"))).thenReturn(Flux.just(device("d1", "product-1")));
-        when(snapshots.readContext("product-1", "p1"))
-            .thenReturn(Mono.just(new CounterReadContext(false, 1, 1, 1)));
+        when(snapshots.readContexts("product-1", "p1", List.of("d1")))
+            .thenReturn(Mono.just(Map.of("d1", new CounterReadContext(false, 1, 1, 1))));
         when(dataService.aggregationPropertiesByDevice(
             eq("d1"), any(DeviceDataService.AggregationRequest.class),
             any(DeviceDataService.DevicePropertyAggregation[].class)))
@@ -312,8 +346,8 @@ class LegacyDeviceDataCacheTest {
         when(devices.findById(List.of("d1"))).thenReturn(Flux.just(device("d1", "product-1")));
         when(scope.requireDevice("d1", "product-1")).thenReturn(
             Mono.empty(), Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN)));
-        when(snapshots.readContext("product-1", "p1"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(snapshots.readContexts("product-1", "p1", List.of("d1")))
+            .thenReturn(Mono.just(Map.of("d1", new CounterReadContext(true, 1, 1, 1))));
         when(dataService.aggregationPropertiesByDevice(
             eq("d1"), any(DeviceDataService.AggregationRequest.class),
             any(DeviceDataService.DevicePropertyAggregation[].class)))
@@ -341,8 +375,9 @@ class LegacyDeviceDataCacheTest {
         when(devices.findById(List.of("d1", "d2"))).thenReturn(Flux.just(
             device("d1", "product-1"), device("d2", "product-1")));
         when(scope.requireDevice(any(String.class), eq("product-1"))).thenReturn(Mono.empty());
-        when(snapshots.readContext("product-1", "p1"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(snapshots.readContexts("product-1", "p1", List.of("d1", "d2")))
+            .thenReturn(Mono.just(Map.of("d1", new CounterReadContext(true, 1, 1, 1),
+                "d2", new CounterReadContext(true, 1, 1, 1))));
         when(dataService.aggregationPropertiesByDevice(
             any(String.class), any(DeviceDataService.AggregationRequest.class),
             any(DeviceDataService.DevicePropertyAggregation[].class)))
@@ -354,7 +389,7 @@ class LegacyDeviceDataCacheTest {
         verify(devices).findById(List.of("d1", "d2"));
         verify(scope).requireDevice("d1", "product-1");
         verify(scope).requireDevice("d2", "product-1");
-        verify(snapshots).readContext("product-1", "p1");
+        verify(snapshots).readContexts("product-1", "p1", List.of("d1", "d2"));
     }
 
     private DeviceInstanceEntity device(String id, String productId) {

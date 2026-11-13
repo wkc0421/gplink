@@ -258,6 +258,9 @@ class LegacyIntervalSummaryCompatibilityTest {
         DeviceInstanceEntity other = new DeviceInstanceEntity(); other.setId("d2"); other.setProductId("p1");
         when(f.devices.findById("d2")).thenReturn(Mono.just(other));
         when(f.scope.requireDevice("d2", "p1")).thenReturn(Mono.empty());
+        when(f.counters.readContexts("p1", "E", List.of("d2", "d1")))
+            .thenReturn(Mono.just(Map.of("d1", new CounterReadContext(true, 1, 1, 1),
+                "d2", new CounterReadContext(true, 1, 1, 1))));
         when(f.counters.summaryBoundaryValues(eq("p1"), eq("E"), anyCollection(), eq(100000L), eq(false), eq(false)))
             .thenReturn(Mono.just(Map.of("d1", "10", "d2", "30")));
         when(f.counters.summaryBoundaryValues(eq("p1"), eq("E"), anyCollection(), eq(200000L), eq(true), eq(false)))
@@ -267,7 +270,7 @@ class LegacyIntervalSummaryCompatibilityTest {
         assertThat(rows).extracting(DeviceIntervalDataEntity::getDeviceId).containsExactly("d2", "d1");
         assertValues(rows.get(0), "30", "40"); assertValues(rows.get(1), "10", "20");
         verify(f.counters, times(2)).summaryBoundaryValues(anyString(), anyString(), anyCollection(), anyLong(), anyBoolean(), anyBoolean());
-        verify(f.counters, times(1)).readContext("p1", "E");
+        verify(f.counters, times(1)).readContexts("p1", "E", List.of("d2", "d1"));
         verifyNoInteractions(f.raw);
     }
 
@@ -342,7 +345,7 @@ class LegacyIntervalSummaryCompatibilityTest {
             device.setId("d1"); device.setProductId("p1");
             when(devices.findById("d1")).thenReturn(Mono.just(device));
             when(scope.requireDevice("d1", "p1")).thenReturn(Mono.empty());
-            when(counters.readContext("p1", "E")).thenReturn(Mono.just(new CounterReadContext(enabled, 1, 1, 1)));
+            when(counters.readContexts("p1", "E", List.of("d1"))).thenReturn(Mono.just(Map.of("d1", new CounterReadContext(enabled, 1, 1, 1))));
             when(latest.readProperty("d1", "E")).thenReturn(Mono.empty());
             List<DeviceProperty> points = new java.util.ArrayList<>();
             for (int i = 0; i < samples.length; i += 2) {

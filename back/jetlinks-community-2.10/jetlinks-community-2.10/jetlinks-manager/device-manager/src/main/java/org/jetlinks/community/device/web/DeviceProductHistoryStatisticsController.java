@@ -12,6 +12,7 @@ import org.jetlinks.community.device.entity.DeviceInstanceEntity;
 import org.jetlinks.community.device.service.LocalDeviceInstanceService;
 import org.jetlinks.community.device.service.LocalDeviceProductService;
 import org.jetlinks.community.device.service.data.DeviceDataStorageProperties;
+import org.jetlinks.community.device.service.data.HistoryStatisticsMetadataService;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
 import org.jetlinks.community.timescaledb.thing.counter.CounterConfig;
 import org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService;
@@ -48,22 +49,25 @@ public class DeviceProductHistoryStatisticsController {
     private final LocalDeviceInstanceService devices;
     private final DeviceDataStorageProperties storageProperties;
     private final ObjectProvider<CounterSnapshotService> snapshots;
+    private final HistoryStatisticsMetadataService metadata;
 
     public DeviceProductHistoryStatisticsController(LocalDeviceProductService products,
                                                     LocalDeviceInstanceService devices,
                                                     DeviceDataStorageProperties storageProperties,
-                                                    ObjectProvider<CounterSnapshotService> snapshots) {
+                                                    ObjectProvider<CounterSnapshotService> snapshots,
+                                                    HistoryStatisticsMetadataService metadata) {
         this.products = products;
         this.devices = devices;
         this.storageProperties = storageProperties;
         this.snapshots = snapshots;
+        this.metadata = metadata;
     }
 
     @GetMapping({"", "/"})
     @QueryAction
     public Flux<CounterConfig> list(@PathVariable String productId) {
         return requireProduct(productId)
-            .thenMany(service().list(productId));
+            .thenMany(service().list(productId).filter(CounterConfig::isProductConfigured));
     }
 
     @PutMapping("/{propertyId}")
@@ -82,15 +86,7 @@ public class DeviceProductHistoryStatisticsController {
                 request.getEnabled(),
                 TimescaleDBUtils.getTableName(storageProperties.getMetric().getPropertyPrefix() + productId),
                 auth.getUser().getId()))
-            .flatMap(config -> config.isEnabled()
-                ? devices.createQuery()
-                    .where(DeviceInstanceEntity::getProductId, productId)
-                    .fetch()
-                    .map(DeviceInstanceEntity::getId)
-                    .buffer(50)
-                    .concatMap(ids -> service().registerDevices(productId, ids))
-                    .then(Mono.just(config))
-                : Mono.just(config));
+            .flatMap(config -> metadata.syncProduct(productId).thenReturn(config));
     }
 
     @PostMapping("/{propertyId}/_rebuild")
@@ -123,7 +119,7 @@ public class DeviceProductHistoryStatisticsController {
     public Mono<CounterTask> task(@PathVariable String productId, @PathVariable String taskId) {
         return requireProduct(productId)
             .then(service().task(taskId))
-            .filter(task -> productId.equals(task.getProductId()))
+            .filter(task -> productId.equals(task.getProductId()) && task.getDeviceId() == null)
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found")));
     }
 

@@ -106,6 +106,14 @@ public class ClusterNetworkManager implements NetworkManager, CommandLineRunner 
                    .flatMapIterable(ReactiveCacheContainer::valuesNow);
     }
 
+    @Override
+    public Mono<Network> getCachedNetwork(NetworkType type, String id) {
+        return Mono.defer(() -> {
+            ReactiveCacheContainer<String, Network> networks = store.get(type.getId());
+            return networks == null ? Mono.empty() : Mono.justOrEmpty(networks.getNow(id));
+        });
+    }
+
     public Mono<Network> createOrUpdate(NetworkProvider<Object> provider, String id, Object properties) {
         ReactiveCacheContainer<String, Network> networkStore = getNetworkStore(provider.getType());
         return Mono.defer(() -> {

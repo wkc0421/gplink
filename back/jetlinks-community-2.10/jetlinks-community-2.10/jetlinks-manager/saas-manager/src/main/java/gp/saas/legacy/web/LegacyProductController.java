@@ -496,8 +496,12 @@ public class LegacyProductController {
                                                       @PathVariable String format,
                                                       ServerHttpResponse response) {
         setDownloadHeader(response, "properties.", format);
-        return getProductPropertyMetadataList(productId)
-            .flatMapMany(Flux::fromIterable)
+        return productService
+            .findById(productId)
+            .switchIfEmpty(Mono.error(new ValidationException("产品不存在")))
+            .map(DeviceProductEntity::getMetadata)
+            .map(LegacyMetadataUtils::getProperties)
+            .flatMapMany(CustomizePropertyExcelInfo::getExportContentMapping)
             .as(data -> writeExcel(format, data))
             .map(bufferFactory::wrap)
             .as(response::writeWith);

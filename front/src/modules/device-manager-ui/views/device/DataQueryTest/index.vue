@@ -1,5 +1,13 @@
 <template>
   <j-page-container>
+    <a-tabs v-model:active-key="pageTab">
+      <a-tab-pane key="query" tab="统计接口查询" />
+      <a-tab-pane key="raw" tab="属性历史" />
+      <a-tab-pane key="simulation" tab="模拟数据补录" />
+    </a-tabs>
+    <Simulation v-if="pageTab === 'simulation'" @query="useSimulation" />
+    <PropertyHistory v-else-if="pageTab === 'raw'" :initial="historyInitial" />
+    <template v-else>
     <a-card :bordered="false" title="设备数据接口测试">
       <template #extra><a-button @click="goBack">返回设备列表</a-button></template>
       <a-tabs v-model:active-key="form.mode">
@@ -37,7 +45,7 @@
             </a-col>
             <a-col :xs="24" :lg="4">
               <a-form-item label="每台设备结果上限" required>
-                <a-input-number v-model:value="form.limit" aria-label="每台设备结果上限" :min="1" :max="1000" :precision="0" :disabled="loading" class="full-width" />
+                <a-input-number :value="form.limit ?? undefined" @change="form.limit = $event == null ? null : Number($event)" aria-label="每台设备结果上限" :min="1" :max="1000" :precision="0" :disabled="loading" class="full-width" />
               </a-form-item>
             </a-col>
           </template>
@@ -76,8 +84,8 @@
       <div v-if="submittedUrl" class="endpoint secondary">POST {{ submittedUrl }}</div>
       <a-table :columns="columns" :data-source="rows" row-key="key" :loading="loading" size="middle" :scroll="{ x: resultMode === 'aggregation' ? 800 : 1300 }" :pagination="{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['20', '50', '100'], showTotal: (total: number) => `共 ${total} 条` }">
         <template #bodyCell="{ column, record }">
-          <template v-if="timeKeys.has(column.dataIndex)">{{ formatTime(record[column.dataIndex]) }}</template>
-          <template v-else>{{ displayValue(record[column.dataIndex]) }}</template>
+          <template v-if="timeKeys.has(String(column.dataIndex))">{{ formatTime(record[String(column.dataIndex)]) }}</template>
+          <template v-else>{{ displayValue(record[String(column.dataIndex)]) }}</template>
         </template>
         <template #emptyText>{{ completed ? (errorMessage ? '查询失败，请查看错误信息' : '该时间范围内没有数据') : '填写参数后发送查询' }}</template>
       </a-table>
@@ -88,6 +96,7 @@
         </a-collapse-panel>
       </a-collapse>
     </a-card>
+    </template>
   </j-page-container>
 </template>
 
@@ -103,6 +112,20 @@ import {
 } from './utils'
 import type { QueryForm, ResultRow } from './utils'
 import DeviceSelect from './DeviceSelect.vue'
+import Simulation from './Simulation.vue'
+import PropertyHistory from './PropertyHistory.vue'
+import { queryGranularity } from './simulationUtils'
+import type { SimulationRequest } from '../../../api/simulation'
+const pageTab = ref('query')
+const historyInitial = ref<SimulationRequest>()
+function useSimulation(request: SimulationRequest, target: 'query' | 'raw') {
+  historyInitial.value = request
+  const granularity = queryGranularity(request.startTime, request.endTime)
+  Object.assign(form, { devices: [request.deviceId], property: request.propertyId,
+    range: [formatTime(request.startTime), formatTime(request.endTime)], mode: 'aggregation', limit: 1000, ...granularity })
+  deviceSelectionVersion.value++
+  pageTab.value = target
+}
 
 const menuStore = useMenuStore()
 function initialForm(): QueryForm {

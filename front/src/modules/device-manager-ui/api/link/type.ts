@@ -37,6 +37,29 @@ export const update = (data: Object) => request.patch(`/network/config`, data);
 
 export const detail = (id: string) => request.get(`/network/config/${id}`);
 
+export interface NetworkRuntime {
+    id: string;
+    type: string;
+    serverId: string;
+    configState?: 'enabled' | 'disabled' | 'paused';
+    available: boolean;
+    alive?: boolean | null;
+    details: {
+        connected?: boolean;
+        connecting?: boolean;
+        listening?: boolean;
+        remoteAddress?: string;
+        localAddress?: string;
+        bindAddress?: string;
+        clientId?: string;
+        connectionCount?: number;
+        connections?: { remoteHost?: string; remotePort?: number; clientId?: string }[];
+    };
+}
+
+export const getNetworkRuntime = (id: string) =>
+    request.get<NetworkRuntime>(`/network/config/${encodeURIComponent(id)}/_runtime`);
+
 /**
  * 获取TCP粘拆包TS资源
  */

@@ -33,11 +33,12 @@ const virtual = {
     import 'ant-design-vue/dist/reset.css';
     import i18n from '/src/locales/index.ts';
     import List from '/src/modules/device-manager-ui/views/link/Type/index.vue';
-    import Detail from '/src/modules/device-manager-ui/views/link/Type/Detail/index.vue';
+    import Detail from '/src/modules/device-manager-ui/views/link/Type/Detail/Route.vue';
     const router = createRouter({history:createWebHistory(), routes:[
       {path:'/', component:List},
       {name:'link/Type/Detail', path:'/network/:id', component:Detail},
     ]});
+    window.navigateNetwork = path => router.push(path);
     const app = createApp({render: () => h(RouterView)});
     app.use(Antd).use(createPinia()).use(i18n).use(router);
     const Wrapper = defineComponent({setup: (_, {slots}) => () => h('div', slots.default?.())});
@@ -62,12 +63,12 @@ const virtual = {
   `,
 }
 const server = await createServer({
-  configFile:false, root,
+  configFile:false, root, cacheDir:path.join(root, 'node_modules/.cache/network-component-vite'),
   resolve:{alias:[
     ...Object.keys(virtual).filter(key => key.startsWith('@/')).map(key => ({find:key, replacement:'\0' + key})),
     {find:'@', replacement:path.join(root,'src')},
   ]},
-  optimizeDeps:{entries:[], include:['vue','vue-router','pinia','vue-i18n','ant-design-vue','lodash-es']},
+  optimizeDeps:{noDiscovery:true, include:['vue','vue-router','pinia','vue-i18n','ant-design-vue','lodash-es']},
   server:{host:'127.0.0.1', port:9385, strictPort:true},
   css:{preprocessorOptions:{less:{modifyVars:{'error-color':'#ff4d4f'}, javascriptEnabled:true}}},
   plugins:[{

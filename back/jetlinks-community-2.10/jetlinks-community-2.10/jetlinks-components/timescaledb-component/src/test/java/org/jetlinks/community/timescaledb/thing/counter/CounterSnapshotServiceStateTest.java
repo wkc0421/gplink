@@ -154,6 +154,100 @@ class CounterSnapshotServiceStateTest {
             : List.of(LocalDateTime.of(2024, 1, 1, 0, 0), LocalDateTime.of(2024, 4, 1, 0, 0));
     }
 
+    @Test
+    void caggCandidateReadIsSeparateFromExactlyBoundedRawRead() throws Exception {
+        RecordingExecutor executor = new RecordingExecutor();
+        LocalDateTime time = BOUNDARY, sample = time.minusMinutes(1), bucket = time.minusDays(1);
+        executor.responder = request -> {
+            String sql = request.getSql();
+            if (sql.startsWith("SELECT * FROM")) return Flux.just(calendarConfig());
+            if (sql.contains("counter_snapshot_day") || sql.contains("counter_snapshot_hour")) return Flux.empty();
+            if (sql.contains("metrics_daily_agg")) {
+                assertThat(sql).doesNotContain("FROM \"public\".\"metrics\"");
+                assertThat(sql).contains("counter_cagg_refresh", "counter_snapshot_change");
+                return Flux.just(Map.of("device_id", "d1", "boundary_time", time,
+                    "bucket_start", bucket, "last_timestamp", sample));
+            }
+            if (sql.contains("FROM requested r LEFT JOIN LATERAL")) {
+                assertThat(sql).contains("\"timestamp\">=?::timestamp", "\"timestamp\"<=?::timestamp",
+                    "\"timestamp\">=r.sample_time", "counter_cagg_refresh", "counter_snapshot_change");
+                assertThat(request.getParameters()).contains(sample, time, bucket);
+                return Flux.just(Map.of("device_id", "d1", "boundary_time", time,
+                    "sample_time", sample, "value", "9007199254740993.123456789"));
+            }
+            return Flux.error(new AssertionError("Unexpected query " + sql));
+        };
+        CounterBoundary value = calendarService(executor).resolveBoundaries("product-1", "energy",
+            List.of("d1"), List.of(epoch(time))).block().get("d1").get(epoch(time));
+        assertThat(value.getValue()).isEqualTo("9007199254740993.123456789");
+        assertThat(value.getSource()).isEqualTo("CAGG");
+        assertThat(executor.queries).hasSize(5);
+        assertThat(executor.updates).isEmpty();
+    }
+
+    @Test
+    void firstReadingSeeksOneNonNullValuePerDeviceWithinTheExactRange() throws Exception {
+        RecordingExecutor executor = new RecordingExecutor();
+        executor.responder = request -> request.getSql().contains("SELECT raw_table")
+            ? Flux.just(Map.of("raw_table", "metrics"))
+            : Flux.just(Map.of("device_id", "d1", "value", "0"));
+        Map<String, String> result = service(executor).firstValuesInRange("product-1", "energy",
+            List.of("d1", "d2"), epoch(BOUNDARY), epoch(BOUNDARY.plusDays(1))).block();
+        assertThat(result).containsOnlyKeys("d1").containsEntry("d1", "0");
+        SqlRequest query = executor.queries.get(1);
+        assertThat(query.getSql()).contains("JOIN LATERAL", "value IS NOT NULL",
+            "ORDER BY \"timestamp\" ASC LIMIT 1", "\"timestamp\">?::timestamp", "\"timestamp\"<=?::timestamp")
+            .doesNotContain("DISTINCT ON");
+        assertThat(query.getParameters()).containsExactly("d1", "d2", "energy", BOUNDARY, BOUNDARY.plusDays(1));
+        assertThat(executor.updates).isEmpty();
+    }
+
+    @Test
+    void largeEmptyPrefixIsResolvedOnceWithoutDiscardingSnapshotsOrTheExactFirstSample() throws Exception {
+        RecordingExecutor executor = new RecordingExecutor();
+        List<LocalDateTime> times = IntStream.range(0, 9).mapToObj(i -> BOUNDARY.minusDays(8 - i)).toList();
+        LocalDateTime first = times.get(7);
+        executor.responder = request -> {
+            String sql = request.getSql();
+            if (sql.startsWith("SELECT * FROM")) return Flux.just(calendarConfig());
+            if (sql.contains("counter_snapshot_day")) return Flux.just(snapshotRow(times.get(0), CounterBoundary.VALID));
+            if (sql.contains("counter_snapshot_hour")) return Flux.empty();
+            if (sql.contains("AS relation_name")) return Flux.just(Map.of("relation_name", "metrics"));
+            if (sql.contains("AS first_sample")) return Flux.just(Map.of("device_id", "d1", "first_sample", first));
+            assertThat(request.getParameters()).doesNotContain(times.subList(0, 7).toArray());
+            if (sql.contains("metrics_daily_agg") || sql.contains("metrics_hourly_agg")) return Flux.empty();
+            if (sql.contains("FROM requested r LEFT JOIN LATERAL")) return Flux.fromIterable(times.subList(7, 9))
+                .map(time -> Map.<String, Object>of("device_id", "d1", "boundary_time", time, "sample_time", first, "value", "42"));
+            return Flux.error(new AssertionError("Unexpected SQL: " + sql));
+        };
+        Map<Long, CounterBoundary> result = calendarService(executor).resolveBoundaries("product-1", "energy",
+            List.of("d1"), times.stream().map(CounterSnapshotServiceStateTest::epoch).toList()).block().get("d1");
+        assertThat(result.get(epoch(times.get(0))).getValue()).isEqualTo("123.4567890123456789");
+        for (LocalDateTime time : times.subList(1, 7)) {
+            assertThat(result.get(epoch(time)).getState()).isEqualTo(CounterBoundary.NO_VALUE);
+            assertThat(result.get(epoch(time)).getSource()).isEqualTo("BEFORE_FIRST_RAW");
+        }
+        assertThat(result.get(epoch(first)).getValue()).isEqualTo("42");
+        assertThat(executor.queries.stream().filter(q -> q.getSql().contains("AS first_sample"))).hasSize(1);
+        assertThat(executor.updates).isEmpty();
+    }
+
+    @Test
+    void firstSampleProbeFailureCannotBeTurnedIntoKnownEmptyData() throws Exception {
+        RecordingExecutor executor = new RecordingExecutor();
+        executor.responder = request -> {
+            String sql = request.getSql();
+            if (sql.startsWith("SELECT * FROM")) return Flux.just(calendarConfig());
+            if (sql.contains("AS relation_name")) return Flux.just(Map.of("relation_name", "metrics"));
+            if (sql.contains("AS first_sample")) return Flux.error(new IllegalStateException("first sample lookup failed"));
+            return Flux.empty();
+        };
+        StepVerifier.create(calendarService(executor).resolveBoundaries("product-1", "energy", List.of("d1"),
+            IntStream.range(0, 5).mapToObj(i -> epoch(BOUNDARY.minusDays(i))).toList()))
+            .expectErrorMessage("first sample lookup failed").verify();
+        assertThat(executor.updates).isEmpty();
+    }
+
     private static long epoch(LocalDateTime time) {
         return time.atZone(SHANGHAI).toInstant().toEpochMilli();
     }
@@ -285,9 +379,9 @@ class CounterSnapshotServiceStateTest {
 
         assertThat(values).containsEntry("d1", "1718479.63").doesNotContainKey("d2");
         SqlRequest request = executor.queries.get(1);
-        assertThat(request.getSql()).contains("DISTINCT ON (\"deviceId\")",
+        assertThat(request.getSql()).contains("JOIN LATERAL",
             "\"timestamp\">?::timestamp", "\"timestamp\"<=?::timestamp", "value IS NOT NULL",
-            "ORDER BY \"deviceId\",\"timestamp\" ASC");
+            "ORDER BY \"timestamp\" ASC LIMIT 1");
         assertThat(request.getParameters()).contains("energy", BOUNDARY, "d1", "d2");
         assertThat(executor.updates).isEmpty();
     }
@@ -344,7 +438,7 @@ class CounterSnapshotServiceStateTest {
     @Test
     void fiftiethDeviceAdvancesToFiftyFirstWithoutCompletingTask() throws Exception {
         RecordingExecutor executor = new RecordingExecutor();
-        executor.responder = request -> request.getSql().contains("SELECT device_id FROM")
+        executor.responder = request -> request.getSql().contains("SELECT d.device_id FROM")
             ? Flux.just(Map.of("device_id", "d051")) : Flux.empty();
         CounterSnapshotService service = service(executor);
         List<String> firstFifty = IntStream.rangeClosed(1, 50)
@@ -390,6 +484,9 @@ class CounterSnapshotServiceStateTest {
             if (sql.contains("counter_snapshot_config") && sql.contains("FOR UPDATE")) {
                 return Flux.just(Map.of("enabled", true, "raw_table", "properties_test",
                     "source_version", 3L, "product_id", "product-1"));
+            }
+            if (sql.contains("AS effective_start")) {
+                return Flux.just(Map.of("device_id", "d001", "effective_start", BOUNDARY));
             }
             if (sql.contains("FROM requested r LEFT JOIN LATERAL")
                 && sql.contains("properties_test")) {

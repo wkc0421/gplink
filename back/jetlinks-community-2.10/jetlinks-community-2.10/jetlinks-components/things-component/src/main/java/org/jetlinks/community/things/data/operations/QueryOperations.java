@@ -35,6 +35,11 @@ import java.util.List;
  */
 public interface QueryOperations extends Wrapper {
 
+    /** Optional batch capability; unsupported stores must not fall back to a full history scan. */
+    default java.util.Optional<PropertyExtremesQuery> propertyExtremesQuery() {
+        return java.util.Optional.empty();
+    }
+
     /**
      * 按条件查询每一个属性,通常用于同时查询多个属性值.
      *

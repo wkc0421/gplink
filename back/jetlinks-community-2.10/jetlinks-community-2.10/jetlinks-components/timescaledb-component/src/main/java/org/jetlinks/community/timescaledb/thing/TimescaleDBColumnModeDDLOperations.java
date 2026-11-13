@@ -125,11 +125,17 @@ public class TimescaleDBColumnModeDDLOperations extends ColumnModeDDLOperationsB
 
         table.addFeature(new CreateHypertable(ThingsDataConstants.COLUMN_TIMESTAMP, this.properties.getChunkTimeInterval()));
 
+        Mono<Void> ensureLogRetention = metricType == MetricType.log
+            ? Mono.defer(() -> DeviceLogRetentionStartupReconciler.ensure(
+                database, this.properties, table.getName()))
+            : Mono.empty();
+
         if (ddl) {
             return builder
                 .commit()
                 .reactive()
                 .then()
+                .then(ensureLogRetention)
                 .contextWrite(ctx -> ctx.put(Logger.class, log));
         }
         return schema
@@ -137,6 +143,7 @@ public class TimescaleDBColumnModeDDLOperations extends ColumnModeDDLOperationsB
             .doOnNext(oldTable -> oldTable.replace(table))
             .switchIfEmpty(Mono.fromRunnable(() -> schema.addTable(table)))
             .then()
+            .then(ensureLogRetention)
             .contextWrite(ctx -> ctx.put(Logger.class, log));
     }
 

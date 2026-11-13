@@ -133,7 +133,10 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
 
         // Property-table retention is reconciled after DDL by ContinuousAggregateManager,
         // including already-existing jobs whose drop_after was configured to an older value.
-        if (this.properties.getRetentionPolicy() != null && metricType != MetricType.properties) {
+        boolean separateLogRetention = metricType == MetricType.log
+            && this.properties.getLogRetentionPolicy() != null;
+        if (this.properties.getRetentionPolicy() != null && metricType != MetricType.properties
+            && !separateLogRetention) {
             table.addFeature(new CreateRetentionPolicy(this.properties.getRetentionPolicy()));
         }
 
@@ -152,7 +155,10 @@ public class TimescaleDBRowModeDDLOperations extends RowModeDDLOperationsBase {
         Mono<Void> ensureCagg = metricType == MetricType.properties
             ? Mono.defer(() -> new ContinuousAggregateManager(database, this.properties,
                     metricBuilder.getThingIdProperty()).ensure(table.getName()))
-            : Mono.empty();
+            : separateLogRetention
+                ? Mono.defer(() -> DeviceLogRetentionStartupReconciler.ensure(
+                    database, this.properties, table.getName()))
+                : Mono.empty();
 
         if (ddl) {
             return builder

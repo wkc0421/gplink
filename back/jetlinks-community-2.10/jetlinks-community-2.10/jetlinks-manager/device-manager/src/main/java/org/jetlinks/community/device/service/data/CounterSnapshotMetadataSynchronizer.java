@@ -2,115 +2,90 @@ package org.jetlinks.community.device.service.data;
 
 import lombok.extern.slf4j.Slf4j;
 import org.hswebframework.web.crud.events.EntityCreatedEvent;
+import org.hswebframework.web.crud.events.EntityDeletedEvent;
 import org.hswebframework.web.crud.events.EntityModifyEvent;
 import org.hswebframework.web.crud.events.EntitySavedEvent;
 import org.jetlinks.community.device.entity.DeviceProductEntity;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
-import org.jetlinks.community.device.service.LocalDeviceProductService;
-import org.jetlinks.community.timescaledb.thing.counter.CounterConfig;
 import org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService;
-import org.jetlinks.core.metadata.types.NumberType;
-import org.jetlinks.supports.official.JetLinksDeviceMetadataCodec;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Scheduled;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Pauses counters when their product property is no longer eligible. */
+/** Keeps policy membership and eligibility current without deleting retained history. */
 @Component
 @Slf4j
 public class CounterSnapshotMetadataSynchronizer {
-
-    private final LocalDeviceProductService products;
+    private final HistoryStatisticsMetadataService metadata;
     private final ObjectProvider<CounterSnapshotService> snapshots;
+    private final AtomicBoolean reconciliationRunning = new AtomicBoolean();
 
-    public CounterSnapshotMetadataSynchronizer(LocalDeviceProductService products,
+    public CounterSnapshotMetadataSynchronizer(HistoryStatisticsMetadataService metadata,
                                                ObjectProvider<CounterSnapshotService> snapshots) {
-        this.products = products;
+        this.metadata = metadata;
         this.snapshots = snapshots;
     }
 
     @EventListener
-    public void onSaved(EntitySavedEvent<DeviceProductEntity> event) {
-        event.async(reconcile(event.getEntity()));
+    public void onReady(ApplicationReadyEvent event) {
+        metadata.ensureInitialized().subscribe(ignored -> { }, error -> log.warn("Unable to reconcile counter policy membership", error));
+    }
+
+    @Scheduled(initialDelay = 300000, fixedDelay = 300000)
+    public void reconcileMembership() {
+        if (!reconciliationRunning.compareAndSet(false, true)) return;
+        metadata.ensureInitialized().then(metadata.reconcileExisting()).doFinally(signal -> reconciliationRunning.set(false)).subscribe(ignored -> { },
+            error -> log.warn("Unable to reconcile counter policy membership", error));
     }
 
     @EventListener
-    public void onModified(EntityModifyEvent<DeviceProductEntity> event) {
-        event.async(reconcile(event.getBefore()));
-    }
+    public void onSaved(EntitySavedEvent<DeviceProductEntity> event) { event.async(products(event.getEntity())); }
 
     @EventListener
-    public void onDeviceCreated(EntityCreatedEvent<DeviceInstanceEntity> event) {
-        event.async(registerDevices(event.getEntity()));
-    }
+    public void onModified(EntityModifyEvent<DeviceProductEntity> event) { event.async(products(event.getAfter())); }
 
     @EventListener
-    public void onDeviceSaved(EntitySavedEvent<DeviceInstanceEntity> event) {
-        event.async(registerDevices(event.getEntity()));
-    }
+    public void onProductDeleted(EntityDeletedEvent<DeviceProductEntity> event) { event.async(products(event.getEntity())); }
 
     @EventListener
-    public void onDeviceModified(EntityModifyEvent<DeviceInstanceEntity> event) {
-        event.async(registerDevices(event.getAfter()));
-    }
+    public void onDeviceCreated(EntityCreatedEvent<DeviceInstanceEntity> event) { event.async(devices(event.getEntity())); }
 
-    private Mono<Void> registerDevices(List<DeviceInstanceEntity> instances) {
+    @EventListener
+    public void onDeviceSaved(EntitySavedEvent<DeviceInstanceEntity> event) { event.async(devices(event.getEntity())); }
+
+    @EventListener
+    public void onDeviceModified(EntityModifyEvent<DeviceInstanceEntity> event) { event.async(devices(event.getAfter())); }
+
+    @EventListener
+    public void onDeviceDeleted(EntityDeletedEvent<DeviceInstanceEntity> event) {
         CounterSnapshotService service = snapshots.getIfAvailable();
-        if (service == null || instances == null || instances.isEmpty()) return Mono.empty();
-        Map<String, List<String>> byProduct = instances.stream()
-            .filter(instance -> instance.getId() != null && instance.getProductId() != null)
-            .collect(Collectors.groupingBy(DeviceInstanceEntity::getProductId,
-                Collectors.mapping(DeviceInstanceEntity::getId, Collectors.toList())));
-        return Flux.fromIterable(byProduct.entrySet())
-            .concatMap(entry -> service.registerDevices(entry.getKey(), entry.getValue())
-                .onErrorResume(error -> {
-                    log.warn("Unable to register new counter snapshot devices for product {}", entry.getKey(), error);
-                    return Mono.empty();
-                }))
+        if (service != null) event.async(Flux.fromIterable(event.getEntity()).map(DeviceInstanceEntity::getId)
+            .filter(Objects::nonNull).distinct().concatMap(service::markDeviceInactive).then());
+    }
+
+    private Mono<Void> devices(List<DeviceInstanceEntity> instances) {
+        if (instances == null || instances.isEmpty()) return Mono.empty();
+        return Flux.fromIterable(instances).map(DeviceInstanceEntity::getId).filter(Objects::nonNull).distinct()
+            .concatMap(id -> metadata.syncDevice(id).onErrorResume(error -> {
+                log.warn("Unable to reconcile counter device {}", id, error); return Mono.empty();
+            }))
             .then();
     }
 
-    private Mono<Void> reconcile(List<DeviceProductEntity> productsInEvent) {
-        CounterSnapshotService service = snapshots.getIfAvailable();
-        if (service == null || productsInEvent == null || productsInEvent.isEmpty()) {
-            return Mono.empty();
-        }
-        return Flux.fromIterable(productsInEvent)
-            .map(DeviceProductEntity::getId)
-            .filter(id -> id != null && !id.isEmpty())
-            .distinct()
-            .concatMap(productId -> products.findById(productId)
-                .flatMap(product -> eligibleProperties(product)
-                    .flatMapMany(eligible -> service.list(productId)
-                        .filter(CounterConfig::isEnabled)
-                        .filter(config -> !eligible.contains(config.getPropertyId()))
-                        .concatMap(config -> service.suspend(productId,
-                            config.getPropertyId(),
-                            "Property removed or changed to a non-numeric type")))
-                    .then())
-                .onErrorResume(error -> {
-                    log.warn("Unable to reconcile counter snapshot metadata for product {}", productId, error);
-                    return Mono.empty();
-                }))
+    private Mono<Void> products(List<DeviceProductEntity> products) {
+        if (products == null || products.isEmpty()) return Mono.empty();
+        return Flux.fromIterable(products).map(DeviceProductEntity::getId).filter(Objects::nonNull).distinct()
+            .concatMap(id -> metadata.syncProduct(id).onErrorResume(error -> {
+                log.warn("Unable to reconcile counter product {}", id, error); return Mono.empty();
+            }))
             .then();
-    }
-
-    private Mono<Set<String>> eligibleProperties(DeviceProductEntity product) {
-        if (product.getMetadata() == null) {
-            return Mono.just(Set.of());
-        }
-        return JetLinksDeviceMetadataCodec.getInstance()
-            .decode(product.getMetadata())
-            .map(metadata -> metadata.getProperties().stream()
-                .filter(property -> property.getValueType() instanceof NumberType)
-                .map(property -> property.getId())
-                .collect(Collectors.toSet()));
     }
 }

@@ -633,8 +633,12 @@ public class DeviceInstanceController implements
         @PathVariable @Parameter(description = "产品ID") String productId,
         @RequestParam(defaultValue = "false") @Parameter(description = "自动启用") boolean autoDeploy,
         @RequestParam @Parameter(description = "文件地址,支持csv,xlsx文件格式") String fileUrl,
+        @RequestParam(defaultValue = "false") @Parameter(description = "仅新增，拒绝已有设备ID") boolean createOnly,
         @RequestParam(defaultValue = "32") @Parameter int speed
     ) {
+        if (createOnly) {
+            return doCreateOnlyImport(productId, fileUrl, autoDeploy);
+        }
         return Authentication
             .currentReactive()
             .flatMapMany(auth -> this
@@ -667,6 +671,60 @@ public class DeviceInstanceController implements
                     })
                 )
             );
+    }
+
+    private Flux<ImportDeviceInstanceResult> doCreateOnlyImport(String productId, String fileUrl, boolean autoDeploy) {
+        return Authentication.currentReactive()
+            .flatMapMany(auth -> getDeviceProductDetail(productId)
+                .map(detail -> new CreateOnlyDeviceExcelImporter(fileManager, webClient, detail.getT1(),
+                    detail.getT4(), service, auth, row -> insertImportedDevice(row, autoDeploy)))
+                .flatMapMany(importer -> summarizeCreateOnlyImport(importer.doImport(fileUrl))));
+    }
+
+    Mono<Void> insertImportedDevice(DeviceExcelInfo row, boolean autoDeploy) {
+        DeviceInstanceEntity device = row.getDevice();
+        return service.insert(device)
+            .flatMap(count -> count == 1 ? Mono.just(count)
+                : Mono.error(new BusinessException("设备未创建: " + device.getId())))
+            .then(Mono.defer(() -> tagRepository.save(Flux.fromIterable(row.getTags()))))
+            .then(autoDeploy ? Mono.defer(() -> service.deploy(Flux.just(device))
+                .switchIfEmpty(Mono.error(new BusinessException("设备启用未返回结果")))
+                .concatMap(result -> result.isSuccess() ? Mono.empty()
+                    : Mono.error(new BusinessException("设备启用失败: " + result.getMessage())))
+                .then()) : Mono.empty())
+            .as(transactionalOperator::transactional)
+            .onErrorMap(DuplicateKeyException.class,
+                error -> new BusinessException("设备ID已存在或文件内重复: " + device.getId()));
+    }
+
+    static Flux<ImportDeviceInstanceResult> summarizeCreateOnlyImport(
+        Flux<AbstractImporter.ImportResult<DeviceExcelInfo>> results) {
+        return Flux.defer(() -> {
+            long[] counts = new long[2];
+            return results.map(result -> {
+                ImportDeviceInstanceResult response = new ImportDeviceInstanceResult();
+                if (result.getType() == AbstractImporter.ImportResultType.detailFile) {
+                    response.setType("detailFile");
+                    response.setSuccess(true);
+                    response.setDetailFile(result.getDetailFile());
+                } else {
+                    response.setType("row");
+                    response.setRow(result.getRow() + 2); // Excel header occupies the first row.
+                    response.setDeviceId(result.getData() == null ? null : result.getData().getId());
+                    response.setSuccess(result.isSuccess());
+                    response.setMessage(result.getMessage());
+                    counts[result.isSuccess() ? 0 : 1]++;
+                }
+                return response;
+            }).concatWith(Mono.fromSupplier(() -> {
+                ImportDeviceInstanceResult completed = new ImportDeviceInstanceResult();
+                completed.setType("complete");
+                completed.setSuccess(counts[1] == 0 && counts[0] > 0);
+                completed.setSuccessCount(counts[0]);
+                completed.setFailureCount(counts[1]);
+                return completed;
+            }));
+        });
     }
 
     private Flux<ImportDeviceInstanceResult> handleImportDevice(Flux<Tuple2<DeviceInstanceEntity, List<DeviceTagEntity>>> flux,

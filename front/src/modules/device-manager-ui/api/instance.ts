@@ -1,6 +1,6 @@
 import { request, ndJson } from '@jetlinks-web/core'
 import {getToken} from '@jetlinks-web/utils'
-import {BASE_API, TOKEN_KEY_URL} from '@jetlinks-web/constants'
+import {BASE_API, TOKEN_KEY, TOKEN_KEY_URL} from '@jetlinks-web/constants'
 import type { DeviceInstance } from '../views/device/Instance/typings'
 import type { DeviceMetadata, UnitType } from '../views/device/Product/typings';
 
@@ -106,6 +106,15 @@ export const templateDownload = (productId: string, type: string) => request.get
  * @returns
  */
 export const deviceImport = (productId: string, fileUrl: string, autoDeploy: boolean) => `${BASE_API}/device-instance/${productId}/import/_withlog?fileUrl=${fileUrl}&autoDeploy=${autoDeploy}&${TOKEN_KEY_URL}=${getToken()}`
+
+// Fetch has no SSE reconnection behavior. Keep the token out of URLs and error messages.
+export const createOnlyDeviceImport = (productId: string, fileUrl: string, autoDeploy: boolean, signal: AbortSignal) => {
+    const params = new URLSearchParams({ fileUrl, autoDeploy: String(autoDeploy), createOnly: 'true' })
+    return fetch(`${BASE_API}/device-instance/${encodeURIComponent(productId)}/import/_withlog?${params}`, {
+        headers: { [TOKEN_KEY]: getToken(), Accept: 'text/event-stream' },
+        credentials: 'same-origin', signal,
+    })
+}
 
 /**
  * 插件设备导入
@@ -255,7 +264,7 @@ export const unbindBatchDevice = (deviceId: string, data: Record<string, any>) =
  * @param data
  * @returns
  */
-export const bindDevice = (deviceId: string, data: Record<string, any>) => request.post(`/device/gateway/${deviceId}/bind`, data)
+export const bindDevice = (deviceId: string, data: Record<string, any>, validateRuntime = false) => request.post(`/device/gateway/${deviceId}/bind${validateRuntime ? '?validateRuntime=true' : ''}`, data)
 
 /**
  * 云端批量禁用设备-云边协同

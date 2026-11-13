@@ -170,6 +170,7 @@
               "device-product"
             ],
             "permissions": [
+              { "permission": "property-library", "actions": ["query"] },
               {
                 "permission": "transparent-codec",
                 "actions": [
@@ -225,6 +226,7 @@
                   "en": "View"
                 },
                 "permissions": [
+                  { "permission": "property-library", "actions": ["query"] },
                   {
                     "permission": "protocol-supports",
                     "actions": [
@@ -254,6 +256,7 @@
                   "en": "Edit"
                 },
                 "permissions": [
+                  { "permission": "property-library", "actions": ["query"] },
                   {
                     "permission": "protocol-supports",
                     "actions": [
@@ -426,6 +429,7 @@
                   "en": "Add"
                 },
                 "permissions": [
+                  { "permission": "property-library", "actions": ["query"] },
                   {
                     "permission": "protocol-supports",
                     "actions": [
@@ -485,6 +489,7 @@
               "device-instance"
             ],
             "permissions": [
+              { "permission": "property-library", "actions": ["query"] },
               {
                 "permission": "transparent-codec",
                 "actions": [
@@ -541,6 +546,7 @@
                   "en": "View"
                 },
                 "permissions": [
+                  { "permission": "property-library", "actions": ["query"] },
                   {
                     "permission": "device-product",
                     "actions": [
@@ -630,6 +636,7 @@
                   "en": "Edit"
                 },
                 "permissions": [
+                  { "permission": "property-library", "actions": ["query"] },
                   {
                     "permission": "file",
                     "actions": [
@@ -784,6 +791,7 @@
                   "en": "Add"
                 },
                 "permissions": [
+                  { "permission": "property-library", "actions": ["query"] },
                   {
                     "permission": "file",
                     "actions": [
@@ -1102,6 +1110,213 @@
               "text": "支持",
               "value": "support"
             },
+            "supportDataAccess": false
+          },
+          {
+            "code": "device/TcpServerAccess",
+            "name": "TCP服务端向导",
+            "i18nMessages": {
+              "name": {
+                "zh_CN": "TCP服务端向导",
+                "en_US": "TCP Server Wizard",
+                "en": "TCP Server Wizard"
+              }
+            },
+            "owner": "iot",
+            "id": "2f1bdf09d5784ba1973139a81c6eb6fd",
+            "url": "/iot/device/TcpServerAccess",
+            "icon": "CloudServerOutlined",
+            "sortIndex": 9,
+            "showPage": [
+              "network-config",
+              "device-gateway",
+              "device-product",
+              "device-instance"
+            ],
+            "permissions": [
+              {
+                "permission": "network-config",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "device-gateway",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "protocol-supports",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "device-product",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              },
+              {
+                "permission": "device-instance",
+                "actions": [
+                  "query",
+                  "save"
+                ]
+              }
+            ],
+            "buttons": [
+              {
+                "id": "view",
+                "name": "查看",
+                "i18nMessages": {
+                  "zh_CN": "查看",
+                  "en_US": "View",
+                  "en": "View"
+                },
+                "permissions": [
+                  {
+                    "permission": "network-config",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-gateway",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-product",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-instance",
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "save",
+                "name": "保存",
+                "i18nMessages": {
+                  "zh_CN": "保存",
+                  "en_US": "Save",
+                  "en": "Save"
+                },
+                "permissions": [
+                  {
+                    "permission": "network-config",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "device-gateway",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "protocol-supports",
+                    "actions": [
+                      "query"
+                    ]
+                  },
+                  {
+                    "permission": "device-product",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  },
+                  {
+                    "permission": "device-instance",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "uploadProtocol",
+                "name": "上传协议",
+                "i18nMessages": {
+                  "zh_CN": "上传协议",
+                  "en_US": "Upload Protocol",
+                  "en": "Upload Protocol"
+                },
+                "permissions": [
+                  {
+                    "permission": "protocol-supports",
+                    "actions": [
+                      "query",
+                      "save"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accessSupport": {
+              "text": "支持",
+              "value": "support"
+            },
+            "supportDataAccess": false
+          },
+          {
+            "code": "device/PropertyLibrary",
+            "name": "采集项库",
+            "i18nMessages": { "name": { "zh_CN": "采集项库", "en_US": "Property Library", "en": "Property Library" } },
+            "owner": "iot",
+            "id": "c14ef3854ad04e7981929810da825b97",
+            "url": "/iot/device/PropertyLibrary",
+            "icon": "DatabaseOutlined",
+            "sortIndex": 4.5,
+            "showPage": ["property-library"],
+            "permissions": [{ "permission": "property-library", "actions": ["query"] }],
+            "buttons": [
+              { "id": "view", "name": "查看", "permissions": [{ "permission": "property-library", "actions": ["query"] }] },
+              { "id": "add", "name": "新增", "permissions": [{ "permission": "property-library", "actions": ["query", "save"] }] },
+              { "id": "update", "name": "编辑", "permissions": [{ "permission": "property-library", "actions": ["query", "save"] }] },
+              { "id": "import", "name": "导入", "permissions": [{ "permission": "property-library", "actions": ["query", "save"] }] },
+              { "id": "delete", "name": "删除", "permissions": [{ "permission": "property-library", "actions": ["query", "delete"] }] }
+            ],
+            "accessSupport": { "text": "不支持", "value": "unsupported" },
+            "supportDataAccess": false
+          },
+          {
+            "code": "device/HistoryStatistics",
+            "name": "历史统计",
+            "i18nMessages": { "name": { "zh_CN": "历史统计", "en_US": "History Statistics", "en": "History Statistics" } },
+            "owner": "iot",
+            "id": "b5fb36d7917f4ee48ec779066a8f4914",
+            "url": "/iot/device/HistoryStatistics",
+            "icon": "BarChartOutlined",
+            "sortIndex": 4.6,
+            "showPage": ["device-product", "device-instance"],
+            "permissions": [
+              { "permission": "device-product", "actions": ["query"] },
+              { "permission": "device-instance", "actions": ["query"] }
+            ],
+            "buttons": [
+              { "id": "view", "name": "查看", "permissions": [{ "permission": "device-product", "actions": ["query"] }, { "permission": "device-instance", "actions": ["query"] }] },
+              { "id": "updateProduct", "name": "管理产品默认", "permissions": [{ "permission": "device-product", "actions": ["query", "save"] }] },
+              { "id": "updateDevice", "name": "管理设备例外", "permissions": [{ "permission": "device-instance", "actions": ["query", "save"] }] }
+            ],
+            "accessSupport": { "text": "不支持", "value": "unsupported" },
             "supportDataAccess": false
           },
           {

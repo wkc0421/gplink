@@ -41,6 +41,84 @@ import static org.mockito.Mockito.when;
 
 class LegacyCounterIntervalRoutingTest {
 
+    @Test
+    void devicesOfOneProductUseTheirOwnPolicyForHistoryAndSummary() {
+        Fixture fixture = new Fixture("excluded", "enabled");
+        List<Long> boundaries = calendarBoundaries("week");
+        long start = boundaries.get(0), end = boundaries.get(2);
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(Map.of(
+                "excluded", new CounterReadContext(false, 1, 1, 1),
+                "enabled", new CounterReadContext(true, 1, 1, 1))));
+        Map<Long, CounterBoundary> values = new LinkedHashMap<>();
+        boundaries.forEach(time -> values.put(time, boundary(time, time == start ? "100" : "150")));
+        when(fixture.snapshots.resolveBoundaries("product-1", "energy", List.of("enabled"), boundaries))
+            .thenReturn(Mono.just(Map.of("enabled", values)));
+        when(fixture.raw.queryPropertyAtBoundaries("excluded", "energy", start, end, boundaries))
+            .thenReturn(Mono.just(new PropertyBoundaryValues("energy", start, end, 10,
+                boundaries.stream().map(time -> new PropertyBoundaryValues.BoundaryValue(time, 20)).toList())));
+
+        List<List<DeviceIntervalDataEntity>> history = fixture.controller.queryDeviceIntervalHistory(
+            "week", start, end, fixture.request()).collectList().block();
+        assertThat(history).extracting(rows -> rows.get(0).getDeviceId()).containsExactly("excluded", "enabled");
+        assertThat(history.get(1).get(0).getStartValue()).isEqualTo(new BigDecimal("100"));
+        verify(fixture.raw).queryPropertyAtBoundaries("excluded", "energy", start, end, boundaries);
+        verify(fixture.snapshots).resolveBoundaries("product-1", "energy", List.of("enabled"), boundaries);
+
+        when(fixture.snapshots.summaryBoundaryValues(
+            "product-1", "energy", List.of("enabled"), start, false, false))
+            .thenReturn(Mono.just(Map.of("enabled", "100")));
+        when(fixture.snapshots.summaryBoundaryValues(
+            "product-1", "energy", List.of("enabled"), end, true, false))
+            .thenReturn(Mono.just(Map.of("enabled", "150")));
+        when(fixture.raw.queryEachOneProperties(eq("excluded"),
+            org.mockito.ArgumentMatchers.any(org.hswebframework.web.api.crud.entity.QueryParamEntity.class), eq("energy")))
+            .thenReturn(reactor.core.publisher.Flux.empty());
+        List<DeviceIntervalDataEntity> summary = fixture.controller.queryDeviceInterval(
+            start, end, fixture.request()).collectList().block();
+        assertThat(summary).extracting(DeviceIntervalDataEntity::getDeviceId).containsExactly("excluded", "enabled");
+        assertThat(summary.get(0).getStartValue()).isNull();
+        assertThat(summary.get(1).getStartValue()).isEqualTo(new BigDecimal("100"));
+        assertThat(summary.get(1).getEndValue()).isEqualTo(new BigDecimal("150"));
+    }
+
+    @Test
+    void changingOneDevicePolicyInvalidatesOnlyItsHistoryCache() {
+        Fixture fixture = new Fixture("d1", "d2");
+        List<Long> boundaries = calendarBoundaries("week");
+        long start = boundaries.get(0), end = boundaries.get(2);
+        java.util.concurrent.atomic.AtomicLong revision = new java.util.concurrent.atomic.AtomicLong(1);
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenAnswer(call -> {
+                CounterReadContext first = new CounterReadContext(true, 1, 1, 1);
+                first.setPolicyRevision(revision.get());
+                return Mono.just(Map.of("d1", first, "d2", new CounterReadContext(true, 1, 1, 1)));
+            });
+        when(fixture.snapshots.resolveBoundaries(eq("product-1"), eq("energy"), anyCollection(), eq(boundaries)))
+            .thenAnswer(call -> {
+                Map<String, Map<Long, CounterBoundary>> result = new LinkedHashMap<>();
+                Collection<String> requested = call.getArgument(2);
+                for (String id : requested) {
+                    Map<Long, CounterBoundary> values = new LinkedHashMap<>();
+                    boundaries.forEach(time -> values.put(time, boundary(time, time == start
+                        ? Long.toString(id.equals("d1") ? revision.get() * 100 : 100) : "500")));
+                    result.put(id, values);
+                }
+                return Mono.just(result);
+            });
+        for (int attempt = 0; attempt < 2; attempt++) {
+            fixture.controller.queryDeviceIntervalHistory("week", start, end, fixture.request()).collectList().block();
+        }
+        revision.incrementAndGet();
+        List<List<DeviceIntervalDataEntity>> updated = fixture.controller.queryDeviceIntervalHistory(
+            "week", start, end, fixture.request()).collectList().block();
+        assertThat(updated.get(0).get(0).getStartValue()).isEqualTo(new BigDecimal("200"));
+        assertThat(updated.get(1).get(0).getStartValue()).isEqualTo(new BigDecimal("100"));
+        verify(fixture.snapshots, times(1)).resolveBoundaries("product-1", "energy", List.of("d1", "d2"), boundaries);
+        verify(fixture.snapshots, times(1)).resolveBoundaries("product-1", "energy", List.of("d1"), boundaries);
+        verifyNoInteractions(fixture.raw);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"week", "quarter"})
     void calendarHistoryUsesConfiguredBoundariesInDeviceOrderAndInvalidatesVersionedCache(String type) {
@@ -48,8 +126,8 @@ class LegacyCounterIntervalRoutingTest {
         List<Long> boundaries = calendarBoundaries(type);
         long start = boundaries.get(0), end = boundaries.get(2);
         java.util.concurrent.atomic.AtomicLong version = new java.util.concurrent.atomic.AtomicLong(1);
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenAnswer(call -> Mono.just(new CounterReadContext(true, version.get(), 1, 1)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenAnswer(call -> Mono.just(fixture.contexts(new CounterReadContext(true, version.get(), 1, 1))));
         when(fixture.snapshots.resolveBoundaries(
             eq("product-1"), eq("energy"), anyCollection(), eq(boundaries)))
             .thenAnswer(call -> {
@@ -99,8 +177,8 @@ class LegacyCounterIntervalRoutingTest {
         Fixture fixture = new Fixture("d1");
         List<Long> boundaries = calendarBoundaries(type);
         long start = boundaries.get(0), end = boundaries.get(2);
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenReturn(Mono.just(new CounterReadContext(false, 0, 0, 0)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(false, 0, 0, 0))));
         when(fixture.raw.queryPropertyAtBoundaries("d1", "energy", start, end, boundaries))
             .thenReturn(Mono.just(new PropertyBoundaryValues("energy", start, end, 10,
                 boundaries.stream().map(time -> new PropertyBoundaryValues.BoundaryValue(time, 10)).toList())));
@@ -117,8 +195,8 @@ class LegacyCounterIntervalRoutingTest {
     void calendarHistorySnapshotFailureIsNotConvertedToEmptyOrRawResult(String type) {
         Fixture fixture = new Fixture("d1");
         List<Long> boundaries = calendarBoundaries(type);
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
         when(fixture.snapshots.resolveBoundaries(
             eq("product-1"), eq("energy"), anyCollection(), anyCollection()))
             .thenReturn(Mono.error(new IllegalStateException("snapshot database unavailable")));
@@ -142,8 +220,8 @@ class LegacyCounterIntervalRoutingTest {
         long middle = timestamp("2024-01-20T09:00:00");
         long end = timestamp("2024-01-20T10:00:00");
         long previous = timestamp("2024-01-19T23:00:00");
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
         Map<Long, CounterBoundary> values = new LinkedHashMap<>();
         for (long boundary : List.of(start, middle, end)) {
             values.put(boundary, new CounterBoundary(boundary, "100", previous, CounterBoundary.VALID, "SNAPSHOT"));
@@ -170,8 +248,8 @@ class LegacyCounterIntervalRoutingTest {
         long start = timestamp("2024-01-01T08:00:00");
         long middle = timestamp("2024-01-01T09:00:00");
         long end = timestamp("2024-01-01T10:00:00");
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
         Map<Long, CounterBoundary> values = new LinkedHashMap<>();
         values.put(start, boundary(start, null));
         values.put(middle, boundary(middle, "10"));
@@ -180,16 +258,119 @@ class LegacyCounterIntervalRoutingTest {
             eq("product-1"), eq("energy"), anyCollection(), anyCollection(), eq(true)))
             .thenReturn(Mono.just(Map.of("d1", values)));
 
+        when(fixture.snapshots.firstValuesInRange("product-1", "energy", List.of("d1"), start, end))
+            .thenReturn(Mono.just(Map.of("d1", "5")));
+
         List<DeviceIntervalDataEntity> intervals = fixture.controller
             .queryDeviceIntervalHistory("day", start, end, fixture.request())
             .single().block();
 
         assertThat(intervals).hasSize(2);
-        assertThat(intervals.get(0).getStartValue()).isEqualTo(new BigDecimal("10"));
+        assertThat(intervals.get(0).getStartValue()).isEqualTo(new BigDecimal("5"));
         assertThat(intervals.get(0).getEndValue()).isEqualTo(new BigDecimal("10"));
         assertThat(intervals.get(1).getStartValue()).isEqualTo(new BigDecimal("10"));
         assertThat(intervals.get(1).getEndValue()).isEqualTo(new BigDecimal("20"));
         verifyNoInteractions(fixture.raw);
+    }
+
+    @Test
+    void dailyAndMonthlyHistoryUseTheSameActualInitialReading() {
+        Fixture fixture = new Fixture("d1");
+        long start = timestamp("2024-01-01T00:00:00"), end = timestamp("2024-03-01T00:00:00");
+        long firstDay = timestamp("2024-01-16T00:00:00");
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
+        when(fixture.snapshots.resolveBoundaries(eq("product-1"), eq("energy"), anyCollection(), anyCollection()))
+            .thenAnswer(call -> {
+                Map<Long, CounterBoundary> points = new LinkedHashMap<>();
+                for (long time : (Collection<Long>) call.getArgument(3)) {
+                    points.put(time, boundary(time, time < firstDay ? null : time == end ? "150" : "110"));
+                }
+                return Mono.just(Map.of("d1", points));
+            });
+        when(fixture.snapshots.firstValuesInRange("product-1", "energy", List.of("d1"), start, end))
+            .thenReturn(Mono.just(Map.of("d1", "100.123456789012345678")));
+        for (String type : List.of("month", "year")) {
+            List<DeviceIntervalDataEntity> rows = fixture.controller
+                .queryDeviceIntervalHistory(type, start, end, fixture.request()).single().block();
+            assertThat(rows.get(0).getStartValue()).isEqualTo(new BigDecimal("100.123456789012345678"));
+            BigDecimal sum = rows.stream().map(row -> ((BigDecimal) row.getEndValue())
+                .subtract((BigDecimal) row.getStartValue())).reduce(BigDecimal.ZERO, BigDecimal::add);
+            assertThat(sum).isEqualByComparingTo("49.876543210987654322");
+        }
+    }
+
+    @Test
+    void missingActualBaselineDoesNotSubstituteABucketLastValue() {
+        Fixture fixture = new Fixture("d1");
+        long start = timestamp("2024-01-01T00:00:00"), end = timestamp("2024-02-01T00:00:00");
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
+        when(fixture.snapshots.resolveBoundaries(eq("product-1"), eq("energy"), anyCollection(), anyCollection()))
+            .thenReturn(Mono.just(Map.of("d1", points(start, null, end, "50"))));
+        when(fixture.snapshots.firstValuesInRange("product-1", "energy", List.of("d1"), start, end))
+            .thenReturn(Mono.just(Map.of()));
+        List<DeviceIntervalDataEntity> rows = fixture.controller
+            .queryDeviceIntervalHistory("year", start, end, fixture.request()).single().block();
+        assertThat(rows.get(0).getStartValue()).isNull();
+        // The legacy DTO intentionally exposes neither reading when a delta cannot be computed.
+        assertThat(rows.get(0).getEndValue()).isNull();
+    }
+
+    @Test
+    void rawSuccessorOutsideTheRangeDoesNotManufactureAMissingBaseline() {
+        Fixture fixture = new Fixture("d1");
+        long start = 0L, end = 300_000L;
+        when(fixture.raw.queryPropertyAtBoundaries("d1", "energy", start, end, List.of(start, end)))
+            .thenReturn(Mono.just(new PropertyBoundaryValues("energy", start, end, null,
+                List.of(new PropertyBoundaryValues.BoundaryValue(start, null),
+                    new PropertyBoundaryValues.BoundaryValue(end, 50)))));
+        List<DeviceIntervalDataEntity> rows = fixture.controller
+            .queryDeviceIntervalHistory("5m", start, end, fixture.request()).single().block();
+        assertThat(rows.get(0).getStartValue()).isNull();
+        assertThat(rows.get(0).getEndValue()).isNull();
+    }
+
+    @Test
+    void movingEndReusesClosedBoundariesButRefreshesTailAndChecksVersionAndAuthorization() {
+        Fixture fixture = new Fixture("d1");
+        long end = System.currentTimeMillis() - 120_000;
+        java.time.ZonedDateTime monday = java.time.Instant.ofEpochMilli(end).atZone(ZoneId.of("Asia/Shanghai"))
+            .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            .truncatedTo(java.time.temporal.ChronoUnit.DAYS);
+        long start = monday.minusWeeks(2).toInstant().toEpochMilli();
+        java.util.concurrent.atomic.AtomicLong version = new java.util.concurrent.atomic.AtomicLong(1);
+        List<List<Long>> queries = new java.util.ArrayList<>();
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenAnswer(call -> Mono.just(fixture.contexts(new CounterReadContext(true, version.get(), 1, 1))));
+        when(fixture.snapshots.resolveBoundaries(eq("product-1"), eq("energy"), anyCollection(), anyCollection()))
+            .thenAnswer(call -> {
+                List<Long> times = List.copyOf(call.getArgument(3));
+                queries.add(times);
+                Map<Long, CounterBoundary> points = new LinkedHashMap<>();
+                for (long time : times) points.put(time, boundary(time, time == start ? "100" :
+                    times.size() == 1 ? Integer.toString(200 + queries.size()) : "150"));
+                return Mono.just(Map.of("d1", points));
+            });
+        List<DeviceIntervalDataEntity> first = fixture.controller.queryDeviceIntervalHistory(
+            "week", start, end, fixture.request()).single().block();
+        first.get(0).setStartValue(BigDecimal.ZERO);
+        List<DeviceIntervalDataEntity> second = fixture.controller.queryDeviceIntervalHistory(
+            "week", start, end + 1_000, fixture.request()).single().block();
+        assertThat(queries).hasSize(3);
+        assertThat(queries.get(0)).hasSizeGreaterThan(1);
+        assertThat(queries.get(1)).containsExactly(end);
+        assertThat(queries.get(2)).containsExactly(end + 1_000);
+        assertThat(second.get(0).getStartValue()).isEqualTo(new BigDecimal("100"));
+        assertThat(second.get(second.size() - 1).getEndValue()).isEqualTo(new BigDecimal("203"));
+        version.incrementAndGet();
+        fixture.controller.queryDeviceIntervalHistory("week", start, end + 2_000, fixture.request()).collectList().block();
+        assertThat(queries).hasSize(5);
+        when(fixture.scope.requireDevice("d1", "product-1"))
+            .thenReturn(Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN)));
+        StepVerifier.create(fixture.controller.queryDeviceIntervalHistory("week", start, end + 3_000, fixture.request()))
+            .expectError(ResponseStatusException.class).verify();
+        assertThat(queries).hasSize(5);
     }
 
     @Test
@@ -203,8 +384,40 @@ class LegacyCounterIntervalRoutingTest {
             .expectError(ResponseStatusException.class)
             .verify();
 
-        verify(fixture.snapshots, never()).readContext("product-1", "energy");
+        verify(fixture.snapshots, never()).readContexts(eq("product-1"), eq("energy"), anyCollection());
         verifyNoInteractions(fixture.raw);
+    }
+
+    @Test
+    void cachedEmptyPrefixUsesTheFirstActualTailReadingIncludingZero() {
+        Fixture fixture = new Fixture("d1");
+        long end = System.currentTimeMillis() - 120_000;
+        java.time.ZonedDateTime monday = java.time.Instant.ofEpochMilli(end).atZone(ZoneId.of("Asia/Shanghai"))
+            .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            .truncatedTo(java.time.temporal.ChronoUnit.DAYS);
+        long closedEnd = monday.toInstant().toEpochMilli(), start = monday.minusWeeks(2).toInstant().toEpochMilli();
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
+        when(fixture.snapshots.resolveBoundaries(eq("product-1"), eq("energy"), anyCollection(), anyCollection()))
+            .thenAnswer(call -> {
+                List<Long> times = List.copyOf(call.getArgument(3));
+                Map<Long, CounterBoundary> points = new LinkedHashMap<>();
+                for (long time : times) points.put(time, boundary(time, times.size() == 1 ? "25" : null));
+                return Mono.just(Map.of("d1", points));
+            });
+        when(fixture.snapshots.firstValuesInRange("product-1", "energy", List.of("d1"), start, closedEnd))
+            .thenReturn(Mono.just(Map.of()));
+        for (long actualEnd : List.of(end, end + 1_000)) {
+            when(fixture.snapshots.firstValuesInRange("product-1", "energy", List.of("d1"), closedEnd, actualEnd))
+                .thenReturn(Mono.just(Map.of("d1", "0")));
+            List<DeviceIntervalDataEntity> rows = fixture.controller
+                .queryDeviceIntervalHistory("week", start, actualEnd, fixture.request()).single().block();
+            assertThat(rows.get(0).getStartValue()).isEqualTo(BigDecimal.ZERO);
+            assertThat(rows.get(rows.size() - 1).getStartValue()).isEqualTo(BigDecimal.ZERO);
+            assertThat(rows.get(rows.size() - 1).getEndValue()).isEqualTo(new BigDecimal("25"));
+        }
+        verify(fixture.snapshots, times(1)).firstValuesInRange("product-1", "energy", List.of("d1"), start, closedEnd);
+        verify(fixture.snapshots, never()).firstValuesAfter(eq("product-1"), eq("energy"), anyCollection(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Test
@@ -213,8 +426,8 @@ class LegacyCounterIntervalRoutingTest {
         long middle = Math.floorDiv(System.currentTimeMillis(), 3_600_000L) * 3_600_000L;
         long start = middle - 3_600_000L;
         long end = middle + 3_600_000L;
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
         when(fixture.snapshots.resolveBoundaries(
             eq("product-1"), eq("energy"), anyCollection(), anyCollection(), eq(true)))
             .thenAnswer(call -> {
@@ -248,8 +461,8 @@ class LegacyCounterIntervalRoutingTest {
         long next = timestamp("2024-01-21T00:00:00");
         long today = timestamp("2024-01-22T00:00:00");
         long end = timestamp("2024-01-23T00:00:00");
-        when(fixture.snapshots.readContext("product-1", "energy"))
-            .thenReturn(Mono.just(new CounterReadContext(true, 1, 1, 1)));
+        when(fixture.snapshots.readContexts(eq("product-1"), eq("energy"), anyCollection()))
+            .thenReturn(Mono.just(fixture.contexts(new CounterReadContext(true, 1, 1, 1))));
         Map<Long, CounterBoundary> values = new LinkedHashMap<>();
         values.put(start, boundary(start, "1718469.63"));
         values.put(next, boundary(next, "1718469.63"));
@@ -330,6 +543,12 @@ class LegacyCounterIntervalRoutingTest {
                 when(devices.findById(id)).thenReturn(Mono.just(entity));
                 when(scope.requireDevice(id, "product-1")).thenReturn(Mono.empty());
             }
+        }
+
+        Map<String, CounterReadContext> contexts(CounterReadContext context) {
+            Map<String, CounterReadContext> result = new LinkedHashMap<>();
+            ids.forEach(id -> result.put(id, context));
+            return result;
         }
 
         DeiceDataRequestEntity request() {

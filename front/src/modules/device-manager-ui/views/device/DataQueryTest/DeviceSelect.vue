@@ -1,7 +1,7 @@
 <template>
   <a-select
     :value="selectedOptions"
-    mode="multiple"
+    :mode="single ? undefined : 'multiple'"
     label-in-value
     show-search
     allow-clear
@@ -32,7 +32,7 @@
     </template>
   </a-select>
   <div class="device-selection-info">
-    <span>已选择 {{ value.length }} / 500 个设备</span>
+    <span>已选择 {{ value.length }} / {{ single ? 1 : 500 }} 个设备</span>
     <a-button v-if="loadError" type="link" size="small" :disabled="disabled || fetching" @click="retry">加载失败，点击重试</a-button>
     <span v-else-if="fetching">正在加载设备…</span>
     <span v-else-if="hasMore">下拉列表滚动到底部可继续加载</span>
@@ -45,7 +45,7 @@ import type { LabeledValue, SelectValue } from 'ant-design-vue/es/select'
 import { queryDeviceOptions } from '../../../api/legacyDeviceData'
 import type { QueryDeviceOption } from '../../../api/legacyDeviceData'
 
-const props = defineProps<{ value: string[]; disabled?: boolean }>()
+const props = defineProps<{ value: string[]; disabled?: boolean; single?: boolean }>()
 const emit = defineEmits<{ (event: 'update:value', value: string[]): void }>()
 const devices = ref<QueryDeviceOption[]>([])
 const selectedDevices = ref(new Map<string, QueryDeviceOption>())
@@ -60,7 +60,10 @@ let disposed = false
 let searchTimer: ReturnType<typeof setTimeout> | undefined
 
 const deviceLabel = (device: QueryDeviceOption) => device.name ? `${device.name}（${device.id}）` : device.id
-const selectedOptions = computed(() => props.value.map(id => ({ value: id, label: deviceLabel(selectedDevices.value.get(id) || { id }) })))
+const selectedOptions = computed(() => {
+  const values = props.value.map(id => ({ value: id, label: deviceLabel(selectedDevices.value.get(id) || { id }) }))
+  return props.single ? values[0] : values
+})
 const options = computed(() => devices.value.map(device => ({
   value: device.id,
   label: deviceLabel(device),
@@ -70,8 +73,8 @@ const options = computed(() => devices.value.map(device => ({
 })))
 
 function changeSelection(selected: SelectValue) {
-  const selection = (Array.isArray(selected) ? selected : []) as LabeledValue[]
-  const ids = [...new Set(selection.map(item => String(item.value)))].slice(0, 500)
+  const selection = (Array.isArray(selected) ? selected : selected ? [selected] : []) as LabeledValue[]
+  const ids = [...new Set(selection.map(item => String(item.value)))].slice(0, props.single ? 1 : 500)
   const candidates = new Map(devices.value.map(device => [device.id, device]))
   selectedDevices.value = new Map(ids.map(id => [id, candidates.get(id) || selectedDevices.value.get(id) || { id }]))
   emit('update:value', ids)

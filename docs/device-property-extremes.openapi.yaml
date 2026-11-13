@@ -1,0 +1,208 @@
+openapi: 3.0.3
+info:
+  title: GpLink 设备属性极值查询 API
+  version: 1.0.0
+  description: |
+    查询设备属性在指定闭区间内的最大值、最小值及最早发生时间。
+    兼容路径为 /v1/device-data/devices/extremes/_query，使用相同请求和响应。
+    API Token 仅允许访问 /api/v1/；/v1/ 兼容路径使用普通登录认证。
+    导入后请将服务器地址设置为实际 GpLink 服务地址。
+servers:
+  - url: /
+tags:
+  - name: DeviceData
+    description: 设备历史数据查询
+security:
+  - AccessToken: []
+paths:
+  /api/v1/device-data/devices/extremes/_query:
+    post:
+      tags: [DeviceData]
+      operationId: queryDeviceExtremes
+      summary: 批量查询属性最大值、最小值及最早发生时间
+      description: |
+        需要 device-opt-api:query 权限，同时校验全部设备的访问范围。
+        时间范围为 [startTime,endTime]，两端均包含；不分桶、不补值，不裁剪未来结束时间。
+        设备和属性分别去重，按设备输入顺序、属性输入顺序返回所有组合。
+        相同极值重复出现时返回最早的原始采样时间，精确到毫秒。
+        忽略 NULL、NaN、正负 Infinity；零值、负数正常参与。
+        数值比较沿用 numberValue 的 double precision 存储精度。
+        目前仅支持 timescaledb-row，其他存储逐项返回 UNSUPPORTED_STORAGE。
+        任一设备不存在或无访问权限时整个请求失败；数据库错误和超时不返回部分成功结果。
+        总超时为 30 秒。每批最多 1000 个有效组合，并发最多 5 批。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceExtremesRequest'
+            example:
+              devices: [device-1]
+              properties: [temperature]
+              startTime: 1792944000000
+              endTime: 1793030400000
+      responses:
+        '200':
+          description: 查询完成；逐项检查 result 内的 status。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceExtremesResponse'
+              examples:
+                success:
+                  summary: 返回极值及最早发生时间
+                  value:
+                    status: 200
+                    result:
+                      - deviceId: device-1
+                        property: temperature
+                        status: OK
+                        minValue: 12.3
+                        minTime: 1792944000123
+                        maxValue: 35.6
+                        maxTime: 1793020000456
+                noData:
+                  summary: 时间范围内无有效数值采样
+                  value:
+                    status: 200
+                    result:
+                      - deviceId: device-1
+                        property: temperature
+                        status: NO_DATA
+                        minValue: null
+                        minTime: null
+                        maxValue: null
+                        maxTime: null
+        '400':
+          description: 参数缺失、时间范围无效、空白 ID 或去重后的设备/属性数量超限。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未登录或认证令牌无效。
+        '403':
+          description: 缺少查询权限或任一设备超出允许访问的设备/产品范围。
+        '404':
+          description: 至少一个请求设备不存在。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: 查询失败，包括数据库错误或超时；HTTP 状态及错误体遵循服务端统一异常处理。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    AccessToken:
+      type: apiKey
+      in: header
+      name: X-Access-Token
+      description: 输入有效令牌原文，不添加 Bearer 前缀。
+  schemas:
+    DeviceExtremesRequest:
+      type: object
+      required: [devices, properties, startTime, endTime]
+      properties:
+        devices:
+          type: array
+          minItems: 1
+          description: 设备 ID 列表，按原始 ID 去重后最多 500 个；不自动 trim 或改变大小写。
+          items:
+            type: string
+            minLength: 1
+            pattern: '\S'
+        properties:
+          type: array
+          minItems: 1
+          description: 属性 ID 列表，按原始 ID 去重后最多 100 个；不自动 trim 或改变大小写。
+          items:
+            type: string
+            minLength: 1
+            pattern: '\S'
+        startTime:
+          type: integer
+          format: int64
+          description: Unix 毫秒时间戳，包含该时刻；必须早于 endTime。按 Asia/Shanghai 转换后年份须在公元 1—9999 年内。
+        endTime:
+          type: integer
+          format: int64
+          description: Unix 毫秒时间戳，包含该时刻；必须晚于 startTime。按 Asia/Shanghai 转换后年份须在公元 1—9999 年内。
+    DeviceExtremesData:
+      type: object
+      required: [deviceId, property, status, minValue, minTime, maxValue, maxTime]
+      properties:
+        deviceId:
+          type: string
+          description: 设备 ID。
+        property:
+          type: string
+          description: 属性 ID。
+        status:
+          type: string
+          enum: [OK, NO_DATA, UNKNOWN_PROPERTY, NON_NUMERIC, UNSUPPORTED_STORAGE]
+          description: |
+            OK：存在有效采样。
+            NO_DATA：区间内没有有限数值采样。
+            UNKNOWN_PROPERTY：设备当前物模型不存在该属性。
+            NON_NUMERIC：属性不是数值类型。
+            UNSUPPORTED_STORAGE：实际存储策略不支持极值查询。
+            非 OK 项的四个极值/时间字段均显式为 null。
+        minValue:
+          type: number
+          format: double
+          nullable: true
+          description: 区间内最小值，按现有浮点存储精度比较，不额外舍入。
+        minTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: 最小值最早出现的原始采样时间，Unix 毫秒时间戳。
+        maxValue:
+          type: number
+          format: double
+          nullable: true
+          description: 区间内最大值，按现有浮点存储精度比较，不额外舍入。
+        maxTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: 最大值最早出现的原始采样时间，Unix 毫秒时间戳。
+    DeviceExtremesResponse:
+      type: object
+      required: [status, result]
+      properties:
+        status:
+          type: integer
+          enum: [200]
+          description: 统一响应业务状态码。
+        message:
+          type: string
+          nullable: true
+          description: 统一响应消息，可能省略。
+        result:
+          type: array
+          description: 每个去重后的设备属性组合一项，先按设备顺序，再按属性顺序排列。
+          items:
+            $ref: '#/components/schemas/DeviceExtremesData'
+    ErrorResponse:
+      type: object
+      description: 统一错误响应；具体字段由服务端异常处理器提供。
+      properties:
+        status:
+          type: integer
+          description: 错误状态码。
+        code:
+          type: string
+          nullable: true
+          description: 错误标识。
+        message:
+          type: string
+          nullable: true
+          description: 错误说明。
+        result:
+          nullable: true
+          description: 可选的错误附加信息。

@@ -42,6 +42,43 @@ export const DEFAULT_COMMUNICATION_CONFIG = {
     keepOnlineTimeout: 120,
 }
 
+export const decodeCsvBuffer = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer)
+    const utf8Bom = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf
+    if ((bytes[0] === 0xff && bytes[1] === 0xfe) || (bytes[0] === 0xfe && bytes[1] === 0xff)) {
+        throw new Error('CSV 文件为 UTF-16 编码，请另存为 UTF-8 或 GBK 后重新导入')
+    }
+    // Strict decoding prevents replacement characters from silently entering metadata.
+    try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+    } catch {
+        if (utf8Bom) throw new Error('CSV 文件包含 UTF-8 标记，但内容编码损坏，请从原文件重新导出')
+    }
+    try {
+        return new TextDecoder('gbk', { fatal: true }).decode(buffer)
+    } catch {
+        throw new Error('无法按 UTF-8 或 GBK 解码 CSV 文件，请检查文件编码或从原文件重新导出')
+    }
+}
+
+export const buildTcpResourceDefaults = (mode: TcpQuickCreateMode, host: string, port?: number) => {
+    const address = host.trim()
+    const octets = address.split('.')
+    const ipv4 = octets.length === 4 && octets.every(part => /^\d{1,3}$/.test(part) && Number(part) <= 255)
+    const hostSuffix = ipv4 ? String(Number(octets[3])) : address.replace(/[^a-zA-Z0-9]/g, '_')
+    const suffix = port && (mode === 'tcp-server' || hostSuffix)
+        ? mode === 'tcp-server' ? String(port) : `${hostSuffix}_${port}`
+        : ''
+    return {
+        networkName: `Modbus TCP 网络组件${suffix ? ` ${suffix}` : ''}`,
+        accessName: `Modbus TCP 接入网关${suffix ? ` ${suffix}` : ''}`,
+        productId: suffix ? `mb_${suffix}` : '',
+        deviceId: suffix ? `mb_${suffix}` : '',
+        productName: `Modbus 网关产品${suffix ? ` ${suffix}` : ''}`,
+        deviceName: `Modbus 网关${suffix ? ` ${suffix}` : ''}`,
+    }
+}
+
 const isValidPort = (value: unknown) => Number.isInteger(Number(value))
     && Number(value) >= 1
     && Number(value) <= 65535

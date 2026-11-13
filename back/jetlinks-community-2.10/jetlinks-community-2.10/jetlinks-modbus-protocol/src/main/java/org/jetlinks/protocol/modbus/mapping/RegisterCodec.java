@@ -1,5 +1,8 @@
 package org.jetlinks.protocol.modbus.mapping;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 /**
  * Converts between register data bytes and numeric values, honoring byte-order
  * and dataType. Input payload length must equal {@link RegisterDataType#byteLength()}
@@ -63,7 +66,12 @@ public final class RegisterCodec {
             default:
                 throw new IllegalStateException("Unsupported type: " + type);
         }
-        return raw * mapping.getScale() + mapping.getOffset();
+        double value = raw * mapping.getScale() + mapping.getOffset();
+        // Keep the existing Double result type, including non-finite IEEE values.
+        // Round after applying the mapping so the reported engineering value is rounded.
+        return Double.isFinite(value)
+                ? BigDecimal.valueOf(value).setScale(3, RoundingMode.HALF_UP).doubleValue()
+                : value;
     }
 
     public static byte[] encode(RegisterMapping mapping, Number value) {

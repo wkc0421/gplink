@@ -29,6 +29,7 @@ import org.jetlinks.core.metadata.DeviceMetadata;
 import org.jetlinks.core.metadata.EventMetadata;
 import org.jetlinks.community.Interval;
 import org.jetlinks.community.things.data.PropertyBoundaryValues;
+import org.jetlinks.community.things.data.PropertyExtremes;
 import org.jetlinks.community.device.entity.DeviceEvent;
 import org.jetlinks.community.device.entity.DeviceOperationLogEntity;
 import org.jetlinks.community.device.entity.DeviceProperty;
@@ -60,6 +61,14 @@ import java.util.Map;
  * @see DeviceDataRepository
  */
 public interface DeviceDataService {
+
+    /** Query already-authorized numeric targets using their actual storage strategies. */
+    default Flux<PropertyExtremes> queryPropertyExtremes(
+        List<PropertyExtremes.Target> targets,
+        long startTime, long endTime) {
+        return Flux.fromIterable(targets).map(target ->
+            PropertyExtremes.empty(target, PropertyExtremes.Status.UNSUPPORTED_STORAGE));
+    }
 
     ConfigKey<String> STORE_POLICY_CONFIG_KEY = ConfigKey.of("storePolicy", "存储策略", String.class);
 

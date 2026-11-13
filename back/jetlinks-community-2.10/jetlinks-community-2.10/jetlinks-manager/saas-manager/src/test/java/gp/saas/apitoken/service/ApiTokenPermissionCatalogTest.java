@@ -20,6 +20,8 @@ class ApiTokenPermissionCatalogTest {
 
     @Test
     void resolvesPathsUsingTheSameCatalogShownToAdministrators() {
+        assertTarget("/api/v1/device-data/devices/extremes/_query",
+            HttpMethod.POST, "device-opt-api", "query");
         var query = ApiTokenPermissionCatalog
             .resolve("/api/v1/device/_query", HttpMethod.POST)
             .orElseThrow();

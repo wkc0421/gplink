@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -59,6 +60,7 @@ import java.util.stream.Collectors;
 class VertxMqttConnection implements MqttConnection {
 
     private final MqttEndpoint endpoint;
+    private final Set<VertxMqttConnection> acceptedConnections;
     private long keepAliveTimeoutMs;
     @Getter
     private long lastPingTime = System.currentTimeMillis();
@@ -81,8 +83,9 @@ class VertxMqttConnection implements MqttConnection {
     private final Sinks.Many<MqttUnSubscription> unsubscription = Reactors.createMany(Integer.MAX_VALUE, false);
 
 
-    public VertxMqttConnection(MqttEndpoint endpoint) {
+    VertxMqttConnection(MqttEndpoint endpoint, Set<VertxMqttConnection> acceptedConnections) {
         this.endpoint = endpoint;
+        this.acceptedConnections = acceptedConnections;
         this.keepAliveTimeoutMs = (endpoint.keepAliveTimeSeconds() + 10) * 1000L;
     }
 
@@ -162,6 +165,11 @@ class VertxMqttConnection implements MqttConnection {
             return this;
         }
         init();
+        acceptedConnections.add(this);
+        // A close callback can finish while the gateway is accepting the endpoint.
+        if (closed || !endpoint.isConnected()) {
+            acceptedConnections.remove(this);
+        }
         return this;
     }
 
@@ -383,6 +391,7 @@ class VertxMqttConnection implements MqttConnection {
             return;
         }
         closed = true;
+        acceptedConnections.remove(this);
         List<Consumer<MqttConnection>> listeners = new ArrayList<>(closeListeners);
         closeListeners.clear();
         for (Consumer<MqttConnection> listener : listeners) {

@@ -496,10 +496,11 @@ const handleClick = () => {
         border-radius: 6px;
         background: @app-elevated;
         border: 1px solid @app-border;
-        color: @primary-color;
+        color: @app-text-secondary;
 
-        &:hover {
-          background-color: @primary-color-hover;
+        &:not(:disabled):hover {
+          color: @app-text;
+          background-color: @app-hover;
           border-color: @primary-color-hover;
 
           span {
@@ -507,8 +508,9 @@ const handleClick = () => {
           }
         }
 
-        &:active {
-          background-color: @primary-color-active;
+        &:not(:disabled):active {
+          color: @app-text;
+          background-color: @app-surface;
           border-color: @primary-color-active;
 
           span {
@@ -533,7 +535,7 @@ const handleClick = () => {
             color: @error-color !important;
           }
 
-          &:hover {
+          &:not(:disabled):hover {
             background-color: @error-color-hover;
 
             span {
@@ -541,7 +543,7 @@ const handleClick = () => {
             }
           }
 
-          &:active {
+          &:not(:disabled):active {
             background-color: @error-color-active;
 
             span {
@@ -552,19 +554,11 @@ const handleClick = () => {
       }
 
       :deep(button[disabled]) {
-        background: @disabled-bg;
-        border-color: @disabled-color;
+        background: @app-surface;
+        border-color: @app-border;
 
         span {
-          color: @disabled-color !important;
-        }
-
-        &:hover {
-          background-color: @disabled-active-bg;
-        }
-
-        &:active {
-          background-color: @disabled-active-bg;
+          color: @app-text-disabled !important;
         }
       }
 

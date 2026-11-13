@@ -1,0 +1,4364 @@
+{
+  "version": 1,
+  "source": {
+    "file": "0918数据类型配置 (5-600号段).xlsx",
+    "sha256": "b7494b8647d3e9a36fd00ae7dae32698ef2c7ff13781989ecaaf2a9f23312280",
+    "sheet": "电能质量数据ID"
+  },
+  "library": {
+    "id": "excel-0918",
+    "code": "excel-0918",
+    "name": "0918数据类型配置（5-600号段）"
+  },
+  "items": [
+    {
+      "code": "Ua",
+      "name": "A相电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 1,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 4,
+        "fid": "1"
+      }
+    },
+    {
+      "code": "Ub",
+      "name": "B相电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 2,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 5,
+        "fid": "2"
+      }
+    },
+    {
+      "code": "Uc",
+      "name": "C相电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 3,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 6,
+        "fid": "3"
+      }
+    },
+    {
+      "code": "Ia",
+      "name": "A相电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 4,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 7,
+        "fid": "4"
+      }
+    },
+    {
+      "code": "Ib",
+      "name": "B相电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 5,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 8,
+        "fid": "5"
+      }
+    },
+    {
+      "code": "Ic",
+      "name": "C相电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 6,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 9,
+        "fid": "6"
+      }
+    },
+    {
+      "code": "Pa",
+      "name": "A相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 7,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 10,
+        "fid": "7"
+      }
+    },
+    {
+      "code": "Pb",
+      "name": "B相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 8,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 11,
+        "fid": "8"
+      }
+    },
+    {
+      "code": "Pc",
+      "name": "C相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 9,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 12,
+        "fid": "9"
+      }
+    },
+    {
+      "code": "P",
+      "name": "合相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 10,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 13,
+        "fid": "10"
+      }
+    },
+    {
+      "code": "Qa",
+      "name": "A相无功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 11,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 14,
+        "fid": "11"
+      }
+    },
+    {
+      "code": "Qb",
+      "name": "B相无功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 12,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 15,
+        "fid": "12"
+      }
+    },
+    {
+      "code": "Qc",
+      "name": "C相无功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 13,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 16,
+        "fid": "13"
+      }
+    },
+    {
+      "code": "Q",
+      "name": "合相无功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 14,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 17,
+        "fid": "14"
+      }
+    },
+    {
+      "code": "Pfa",
+      "name": "A相功率因数",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 15,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 18,
+        "fid": "15"
+      }
+    },
+    {
+      "code": "Pfb",
+      "name": "B相功率因数",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 16,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 19,
+        "fid": "16"
+      }
+    },
+    {
+      "code": "Pfc",
+      "name": "C相功率因数",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 17,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 20,
+        "fid": "17"
+      }
+    },
+    {
+      "code": "Pf",
+      "name": "合相功率因数",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 18,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 21,
+        "fid": "18"
+      }
+    },
+    {
+      "code": "Freq",
+      "name": "频率",
+      "categoryPath": "电参量/频率",
+      "sortIndex": 19,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 22,
+        "fid": "19"
+      }
+    },
+    {
+      "code": "Epa",
+      "name": "A相有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 20,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 23,
+        "fid": "20"
+      }
+    },
+    {
+      "code": "Epb",
+      "name": "B相有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 21,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 24,
+        "fid": "21"
+      }
+    },
+    {
+      "code": "Epc",
+      "name": "C相有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 22,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 25,
+        "fid": "22"
+      }
+    },
+    {
+      "code": "Epi",
+      "name": "合相有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 23,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 26,
+        "fid": "23"
+      }
+    },
+    {
+      "code": "Eqa",
+      "name": "A相无功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 24,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 27,
+        "fid": "24"
+      }
+    },
+    {
+      "code": "Eqb",
+      "name": "B相无功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 25,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 28,
+        "fid": "25"
+      }
+    },
+    {
+      "code": "Eqi",
+      "name": "合相无功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 27,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 30,
+        "fid": "27"
+      }
+    },
+    {
+      "code": "Uab",
+      "name": "AB线电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 28,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 31,
+        "fid": "28"
+      }
+    },
+    {
+      "code": "Ubc",
+      "name": "BC线电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 29,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 32,
+        "fid": "29"
+      }
+    },
+    {
+      "code": "Uac",
+      "name": "AC线电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 30,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 33,
+        "fid": "30"
+      }
+    },
+    {
+      "code": "Epj",
+      "name": "总尖电能/总一阶电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 31,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 34,
+        "fid": "31"
+      }
+    },
+    {
+      "code": "Epf",
+      "name": "总峰电能/总二阶电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 32,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 35,
+        "fid": "32"
+      }
+    },
+    {
+      "code": "Epp",
+      "name": "总平电能/总三阶电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 33,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 36,
+        "fid": "33"
+      }
+    },
+    {
+      "code": "Epg",
+      "name": "总谷电能/总四阶电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 34,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 37,
+        "fid": "34"
+      }
+    },
+    {
+      "code": "CT",
+      "name": "电流倍率",
+      "categoryPath": "电参量/倍率",
+      "sortIndex": 35,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 38,
+        "fid": "35"
+      }
+    },
+    {
+      "code": "PT",
+      "name": "电压倍率",
+      "categoryPath": "电参量/倍率",
+      "sortIndex": 36,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 39,
+        "fid": "36"
+      }
+    },
+    {
+      "code": "Sa",
+      "name": "A相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 37,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 40,
+        "fid": "37"
+      }
+    },
+    {
+      "code": "Sb",
+      "name": "B相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 38,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 41,
+        "fid": "38"
+      }
+    },
+    {
+      "code": "Sc",
+      "name": "C相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 39,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 42,
+        "fid": "39"
+      }
+    },
+    {
+      "code": "S",
+      "name": "合相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 40,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 43,
+        "fid": "40"
+      }
+    },
+    {
+      "code": "Dem1",
+      "name": "实时需量",
+      "categoryPath": "电参量/需量",
+      "sortIndex": 41,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 44,
+        "fid": "41"
+      }
+    },
+    {
+      "code": "Dem2",
+      "name": "最大需量",
+      "categoryPath": "电参量/需量",
+      "sortIndex": 42,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 45,
+        "fid": "42"
+      }
+    },
+    {
+      "code": "Uim",
+      "name": "电压不平衡",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 43,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 46,
+        "fid": "43"
+      }
+    },
+    {
+      "code": "Iim",
+      "name": "电流不平衡",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 44,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 47,
+        "fid": "44"
+      }
+    },
+    {
+      "code": "Epii",
+      "name": "正向有功电度",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 45,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 48,
+        "fid": "45"
+      }
+    },
+    {
+      "code": "Epo",
+      "name": "反向有功电度",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 46,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 49,
+        "fid": "46"
+      }
+    },
+    {
+      "code": "Eql",
+      "name": "正向无功电度",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 47,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 50,
+        "fid": "47"
+      }
+    },
+    {
+      "code": "Time",
+      "name": "时间",
+      "categoryPath": "预付费",
+      "sortIndex": 49,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 52,
+        "fid": "101"
+      }
+    },
+    {
+      "code": "UserCode",
+      "name": "用户户号",
+      "categoryPath": "预付费",
+      "sortIndex": 50,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 53,
+        "fid": "102"
+      }
+    },
+    {
+      "code": "MoneyRemain",
+      "name": "剩余金额",
+      "categoryPath": "预付费",
+      "sortIndex": 51,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 54,
+        "fid": "103"
+      }
+    },
+    {
+      "code": "MoneyOverdraft",
+      "name": "透支金额",
+      "categoryPath": "预付费",
+      "sortIndex": 52,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 55,
+        "fid": "104"
+      }
+    },
+    {
+      "code": "MoneyTotal",
+      "name": "累计充值金额",
+      "categoryPath": "预付费",
+      "sortIndex": 53,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 56,
+        "fid": "105"
+      }
+    },
+    {
+      "code": "MoneyLastBuy",
+      "name": "上次充值金额",
+      "categoryPath": "预付费",
+      "sortIndex": 54,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 57,
+        "fid": "106"
+      }
+    },
+    {
+      "code": "BuyTimes",
+      "name": "充值次数",
+      "categoryPath": "预付费",
+      "sortIndex": 55,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 58,
+        "fid": "107"
+      }
+    },
+    {
+      "code": "Mode",
+      "name": "模式1/第1回路模式",
+      "categoryPath": "预付费",
+      "sortIndex": 56,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 59,
+        "fid": "108"
+      }
+    },
+    {
+      "code": "StateRelay",
+      "name": "继电器状态",
+      "categoryPath": "预付费",
+      "sortIndex": 57,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 60,
+        "fid": "109"
+      }
+    },
+    {
+      "code": "LimOverdraft",
+      "name": "透支限额",
+      "categoryPath": "预付费",
+      "sortIndex": 58,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 61,
+        "fid": "110"
+      }
+    },
+    {
+      "code": "LimHoard",
+      "name": "囤积限额",
+      "categoryPath": "预付费",
+      "sortIndex": 59,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 62,
+        "fid": "111"
+      }
+    },
+    {
+      "code": "LimLeft",
+      "name": "剩余报警阈值",
+      "categoryPath": "预付费",
+      "sortIndex": 60,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 63,
+        "fid": "112"
+      }
+    },
+    {
+      "code": "LimPower",
+      "name": "功率越限阈值",
+      "categoryPath": "预付费",
+      "sortIndex": 61,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 64,
+        "fid": "113"
+      }
+    },
+    {
+      "code": "Price",
+      "name": "电价",
+      "categoryPath": "预付费",
+      "sortIndex": 62,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 65,
+        "fid": "114"
+      }
+    },
+    {
+      "code": "PriceJ",
+      "name": "电价1",
+      "categoryPath": "预付费",
+      "sortIndex": 63,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 66,
+        "fid": "115"
+      }
+    },
+    {
+      "code": "PriceF",
+      "name": "电价2",
+      "categoryPath": "预付费",
+      "sortIndex": 64,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 67,
+        "fid": "116"
+      }
+    },
+    {
+      "code": "PriceP",
+      "name": "电价3",
+      "categoryPath": "预付费",
+      "sortIndex": 65,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 68,
+        "fid": "117"
+      }
+    },
+    {
+      "code": "PriceG",
+      "name": "电价4",
+      "categoryPath": "预付费",
+      "sortIndex": 66,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 69,
+        "fid": "118"
+      }
+    },
+    {
+      "code": "EqRemain",
+      "name": "剩余电量",
+      "categoryPath": "预付费",
+      "sortIndex": 67,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 70,
+        "fid": "119"
+      }
+    },
+    {
+      "code": "EqOverdraft",
+      "name": "透支电量",
+      "categoryPath": "预付费",
+      "sortIndex": 68,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 71,
+        "fid": "120"
+      }
+    },
+    {
+      "code": "EqTotal",
+      "name": "累计充值电量",
+      "categoryPath": "预付费",
+      "sortIndex": 69,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 72,
+        "fid": "121"
+      }
+    },
+    {
+      "code": "EqLastBuy",
+      "name": "上次充值电量",
+      "categoryPath": "预付费",
+      "sortIndex": 70,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 73,
+        "fid": "122"
+      }
+    },
+    {
+      "code": "LimEqOverdraft",
+      "name": "透支电量限额",
+      "categoryPath": "预付费",
+      "sortIndex": 71,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 74,
+        "fid": "123"
+      }
+    },
+    {
+      "code": "LimEqHoard",
+      "name": "囤积电量限额",
+      "categoryPath": "预付费",
+      "sortIndex": 72,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 75,
+        "fid": "124"
+      }
+    },
+    {
+      "code": "LimEqLeft",
+      "name": "剩余报警阈值",
+      "categoryPath": "预付费",
+      "sortIndex": 73,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 76,
+        "fid": "125"
+      }
+    },
+    {
+      "code": "SettleDay",
+      "name": "月结日",
+      "categoryPath": "预付费",
+      "sortIndex": 74,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 77,
+        "fid": "126"
+      }
+    },
+    {
+      "code": "PresetState",
+      "name": "预置状态",
+      "categoryPath": "预付费",
+      "sortIndex": 75,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 78,
+        "fid": "127"
+      }
+    },
+    {
+      "code": "PresetMoney",
+      "name": "预置金额",
+      "categoryPath": "预付费",
+      "sortIndex": 76,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 79,
+        "fid": "128"
+      }
+    },
+    {
+      "code": "PresetLeft",
+      "name": "剩余预制金额",
+      "categoryPath": "预付费",
+      "sortIndex": 77,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 80,
+        "fid": "129"
+      }
+    },
+    {
+      "code": "PresetTotal",
+      "name": "累计使用预制金额",
+      "categoryPath": "预付费",
+      "sortIndex": 78,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 81,
+        "fid": "130"
+      }
+    },
+    {
+      "code": "LastBuyTime",
+      "name": "上次充值时间",
+      "categoryPath": "预付费",
+      "sortIndex": 79,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 82,
+        "fid": "131"
+      }
+    },
+    {
+      "code": "WaterRemain",
+      "name": "剩余水量",
+      "categoryPath": "预付费",
+      "sortIndex": 80,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 83,
+        "fid": "132"
+      }
+    },
+    {
+      "code": "WaterOverdraft",
+      "name": "透支水量",
+      "categoryPath": "预付费",
+      "sortIndex": 81,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 84,
+        "fid": "133"
+      }
+    },
+    {
+      "code": "WaterTotal",
+      "name": "累计充值水量",
+      "categoryPath": "预付费",
+      "sortIndex": 82,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 85,
+        "fid": "134"
+      }
+    },
+    {
+      "code": "WaterLastBuy",
+      "name": "上次充值水量",
+      "categoryPath": "预付费",
+      "sortIndex": 83,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 86,
+        "fid": "135"
+      }
+    },
+    {
+      "code": "LimWaterOverdraft",
+      "name": "透支限额",
+      "categoryPath": "预付费",
+      "sortIndex": 84,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 87,
+        "fid": "136"
+      }
+    },
+    {
+      "code": "LimWaterHoard",
+      "name": "囤积限额",
+      "categoryPath": "预付费",
+      "sortIndex": 85,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 88,
+        "fid": "137"
+      }
+    },
+    {
+      "code": "LimWaterLeft",
+      "name": "剩余报警阈值",
+      "categoryPath": "预付费",
+      "sortIndex": 86,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 89,
+        "fid": "138"
+      }
+    },
+    {
+      "code": "SysMode",
+      "name": "系统模式",
+      "categoryPath": "预付费",
+      "sortIndex": 87,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 90,
+        "fid": "139"
+      }
+    },
+    {
+      "code": "WaterSum",
+      "name": "累计水量",
+      "categoryPath": "水热/水量",
+      "sortIndex": 88,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 91,
+        "fid": "201"
+      }
+    },
+    {
+      "code": "WaterFrozenDay",
+      "name": "结算日累计水量",
+      "categoryPath": "水热/水量",
+      "sortIndex": 89,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 92,
+        "fid": "202"
+      }
+    },
+    {
+      "code": "StWater",
+      "name": "水表阀门状态",
+      "categoryPath": "水热/水量",
+      "sortIndex": 90,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 93,
+        "fid": "203"
+      }
+    },
+    {
+      "code": "FlowSum",
+      "name": "累计流量",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 91,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 94,
+        "fid": "211"
+      }
+    },
+    {
+      "code": "HeatSum",
+      "name": "累计热量",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 92,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 95,
+        "fid": "212"
+      }
+    },
+    {
+      "code": "CoolSum",
+      "name": "累计冷量",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 93,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 96,
+        "fid": "213"
+      }
+    },
+    {
+      "code": "HeatPower",
+      "name": "热功率",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 94,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 97,
+        "fid": "214"
+      }
+    },
+    {
+      "code": "FlowCur",
+      "name": "瞬时流量",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 95,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 98,
+        "fid": "215"
+      }
+    },
+    {
+      "code": "TempSup",
+      "name": "供水温度",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 96,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 99,
+        "fid": "216"
+      }
+    },
+    {
+      "code": "TempBack",
+      "name": "回水温度",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 97,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 100,
+        "fid": "217"
+      }
+    },
+    {
+      "code": "StHeat",
+      "name": "状态",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 98,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 101,
+        "fid": "218"
+      }
+    },
+    {
+      "code": "FlowFrozenDay",
+      "name": "结算日流量",
+      "categoryPath": "水热/流量与冷热量",
+      "sortIndex": 99,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 102,
+        "fid": "219"
+      }
+    },
+    {
+      "code": "Temp",
+      "name": "温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 100,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 103,
+        "fid": "302"
+      }
+    },
+    {
+      "code": "Hum",
+      "name": "湿度",
+      "categoryPath": "环境/湿度",
+      "sortIndex": 101,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 104,
+        "fid": "303"
+      }
+    },
+    {
+      "code": "TempA",
+      "name": "A节点温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 102,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 105,
+        "fid": "311"
+      }
+    },
+    {
+      "code": "TempB",
+      "name": "B节点温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 103,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 106,
+        "fid": "312"
+      }
+    },
+    {
+      "code": "TempC",
+      "name": "C节点温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 104,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 107,
+        "fid": "313"
+      }
+    },
+    {
+      "code": "TempN",
+      "name": "N节点温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 105,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 108,
+        "fid": "314"
+      }
+    },
+    {
+      "code": "TempDev",
+      "name": "设备温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 106,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 109,
+        "fid": "315"
+      }
+    },
+    {
+      "code": "TempEn",
+      "name": "环境温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 107,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 110,
+        "fid": "316"
+      }
+    },
+    {
+      "code": "1_Ep",
+      "name": "上1结算日组合有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 108,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 111,
+        "fid": "401"
+      }
+    },
+    {
+      "code": "1_Epj",
+      "name": "上1结算日组合有功费率1电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 109,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 112,
+        "fid": "402"
+      }
+    },
+    {
+      "code": "1_Epf",
+      "name": "上1结算日组合有功费率2电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 110,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 113,
+        "fid": "403"
+      }
+    },
+    {
+      "code": "1_Epp",
+      "name": "上1结算日组合有功费率3电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 111,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 114,
+        "fid": "404"
+      }
+    },
+    {
+      "code": "1_Epg",
+      "name": "上1结算日组合有功费率4电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 112,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 115,
+        "fid": "405"
+      }
+    },
+    {
+      "code": "2_Ep",
+      "name": "上2结算日组合有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 113,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 116,
+        "fid": "406"
+      }
+    },
+    {
+      "code": "2_Epj",
+      "name": "上2结算日组合有功费率1电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 114,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 117,
+        "fid": "407"
+      }
+    },
+    {
+      "code": "2_Epf",
+      "name": "上2结算日组合有功费率2电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 115,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 118,
+        "fid": "408"
+      }
+    },
+    {
+      "code": "2_Epp",
+      "name": "上2结算日组合有功费率3电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 116,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 119,
+        "fid": "409"
+      }
+    },
+    {
+      "code": "2_Epg",
+      "name": "上2结算日组合有功费率4电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 117,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 120,
+        "fid": "410"
+      }
+    },
+    {
+      "code": "3_Ep",
+      "name": "上3结算日组合有功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 118,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 121,
+        "fid": "411"
+      }
+    },
+    {
+      "code": "3_Epj",
+      "name": "上3结算日组合有功费率1电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 119,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 122,
+        "fid": "412"
+      }
+    },
+    {
+      "code": "3_Epf",
+      "name": "上3结算日组合有功费率2电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 120,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 123,
+        "fid": "413"
+      }
+    },
+    {
+      "code": "3_Epp",
+      "name": "上3结算日组合有功费率3电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 121,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 124,
+        "fid": "414"
+      }
+    },
+    {
+      "code": "3_Epg",
+      "name": "上3结算日组合有功费率4电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 122,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 125,
+        "fid": "415"
+      }
+    },
+    {
+      "code": "YX1",
+      "name": "合闸",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 123,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 126,
+        "fid": "1001"
+      }
+    },
+    {
+      "code": "YX2",
+      "name": "分闸",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 124,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 127,
+        "fid": "1002"
+      }
+    },
+    {
+      "code": "YX3",
+      "name": "YX3",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 125,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 128,
+        "fid": "1003"
+      }
+    },
+    {
+      "code": "YX4",
+      "name": "YX4",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 126,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 129,
+        "fid": "1004"
+      }
+    },
+    {
+      "code": "YX5",
+      "name": "YX5",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 127,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 130,
+        "fid": "1005"
+      }
+    },
+    {
+      "code": "YX6",
+      "name": "YX6",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 128,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 131,
+        "fid": "1006"
+      }
+    },
+    {
+      "code": "YX7",
+      "name": "YX7",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 129,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 132,
+        "fid": "1007"
+      }
+    },
+    {
+      "code": "YX8",
+      "name": "YX8",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 130,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 133,
+        "fid": "1008"
+      }
+    },
+    {
+      "code": "YX9",
+      "name": "YX9",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 131,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 134,
+        "fid": "1009"
+      }
+    },
+    {
+      "code": "YX10",
+      "name": "YX10",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 132,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 135,
+        "fid": "1010"
+      }
+    },
+    {
+      "code": "YX11",
+      "name": "YX11",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 133,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 136,
+        "fid": "1011"
+      }
+    },
+    {
+      "code": "YX12",
+      "name": "YX12",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 134,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 137,
+        "fid": "1012"
+      }
+    },
+    {
+      "code": "YX13",
+      "name": "YX13",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 135,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 138,
+        "fid": "1013"
+      }
+    },
+    {
+      "code": "YX14",
+      "name": "YX14",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 136,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 139,
+        "fid": "1014"
+      }
+    },
+    {
+      "code": "YX15",
+      "name": "YX15",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 137,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 140,
+        "fid": "1015"
+      }
+    },
+    {
+      "code": "YX16",
+      "name": "YX16",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 138,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 141,
+        "fid": "1016"
+      }
+    },
+    {
+      "code": "YX17",
+      "name": "YX17",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 139,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 142,
+        "fid": "1017"
+      }
+    },
+    {
+      "code": "YX18",
+      "name": "YX18",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 140,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 143,
+        "fid": "1018"
+      }
+    },
+    {
+      "code": "YX19",
+      "name": "YX19",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 141,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 144,
+        "fid": "1019"
+      }
+    },
+    {
+      "code": "YX20",
+      "name": "YX20",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 142,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 145,
+        "fid": "1020"
+      }
+    },
+    {
+      "code": "YX21",
+      "name": "YX21",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 143,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 146,
+        "fid": "1021"
+      }
+    },
+    {
+      "code": "YX22",
+      "name": "YX22",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 144,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 147,
+        "fid": "1022"
+      }
+    },
+    {
+      "code": "YX23",
+      "name": "YX23",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 145,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 148,
+        "fid": "1023"
+      }
+    },
+    {
+      "code": "YX24",
+      "name": "YX24",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 146,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 149,
+        "fid": "1024"
+      }
+    },
+    {
+      "code": "YX25",
+      "name": "YX25",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 147,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 150,
+        "fid": "1025"
+      }
+    },
+    {
+      "code": "YX26",
+      "name": "YX26",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 148,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 151,
+        "fid": "1026"
+      }
+    },
+    {
+      "code": "YX27",
+      "name": "YX27",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 149,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 152,
+        "fid": "1027"
+      }
+    },
+    {
+      "code": "YX28",
+      "name": "YX28",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 150,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 153,
+        "fid": "1028"
+      }
+    },
+    {
+      "code": "YX29",
+      "name": "YX29",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 151,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 154,
+        "fid": "1029"
+      }
+    },
+    {
+      "code": "YX30",
+      "name": "YX30",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 152,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 155,
+        "fid": "1030"
+      }
+    },
+    {
+      "code": "YX31",
+      "name": "YX31",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 153,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 156,
+        "fid": "1031"
+      }
+    },
+    {
+      "code": "YX32",
+      "name": "YX32",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 154,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 157,
+        "fid": "1032"
+      }
+    },
+    {
+      "code": "YX33",
+      "name": "YX33",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 155,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 158,
+        "fid": "1033"
+      }
+    },
+    {
+      "code": "YX34",
+      "name": "YX34",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 156,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 159,
+        "fid": "1034"
+      }
+    },
+    {
+      "code": "YX35",
+      "name": "YX35",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 157,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 160,
+        "fid": "1035"
+      }
+    },
+    {
+      "code": "YX36",
+      "name": "YX36",
+      "categoryPath": "状态控制/遥信",
+      "sortIndex": 158,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 161,
+        "fid": "1036"
+      }
+    },
+    {
+      "code": "YK1",
+      "name": "YK1",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 159,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 162,
+        "fid": "2001"
+      }
+    },
+    {
+      "code": "YK2",
+      "name": "YK2",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 160,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 163,
+        "fid": "2002"
+      }
+    },
+    {
+      "code": "YK3",
+      "name": "YK3",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 161,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 164,
+        "fid": "2003"
+      }
+    },
+    {
+      "code": "YK4",
+      "name": "YK4",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 162,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 165,
+        "fid": "2004"
+      }
+    },
+    {
+      "code": "YK5",
+      "name": "YK5",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 163,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 166,
+        "fid": "2005"
+      }
+    },
+    {
+      "code": "YK6",
+      "name": "YK6",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 164,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 167,
+        "fid": "2006"
+      }
+    },
+    {
+      "code": "YK7",
+      "name": "YK7",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 165,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 168,
+        "fid": "2007"
+      }
+    },
+    {
+      "code": "YK8",
+      "name": "YK8",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 166,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 169,
+        "fid": "2008"
+      }
+    },
+    {
+      "code": "YK9",
+      "name": "YK9",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 167,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 170,
+        "fid": "2009"
+      }
+    },
+    {
+      "code": "YK10",
+      "name": "YK10",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 168,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 171,
+        "fid": "2010"
+      }
+    },
+    {
+      "code": "YK11",
+      "name": "YK11",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 169,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 172,
+        "fid": "2011"
+      }
+    },
+    {
+      "code": "THD_Ua",
+      "name": "A相电压畸变率",
+      "categoryPath": "谐波/电压谐波",
+      "sortIndex": 170,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 173,
+        "fid": "500"
+      }
+    },
+    {
+      "code": "THD_Ub",
+      "name": "B相电压畸变率",
+      "categoryPath": "谐波/电压谐波",
+      "sortIndex": 171,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 174,
+        "fid": "501"
+      }
+    },
+    {
+      "code": "THD_Uc",
+      "name": "C相电压畸变率",
+      "categoryPath": "谐波/电压谐波",
+      "sortIndex": 172,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 175,
+        "fid": "502"
+      }
+    },
+    {
+      "code": "THD_Ia",
+      "name": "A相电流畸变率",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 173,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 176,
+        "fid": "503"
+      }
+    },
+    {
+      "code": "THD_Ib",
+      "name": "B相电流畸变率",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 174,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 177,
+        "fid": "504"
+      }
+    },
+    {
+      "code": "THD_Ic",
+      "name": "C相电流畸变率",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 175,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 178,
+        "fid": "505"
+      }
+    },
+    {
+      "code": "H03_Ia",
+      "name": "A相电流3次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 176,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 179,
+        "fid": "506"
+      }
+    },
+    {
+      "code": "H05_Ia",
+      "name": "A相电流5次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 177,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 180,
+        "fid": "507"
+      }
+    },
+    {
+      "code": "H07_Ia",
+      "name": "A相电流7次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 178,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 181,
+        "fid": "508"
+      }
+    },
+    {
+      "code": "H09_Ia",
+      "name": "A相电流9次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 179,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 182,
+        "fid": "509"
+      }
+    },
+    {
+      "code": "H11_Ia",
+      "name": "A相电流11次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 180,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 183,
+        "fid": "510"
+      }
+    },
+    {
+      "code": "H13_Ia",
+      "name": "A相电流13次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 181,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 184,
+        "fid": "511"
+      }
+    },
+    {
+      "code": "H15_Ia",
+      "name": "A相电流15次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 182,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 185,
+        "fid": "512"
+      }
+    },
+    {
+      "code": "H17_Ia",
+      "name": "A相电流17次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 183,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 186,
+        "fid": "513"
+      }
+    },
+    {
+      "code": "H19_Ia",
+      "name": "A相电流19次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 184,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 187,
+        "fid": "514"
+      }
+    },
+    {
+      "code": "H21_Ia",
+      "name": "A相电流21次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 185,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 188,
+        "fid": "515"
+      }
+    },
+    {
+      "code": "H23_Ia",
+      "name": "A相电流23次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 186,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 189,
+        "fid": "516"
+      }
+    },
+    {
+      "code": "H25_Ia",
+      "name": "A相电流25次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 187,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 190,
+        "fid": "517"
+      }
+    },
+    {
+      "code": "H27_Ia",
+      "name": "A相电流27次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 188,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 191,
+        "fid": "518"
+      }
+    },
+    {
+      "code": "H29_Ia",
+      "name": "A相电流29次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 189,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 192,
+        "fid": "519"
+      }
+    },
+    {
+      "code": "H31_Ia",
+      "name": "A相电流31次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 190,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 193,
+        "fid": "520"
+      }
+    },
+    {
+      "code": "H33_Ia",
+      "name": "A相电流33次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 191,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 194,
+        "fid": "521"
+      }
+    },
+    {
+      "code": "H35_Ia",
+      "name": "A相电流35次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 192,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 195,
+        "fid": "522"
+      }
+    },
+    {
+      "code": "H37_Ia",
+      "name": "A相电流37次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 193,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 196,
+        "fid": "523"
+      }
+    },
+    {
+      "code": "H39_Ia",
+      "name": "A相电流39次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 194,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 197,
+        "fid": "524"
+      }
+    },
+    {
+      "code": "H41_Ia",
+      "name": "A相电流41次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 195,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 198,
+        "fid": "525"
+      }
+    },
+    {
+      "code": "H43_Ia",
+      "name": "A相电流43次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 196,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 199,
+        "fid": "526"
+      }
+    },
+    {
+      "code": "H45_Ia",
+      "name": "A相电流45次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 197,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 200,
+        "fid": "527"
+      }
+    },
+    {
+      "code": "H47_Ia",
+      "name": "A相电流47次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 198,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 201,
+        "fid": "528"
+      }
+    },
+    {
+      "code": "H49_Ia",
+      "name": "A相电流49次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 199,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 202,
+        "fid": "529"
+      }
+    },
+    {
+      "code": "H51_Ia",
+      "name": "A相电流51次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 200,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 203,
+        "fid": "530"
+      }
+    },
+    {
+      "code": "H53_Ia",
+      "name": "A相电流53次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 201,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 204,
+        "fid": "531"
+      }
+    },
+    {
+      "code": "H55_Ia",
+      "name": "A相电流55次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 202,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 205,
+        "fid": "532"
+      }
+    },
+    {
+      "code": "H57_Ia",
+      "name": "A相电流57次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 203,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 206,
+        "fid": "533"
+      }
+    },
+    {
+      "code": "H59_Ia",
+      "name": "A相电流59次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 204,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 207,
+        "fid": "534"
+      }
+    },
+    {
+      "code": "H61_Ia",
+      "name": "A相电流61次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 205,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 208,
+        "fid": "535"
+      }
+    },
+    {
+      "code": "H63_Ia",
+      "name": "A相电流63次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 206,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 209,
+        "fid": "536"
+      }
+    },
+    {
+      "code": "H03_Ib",
+      "name": "B相电流3次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 207,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 210,
+        "fid": "537"
+      }
+    },
+    {
+      "code": "H05_Ib",
+      "name": "B相电流5次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 208,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 211,
+        "fid": "538"
+      }
+    },
+    {
+      "code": "H07_Ib",
+      "name": "B相电流7次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 209,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 212,
+        "fid": "539"
+      }
+    },
+    {
+      "code": "H09_Ib",
+      "name": "B相电流9次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 210,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 213,
+        "fid": "540"
+      }
+    },
+    {
+      "code": "H11_Ib",
+      "name": "B相电流11次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 211,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 214,
+        "fid": "541"
+      }
+    },
+    {
+      "code": "H13_Ib",
+      "name": "B相电流13次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 212,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 215,
+        "fid": "542"
+      }
+    },
+    {
+      "code": "H15_Ib",
+      "name": "B相电流15次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 213,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 216,
+        "fid": "543"
+      }
+    },
+    {
+      "code": "H17_Ib",
+      "name": "B相电流17次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 214,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 217,
+        "fid": "544"
+      }
+    },
+    {
+      "code": "H19_Ib",
+      "name": "B相电流19次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 215,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 218,
+        "fid": "545"
+      }
+    },
+    {
+      "code": "H21_Ib",
+      "name": "B相电流21次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 216,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 219,
+        "fid": "546"
+      }
+    },
+    {
+      "code": "H23_Ib",
+      "name": "B相电流23次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 217,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 220,
+        "fid": "547"
+      }
+    },
+    {
+      "code": "H25_Ib",
+      "name": "B相电流25次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 218,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 221,
+        "fid": "548"
+      }
+    },
+    {
+      "code": "H27_Ib",
+      "name": "B相电流27次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 219,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 222,
+        "fid": "549"
+      }
+    },
+    {
+      "code": "H29_Ib",
+      "name": "B相电流29次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 220,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 223,
+        "fid": "550"
+      }
+    },
+    {
+      "code": "H31_Ib",
+      "name": "B相电流31次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 221,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 224,
+        "fid": "551"
+      }
+    },
+    {
+      "code": "H33_Ib",
+      "name": "B相电流33次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 222,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 225,
+        "fid": "552"
+      }
+    },
+    {
+      "code": "H35_Ib",
+      "name": "B相电流35次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 223,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 226,
+        "fid": "553"
+      }
+    },
+    {
+      "code": "H37_Ib",
+      "name": "B相电流37次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 224,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 227,
+        "fid": "554"
+      }
+    },
+    {
+      "code": "H39_Ib",
+      "name": "B相电流39次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 225,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 228,
+        "fid": "555"
+      }
+    },
+    {
+      "code": "H41_Ib",
+      "name": "B相电流41次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 226,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 229,
+        "fid": "556"
+      }
+    },
+    {
+      "code": "H43_Ib",
+      "name": "B相电流43次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 227,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 230,
+        "fid": "557"
+      }
+    },
+    {
+      "code": "H45_Ib",
+      "name": "B相电流45次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 228,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 231,
+        "fid": "558"
+      }
+    },
+    {
+      "code": "H47_Ib",
+      "name": "B相电流47次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 229,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 232,
+        "fid": "559"
+      }
+    },
+    {
+      "code": "H49_Ib",
+      "name": "B相电流49次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 230,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 233,
+        "fid": "560"
+      }
+    },
+    {
+      "code": "H51_Ib",
+      "name": "B相电流51次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 231,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 234,
+        "fid": "561"
+      }
+    },
+    {
+      "code": "H53_Ib",
+      "name": "B相电流53次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 232,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 235,
+        "fid": "562"
+      }
+    },
+    {
+      "code": "H55_Ib",
+      "name": "B相电流55次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 233,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 236,
+        "fid": "563"
+      }
+    },
+    {
+      "code": "H57_Ib",
+      "name": "B相电流57次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 234,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 237,
+        "fid": "564"
+      }
+    },
+    {
+      "code": "H59_Ib",
+      "name": "B相电流59次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 235,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 238,
+        "fid": "565"
+      }
+    },
+    {
+      "code": "H61_Ib",
+      "name": "B相电流61次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 236,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 239,
+        "fid": "566"
+      }
+    },
+    {
+      "code": "H63_Ib",
+      "name": "B相电流63次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 237,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 240,
+        "fid": "567"
+      }
+    },
+    {
+      "code": "H03_Ic",
+      "name": "C相电流3次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 238,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 241,
+        "fid": "568"
+      }
+    },
+    {
+      "code": "H05_Ic",
+      "name": "C相电流5次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 239,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 242,
+        "fid": "569"
+      }
+    },
+    {
+      "code": "H07_Ic",
+      "name": "C相电流7次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 240,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 243,
+        "fid": "570"
+      }
+    },
+    {
+      "code": "H09_Ic",
+      "name": "C相电流9次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 241,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 244,
+        "fid": "571"
+      }
+    },
+    {
+      "code": "H11_Ic",
+      "name": "C相电流11次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 242,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 245,
+        "fid": "572"
+      }
+    },
+    {
+      "code": "H13_Ic",
+      "name": "C相电流13次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 243,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 246,
+        "fid": "573"
+      }
+    },
+    {
+      "code": "H15_Ic",
+      "name": "C相电流15次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 244,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 247,
+        "fid": "574"
+      }
+    },
+    {
+      "code": "H17_Ic",
+      "name": "C相电流17次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 245,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 248,
+        "fid": "575"
+      }
+    },
+    {
+      "code": "H19_Ic",
+      "name": "C相电流19次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 246,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 249,
+        "fid": "576"
+      }
+    },
+    {
+      "code": "H21_Ic",
+      "name": "C相电流21次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 247,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 250,
+        "fid": "577"
+      }
+    },
+    {
+      "code": "H23_Ic",
+      "name": "C相电流23次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 248,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 251,
+        "fid": "578"
+      }
+    },
+    {
+      "code": "H25_Ic",
+      "name": "C相电流25次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 249,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 252,
+        "fid": "579"
+      }
+    },
+    {
+      "code": "H27_Ic",
+      "name": "C相电流27次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 250,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 253,
+        "fid": "580"
+      }
+    },
+    {
+      "code": "H29_Ic",
+      "name": "C相电流29次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 251,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 254,
+        "fid": "581"
+      }
+    },
+    {
+      "code": "H31_Ic",
+      "name": "C相电流31次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 252,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 255,
+        "fid": "582"
+      }
+    },
+    {
+      "code": "H33_Ic",
+      "name": "C相电流33次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 253,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 256,
+        "fid": "583"
+      }
+    },
+    {
+      "code": "H35_Ic",
+      "name": "C相电流35次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 254,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 257,
+        "fid": "584"
+      }
+    },
+    {
+      "code": "H37_Ic",
+      "name": "C相电流37次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 255,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 258,
+        "fid": "585"
+      }
+    },
+    {
+      "code": "H39_Ic",
+      "name": "C相电流39次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 256,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 259,
+        "fid": "586"
+      }
+    },
+    {
+      "code": "H41_Ic",
+      "name": "C相电流41次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 257,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 260,
+        "fid": "587"
+      }
+    },
+    {
+      "code": "H43_Ic",
+      "name": "C相电流43次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 258,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 261,
+        "fid": "588"
+      }
+    },
+    {
+      "code": "H45_Ic",
+      "name": "C相电流45次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 259,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 262,
+        "fid": "589"
+      }
+    },
+    {
+      "code": "H47_Ic",
+      "name": "C相电流47次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 260,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 263,
+        "fid": "590"
+      }
+    },
+    {
+      "code": "H49_Ic",
+      "name": "C相电流49次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 261,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 264,
+        "fid": "591"
+      }
+    },
+    {
+      "code": "H51_Ic",
+      "name": "C相电流51次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 262,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 265,
+        "fid": "592"
+      }
+    },
+    {
+      "code": "H53_Ic",
+      "name": "C相电流53次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 263,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 266,
+        "fid": "593"
+      }
+    },
+    {
+      "code": "H55_Ic",
+      "name": "C相电流55次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 264,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 267,
+        "fid": "594"
+      }
+    },
+    {
+      "code": "H57_Ic",
+      "name": "C相电流57次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 265,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 268,
+        "fid": "595"
+      }
+    },
+    {
+      "code": "H59_Ic",
+      "name": "C相电流59次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 266,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 269,
+        "fid": "596"
+      }
+    },
+    {
+      "code": "H61_Ic",
+      "name": "C相电流61次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 267,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 270,
+        "fid": "597"
+      }
+    },
+    {
+      "code": "H63_Ic",
+      "name": "C相电流63次谐波",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 268,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 271,
+        "fid": "598"
+      }
+    },
+    {
+      "code": "Grid_Ua",
+      "name": "电网电压A相",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 269,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 272,
+        "fid": "600"
+      }
+    },
+    {
+      "code": "Grid_Ub",
+      "name": "电网电压B相",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 270,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 273,
+        "fid": "601"
+      }
+    },
+    {
+      "code": "Grid_Uc",
+      "name": "电网电压C相",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 271,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 274,
+        "fid": "602"
+      }
+    },
+    {
+      "code": "Grid_Ia",
+      "name": "电网电流A相",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 272,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 275,
+        "fid": "603"
+      }
+    },
+    {
+      "code": "Grid_Ib",
+      "name": "电网电流B相",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 273,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 276,
+        "fid": "604"
+      }
+    },
+    {
+      "code": "Grid_Ic",
+      "name": "电网电流C相",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 274,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 277,
+        "fid": "605"
+      }
+    },
+    {
+      "code": "Grid_THDUa",
+      "name": "电网A相THDU",
+      "categoryPath": "谐波/电压谐波",
+      "sortIndex": 275,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 278,
+        "fid": "606"
+      }
+    },
+    {
+      "code": "Grid_THDUb",
+      "name": "电网B相THDU",
+      "categoryPath": "谐波/电压谐波",
+      "sortIndex": 276,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 279,
+        "fid": "607"
+      }
+    },
+    {
+      "code": "Grid_THDUc",
+      "name": "电网C相THDU",
+      "categoryPath": "谐波/电压谐波",
+      "sortIndex": 277,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 280,
+        "fid": "608"
+      }
+    },
+    {
+      "code": "Grid_THDIa",
+      "name": "电网A相THDI",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 278,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 281,
+        "fid": "609"
+      }
+    },
+    {
+      "code": "Grid_THDIb",
+      "name": "电网B相THDI",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 279,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 282,
+        "fid": "610"
+      }
+    },
+    {
+      "code": "Grid_THDIc",
+      "name": "电网C相THDI",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 280,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 283,
+        "fid": "611"
+      }
+    },
+    {
+      "code": "Grid_COSA",
+      "name": "电网A相COS值",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 281,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 284,
+        "fid": "612"
+      }
+    },
+    {
+      "code": "Grid_COSB",
+      "name": "电网B相COS值",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 282,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 285,
+        "fid": "613"
+      }
+    },
+    {
+      "code": "Grid_COSC",
+      "name": "电网C相COS值",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 283,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 286,
+        "fid": "614"
+      }
+    },
+    {
+      "code": "Grid_Pa",
+      "name": "电网A相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 284,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 287,
+        "fid": "615"
+      }
+    },
+    {
+      "code": "Grid_Pb",
+      "name": "电网B相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 285,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 288,
+        "fid": "616"
+      }
+    },
+    {
+      "code": "Grid_Pc",
+      "name": "电网C相有功功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 286,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 289,
+        "fid": "617"
+      }
+    },
+    {
+      "code": "Load_Sa",
+      "name": "负载视在功率A相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 287,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 290,
+        "fid": "618"
+      }
+    },
+    {
+      "code": "Load_Sb",
+      "name": "负载视在功率B相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 288,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 291,
+        "fid": "619"
+      }
+    },
+    {
+      "code": "Load_Sc",
+      "name": "负载视在功率C相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 289,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 292,
+        "fid": "620"
+      }
+    },
+    {
+      "code": "Load_Pa",
+      "name": "负载有功功率A相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 290,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 293,
+        "fid": "621"
+      }
+    },
+    {
+      "code": "Load_Pb",
+      "name": "负载有功功率B相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 291,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 294,
+        "fid": "622"
+      }
+    },
+    {
+      "code": "Load_Pc",
+      "name": "负载有功功率C相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 292,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 295,
+        "fid": "623"
+      }
+    },
+    {
+      "code": "Load_Qa",
+      "name": "负载无功功率A相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 293,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 296,
+        "fid": "624"
+      }
+    },
+    {
+      "code": "Load_Qb",
+      "name": "负载无功功率B相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 294,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 297,
+        "fid": "625"
+      }
+    },
+    {
+      "code": "Load_Qc",
+      "name": "负载无功功率C相",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 295,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 298,
+        "fid": "626"
+      }
+    },
+    {
+      "code": "Load_Ia",
+      "name": "负载电流A相",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 296,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 299,
+        "fid": "627"
+      }
+    },
+    {
+      "code": "Load_Ib",
+      "name": "负载电流B相",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 297,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 300,
+        "fid": "628"
+      }
+    },
+    {
+      "code": "Load_Ic",
+      "name": "负载电流C相",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 298,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 301,
+        "fid": "629"
+      }
+    },
+    {
+      "code": "Load_THDIa",
+      "name": "负载A相THDI",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 299,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 302,
+        "fid": "630"
+      }
+    },
+    {
+      "code": "Load_THDIb",
+      "name": "负载B相THDI",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 300,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 303,
+        "fid": "631"
+      }
+    },
+    {
+      "code": "Load_THDIc",
+      "name": "负载C相THDI",
+      "categoryPath": "谐波/电流谐波",
+      "sortIndex": 301,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 304,
+        "fid": "632"
+      }
+    },
+    {
+      "code": "Load_Cosa",
+      "name": "负载A相Cos值",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 302,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 305,
+        "fid": "633"
+      }
+    },
+    {
+      "code": "Load_Cosb",
+      "name": "负载B相Cos值",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 303,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 306,
+        "fid": "634"
+      }
+    },
+    {
+      "code": "Load_Cosc",
+      "name": "负载C相Cos值",
+      "categoryPath": "电参量/功率因数",
+      "sortIndex": 304,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 307,
+        "fid": "635"
+      }
+    },
+    {
+      "code": "Dev_Ua",
+      "name": "设备A相电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 305,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 308,
+        "fid": "636"
+      }
+    },
+    {
+      "code": "Dev_Ub",
+      "name": "设备B相电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 306,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 309,
+        "fid": "637"
+      }
+    },
+    {
+      "code": "Dev_Uc",
+      "name": "设备C相电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 307,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 310,
+        "fid": "638"
+      }
+    },
+    {
+      "code": "Dev_Ia",
+      "name": "设备A相电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 308,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 311,
+        "fid": "639"
+      }
+    },
+    {
+      "code": "Dev_Ib",
+      "name": "设备B相电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 309,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 312,
+        "fid": "640"
+      }
+    },
+    {
+      "code": "Dev_Ic",
+      "name": "设备C相电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 310,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 313,
+        "fid": "641"
+      }
+    },
+    {
+      "code": "Dev_Loada",
+      "name": "设备A相负载率",
+      "categoryPath": "未分类",
+      "sortIndex": 311,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 314,
+        "fid": "642"
+      }
+    },
+    {
+      "code": "Dev_Loadb",
+      "name": "设备B相负载率",
+      "categoryPath": "未分类",
+      "sortIndex": 312,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 315,
+        "fid": "643"
+      }
+    },
+    {
+      "code": "Dev_Loadc",
+      "name": "设备C相负载率",
+      "categoryPath": "未分类",
+      "sortIndex": 313,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 316,
+        "fid": "644"
+      }
+    },
+    {
+      "code": "Dev_Sa",
+      "name": "设备A相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 314,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 317,
+        "fid": "645"
+      }
+    },
+    {
+      "code": "Dev_Sb",
+      "name": "设备B相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 315,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 318,
+        "fid": "646"
+      }
+    },
+    {
+      "code": "Dev_Sc",
+      "name": "设备C相视在功率",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 316,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 319,
+        "fid": "647"
+      }
+    },
+    {
+      "code": "IGBT_Temp",
+      "name": "IGBT温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 317,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 320,
+        "fid": "648"
+      }
+    },
+    {
+      "code": "Env_Temp",
+      "name": "环境温度",
+      "categoryPath": "环境/温度",
+      "sortIndex": 318,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 321,
+        "fid": "649"
+      }
+    },
+    {
+      "code": "DC_Bus_Pos_Volt",
+      "name": "正母线电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 319,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 322,
+        "fid": "650"
+      }
+    },
+    {
+      "code": "DC_Bus_Neg_Volt",
+      "name": "负母线电压",
+      "categoryPath": "电参量/电压",
+      "sortIndex": 320,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 323,
+        "fid": "651"
+      }
+    },
+    {
+      "code": "Dev_Loss_Power",
+      "name": "设备损耗",
+      "categoryPath": "电参量/功率",
+      "sortIndex": 321,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 324,
+        "fid": "652"
+      }
+    },
+    {
+      "code": "N_Line_Curr",
+      "name": "N线电流",
+      "categoryPath": "电参量/电流",
+      "sortIndex": 322,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 325,
+        "fid": "653"
+      }
+    },
+    {
+      "code": "Unit_State",
+      "name": "机器状态",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 323,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 326,
+        "fid": "654"
+      },
+      "remark": "0-待机 1-故障  2-运行"
+    },
+    {
+      "code": "Mod_Dev_Addr",
+      "name": "模块设备地址",
+      "categoryPath": "设备配置",
+      "sortIndex": 324,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 327,
+        "fid": "655"
+      }
+    },
+    {
+      "code": "Start_Mode_Set",
+      "name": "启动方式设置",
+      "categoryPath": "设备配置",
+      "sortIndex": 325,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 328,
+        "fid": "656"
+      }
+    },
+    {
+      "code": "CT_Pos_Set",
+      "name": "CT位置设置",
+      "categoryPath": "设备配置",
+      "sortIndex": 326,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 329,
+        "fid": "657"
+      }
+    },
+    {
+      "code": "Target_Cos_Set",
+      "name": "目标COS值设置",
+      "categoryPath": "设备配置",
+      "sortIndex": 327,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 330,
+        "fid": "658"
+      }
+    },
+    {
+      "code": "CT_Ratio_Set",
+      "name": "CT变比设置",
+      "categoryPath": "设备配置",
+      "sortIndex": 328,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 331,
+        "fid": "659"
+      }
+    },
+    {
+      "code": "Reactive_Comp_Set",
+      "name": "无功补偿设置",
+      "categoryPath": "设备配置",
+      "sortIndex": 329,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 332,
+        "fid": "660"
+      }
+    },
+    {
+      "code": "Unbalance_Comp",
+      "name": "不平衡补偿",
+      "categoryPath": "设备配置",
+      "sortIndex": 330,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 333,
+        "fid": "661"
+      }
+    },
+    {
+      "code": "Cmd_PowerOff",
+      "name": "0：关机",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 331,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 334,
+        "fid": "662"
+      },
+      "remark": "开关机设置；0：关机"
+    },
+    {
+      "code": "Cmd_PowerOn",
+      "name": "1：开机",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 332,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 335,
+        "fid": ""
+      },
+      "remark": "1：开机"
+    },
+    {
+      "code": "Cmd_Reset",
+      "name": "2：复位",
+      "categoryPath": "状态控制/遥控",
+      "sortIndex": 333,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 336,
+        "fid": ""
+      },
+      "remark": "2：复位"
+    },
+    {
+      "code": "Bus_Undervolt_Fault",
+      "name": "母线欠压",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 334,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 337,
+        "fid": "663"
+      },
+      "remark": "记录字1；母线欠压；Bit0"
+    },
+    {
+      "code": "Grid_PhaseSeq_Fault",
+      "name": "电网相序异常",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 335,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 338,
+        "fid": "664"
+      },
+      "remark": "电网相序异常；Bit1"
+    },
+    {
+      "code": "Grid_Volt_Fault",
+      "name": "电网电压异常",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 336,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 339,
+        "fid": "665"
+      },
+      "remark": "电网电压异常；Bit2"
+    },
+    {
+      "code": "Grid_Freq_Fault",
+      "name": "电网频率异常",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 337,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 340,
+        "fid": "666"
+      },
+      "remark": "电网频率异常；Bit3"
+    },
+    {
+      "code": "Bus_Overvolt_Fault",
+      "name": "母线过压",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 338,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 341,
+        "fid": "667"
+      },
+      "remark": "母线过压；Bit4"
+    },
+    {
+      "code": "SoftStart_Fail_Fault",
+      "name": "软起失败",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 339,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 342,
+        "fid": "668"
+      },
+      "remark": "软起失败；Bit5"
+    },
+    {
+      "code": "Overload_Timeout_Fault",
+      "name": "过载超时",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 340,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 343,
+        "fid": "669"
+      },
+      "remark": "过载超时；Bit6"
+    },
+    {
+      "code": "Aux_Power_Fault",
+      "name": "辅助电源故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 341,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 344,
+        "fid": "670"
+      },
+      "remark": "辅助电源故障；Bit7"
+    },
+    {
+      "code": "Input_LackN_Fault",
+      "name": "输入缺零",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 342,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 345,
+        "fid": "671"
+      },
+      "remark": "输入缺零；Bit8"
+    },
+    {
+      "code": "PowerOff_State",
+      "name": "关机",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 343,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 346,
+        "fid": "672"
+      },
+      "remark": "关机；Bit9"
+    },
+    {
+      "code": "Relay_Fuse_Open_Fault",
+      "name": "继电器或熔丝开路故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 344,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 347,
+        "fid": "673"
+      },
+      "remark": "继电器或熔丝开路故障；Bit10"
+    },
+    {
+      "code": "Relay_Short_Fault",
+      "name": "继电器短路故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 345,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 348,
+        "fid": "674"
+      },
+      "remark": "继电器短路故障；Bit11"
+    },
+    {
+      "code": "ShortCircuit_Fault",
+      "name": "短路故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 346,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 349,
+        "fid": "675"
+      },
+      "remark": "短路故障；Bit12"
+    },
+    {
+      "code": "CPU_Fault",
+      "name": "CPU故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 347,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 350,
+        "fid": "676"
+      },
+      "remark": "CPU故障；Bit13"
+    },
+    {
+      "code": "CLA_Fault",
+      "name": "CLA故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 348,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 351,
+        "fid": "677"
+      },
+      "remark": "CLA故障；Bit14"
+    },
+    {
+      "code": "EPO_Alarm",
+      "name": "EPO",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 349,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 352,
+        "fid": "678"
+      },
+      "remark": "EPO；Bit15"
+    },
+    {
+      "code": "GBT_Overtemp_Fault",
+      "name": "IGBT过温",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 350,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 353,
+        "fid": "679"
+      },
+      "remark": "记录字2；IGBT过温；Bit0"
+    },
+    {
+      "code": "Env_Overtemp_Fault",
+      "name": "环境过温",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 351,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 354,
+        "fid": "680"
+      },
+      "remark": "环境过温；Bit1"
+    },
+    {
+      "code": "PowerOn_Event",
+      "name": "开机事件",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 352,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 355,
+        "fid": "681"
+      },
+      "remark": "开机事件；Bit2"
+    },
+    {
+      "code": "CT_PolarityRev_Fault",
+      "name": "CT极性反接",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 353,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 356,
+        "fid": "682"
+      },
+      "remark": "CT极性反接；Bit3"
+    },
+    {
+      "code": "Output_Curr_Fault",
+      "name": "输出电流异常",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 354,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 357,
+        "fid": "683"
+      },
+      "remark": "输出电流异常；Bit4"
+    },
+    {
+      "code": "Fan_Fault",
+      "name": "风扇故障",
+      "categoryPath": "状态控制/状态与告警",
+      "sortIndex": 355,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 358,
+        "fid": "684"
+      },
+      "remark": "风扇故障；Bit15"
+    }
+  ],
+  "standardCodes": [
+    "Ua",
+    "Ub",
+    "Uc",
+    "Ia",
+    "Ib",
+    "Ic",
+    "Pa",
+    "Pb",
+    "Pc",
+    "P",
+    "Qa",
+    "Qb",
+    "Qc",
+    "Q",
+    "Pfa",
+    "Pfb",
+    "Pfc",
+    "Pf",
+    "Freq",
+    "Epa",
+    "Epb",
+    "Epc",
+    "Epi",
+    "Eqa",
+    "Eqb",
+    "Eqi",
+    "Uab",
+    "Ubc",
+    "Uac",
+    "Epj",
+    "Epf",
+    "Epp",
+    "Epg",
+    "CT",
+    "PT",
+    "Sa",
+    "Sb",
+    "Sc",
+    "S",
+    "Dem1",
+    "Dem2",
+    "Uim",
+    "Iim",
+    "Epii",
+    "Epo",
+    "Eql",
+    "WaterSum",
+    "FlowSum",
+    "HeatSum",
+    "CoolSum",
+    "HeatPower",
+    "FlowCur",
+    "TempSup",
+    "TempBack",
+    "Temp",
+    "Hum",
+    "TempEn"
+  ],
+  "conflicts": [
+    {
+      "code": "Eqc",
+      "name": "C相无功电能",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 26,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 29,
+        "fid": "26"
+      },
+      "reason": "同一项目库编码重复且名称不同，需人工确认编码"
+    },
+    {
+      "code": "Eqc",
+      "name": "反向无功电度",
+      "categoryPath": "电参量/电能",
+      "sortIndex": 48,
+      "source": {
+        "file": "0918数据类型配置 (5-600号段).xlsx",
+        "sheet": "电能质量数据ID",
+        "row": 51,
+        "fid": "48"
+      },
+      "reason": "同一项目库编码重复且名称不同，需人工确认编码"
+    }
+  ]
+}

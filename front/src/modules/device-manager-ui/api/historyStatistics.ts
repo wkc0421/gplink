@@ -57,3 +57,62 @@ export const cancelHistoryStatisticsTask = (productId: string, taskId: string) =
   request.post<HistoryStatisticsTask>(
     `${basePath(productId)}/tasks/${encodeURIComponent(taskId)}/_cancel`,
   )
+
+export type HistoryScope = 'PRODUCT' | 'DEVICE'
+export type HistoryMode = 'ENABLE' | 'DISABLE' | 'INHERIT'
+export interface HistoryTarget {
+  scope: HistoryScope
+  productId: string
+  deviceId?: string
+  propertyId: string
+}
+export interface HistoryManagementRow extends HistoryTarget {
+  productName: string
+  deviceName?: string
+  propertyName: string
+  valueType?: string
+  unit?: string
+  mode: HistoryMode
+  enabled: boolean
+  eligible: boolean
+  propertySource?: HistoryScope
+  productEnabled?: boolean
+  policyRevision?: number
+  config?: HistoryStatisticsConfig
+}
+export interface HistoryQuery {
+  scope: HistoryScope
+  pageIndex: number
+  pageSize: number
+  productIds?: string[]
+  deviceIds?: string[]
+  keyword?: string
+  enabled?: boolean
+  source?: HistoryMode | 'OVERRIDE'
+  status?: string
+}
+export interface HistoryPage<T> { data: T[]; total: number; pageIndex: number; pageSize: number }
+export interface HistoryBatchItem extends HistoryTarget { mode: HistoryMode }
+export interface HistoryBatchResult {
+  total: number
+  succeeded: number
+  failed: number
+  items: Array<HistoryTarget & { success: boolean; changed?: boolean; message?: string }>
+}
+const managementPath = '/device/history-statistics'
+export const queryHistoryManagement = (query: HistoryQuery) =>
+  request.post<HistoryPage<HistoryManagementRow>>(`${managementPath}/_query`, query, { hiddenError: true })
+export const queryHistoryCandidates = (query: HistoryQuery) =>
+  request.post<HistoryPage<HistoryManagementRow>>(`${managementPath}/candidates/_query`, query, { hiddenError: true })
+export const batchHistoryManagement = (items: HistoryBatchItem[]) =>
+  request.post<HistoryBatchResult>(`${managementPath}/_batch`, { items }, { hiddenError: true })
+const deviceHistoryPath = (deviceId: string) => `${managementPath}/device/${encodeURIComponent(deviceId)}`
+export const rebuildManagedHistory = (target: HistoryTarget, range: { from: number; to: number }) =>
+  target.scope === 'PRODUCT' ? rebuildHistoryStatistics(target.productId, target.propertyId, range)
+    : request.post<{ taskId: string }>(`${deviceHistoryPath(target.deviceId!)}/${encodeURIComponent(target.propertyId)}/_rebuild`, range)
+export const queryManagedHistoryTask = (target: HistoryTarget, taskId: string) =>
+  target.scope === 'PRODUCT' ? queryHistoryStatisticsTask(target.productId, taskId)
+    : request.get<HistoryStatisticsTask>(`${deviceHistoryPath(target.deviceId!)}/tasks/${encodeURIComponent(taskId)}`)
+export const cancelManagedHistoryTask = (target: HistoryTarget, taskId: string) =>
+  target.scope === 'PRODUCT' ? cancelHistoryStatisticsTask(target.productId, taskId)
+    : request.post<HistoryStatisticsTask>(`${deviceHistoryPath(target.deviceId!)}/tasks/${encodeURIComponent(taskId)}/_cancel`)

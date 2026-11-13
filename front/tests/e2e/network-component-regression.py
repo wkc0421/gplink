@@ -44,6 +44,7 @@ def run():
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(locale='zh-CN', viewport={'width': 1440, 'height': 1100})
         page = context.new_page()
+        page.set_default_navigation_timeout(90_000)
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
         if '--inspect' in sys.argv:
@@ -51,6 +52,11 @@ def run():
             page.on('pageerror', lambda error: print('PAGE ERROR', str(error), flush=True))
             page.on('requestfailed', lambda request: print('REQUEST FAILED', request.url, request.failure, flush=True))
         state = {'record': record(), 'writes': [], 'supports': True}
+        runtime = {
+            'id': 'network-170', 'type': 'TCP_CLIENT', 'serverId': 'node-a', 'configState': 'enabled',
+            'available': True, 'alive': True, 'details': {'connected': True, 'remoteAddress': '192.0.2.1:8001'},
+        }
+        runtime_requests = []
 
         def mock(route):
             request = route.request
@@ -64,6 +70,18 @@ def run():
                 result = {'data': [state['record']], 'total': 1}
             elif url == '/network/config/network-170':
                 result = state['record']
+            elif url == '/network/config/network-171':
+                result = dict(record(), id='network-171', name='Second component')
+            elif url == '/network/config/network-171/_runtime':
+                runtime_requests.append(url)
+                result = dict(runtime, id='network-171', serverId='node-b')
+            elif url == '/network/config/network-170/_runtime':
+                assert request.method == 'GET'
+                runtime_requests.append(url)
+                if state.get('runtime_error'):
+                    route.fulfill(status=503, json={'status': 503})
+                    return
+                result = runtime
             elif url == '/network/config' and request.method in ('PATCH', 'POST'):
                 state['writes'].append(copy.deepcopy(body))
                 state['record'].update(copy.deepcopy(body))
@@ -125,6 +143,65 @@ def run():
         expect(page.get_by_test_id('table-type')).to_have_text('TCP客户端')
         expect(page.get_by_test_id('table-details')).to_contain_text('tcp://192.168.110.170:10001')
         assert 'unknown' not in page.locator('body').inner_text().lower()
+        assert not runtime_requests
+        button('运行状态').click()
+        panel = page.locator('.runtime-status')
+        expect(panel).to_contain_text('已连接')
+        expect(panel).to_contain_text('已启用')
+        expect(panel).to_contain_text('192.0.2.1:8001')
+        expect(panel).to_contain_text('node-a')
+        page.evaluate("window.navigateNetwork('/network/network-171?view=true')")
+        expect(panel).to_contain_text('node-b')
+        expect(page.get_by_placeholder('请输入名称')).to_have_value('Second component')
+        with page.expect_response(lambda response: response.url.endswith('/network-171/_runtime')):
+            button('刷新').click()
+        page.evaluate("window.navigateNetwork('/network/network-171?view=false')")
+        expect(panel).to_have_count(0)
+        expect(button('保存')).to_be_visible()
+        expect(page.get_by_placeholder('请输入名称')).to_have_value('Second component')
+        page.get_by_placeholder('请输入名称').fill('Unsaved edit')
+        page.evaluate("window.navigateNetwork('/network/network-171?view=false&tab=configuration#name')")
+        expect(page.get_by_placeholder('请输入名称')).to_have_value('Unsaved edit')
+        page.evaluate("window.navigateNetwork('/network/network-170?view=true')")
+        expect(panel).to_contain_text('node-a')
+        expect(page.get_by_placeholder('请输入名称')).to_have_value('Test network')
+        runtime['details'] = {'connected': False}
+        button('刷新').click()
+        expect(panel).to_contain_text('未连接')
+        expect(panel).not_to_contain_text('192.0.2.1:8001')
+        runtime.update(configState='paused', available=False, alive=None, details={})
+        button('刷新').click()
+        expect(panel).to_contain_text('无运行实例')
+        expect(panel).to_contain_text('已暂停')
+        state['runtime_error'] = True
+        button('刷新').click()
+        expect(panel).to_contain_text('运行状态查询失败')
+        expect(panel).not_to_contain_text('无运行实例')
+        state['runtime_error'] = False
+        for kind in ['TCP_SERVER', 'MQTT_SERVER']:
+            state['record'] = record(kind)
+            peer = {'remoteHost': '2001:db8::12', 'remotePort': 49000}
+            if kind == 'MQTT_SERVER':
+                peer['clientId'] = 'mqtt-sensor'
+            runtime.update(type=kind, configState='enabled', available=True, alive=True, details={
+                'listening': True, 'connectionCount': 1, 'connections': [peer],
+            })
+            page.goto(BASE + '/network/network-170?view=true')
+            page.wait_for_load_state('networkidle')
+            expect(panel).to_contain_text('监听中')
+            expect(panel).to_contain_text('2001:db8::12')
+            expect(panel).to_contain_text('49000')
+            if kind == 'MQTT_SERVER':
+                expect(panel).to_contain_text('mqtt-sensor')
+            runtime['details'].update(connectionCount=0, connections=[])
+            button('刷新').click()
+            expect(panel).to_contain_text('当前没有客户端连接')
+            expect(panel).not_to_contain_text('2001:db8::12')
+        assert not state['writes']
+        passed.append('read-only runtime status covers TCP connections, absent instances, refresh errors and TCP/MQTT peer removal')
+        state['record'] = record()
+        page.goto(BASE)
+        page.wait_for_load_state('networkidle')
         button('编辑').click()
         page.wait_for_load_state('networkidle')
         expect(page.get_by_placeholder('请输入远程地址')).to_have_value('192.168.110.170')

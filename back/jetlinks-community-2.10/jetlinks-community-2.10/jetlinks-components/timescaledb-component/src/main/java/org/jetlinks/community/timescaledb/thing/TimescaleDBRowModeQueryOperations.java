@@ -40,6 +40,7 @@ import org.jetlinks.community.things.data.ThingsDataConstants;
 import org.jetlinks.community.things.data.operations.DataSettings;
 import org.jetlinks.community.things.data.operations.MetricBuilder;
 import org.jetlinks.community.things.data.operations.RowModeQueryOperationsBase;
+import org.jetlinks.community.things.data.operations.PropertyExtremesQuery;
 import org.jetlinks.community.timescaledb.TimescaleDBUtils;
 import org.jetlinks.community.timeseries.TimeSeriesData;
 import org.jetlinks.community.timeseries.query.Aggregation;
@@ -99,6 +100,15 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
         return timedQuery(executor()
             .select(statement, ResultWrappers.map())
             .map(this::convertToTimeSeriesData));
+    }
+
+    @Override
+    public Optional<PropertyExtremesQuery> propertyExtremesQuery() {
+        String table = TimescaleDBUtils.getTableName(
+            metricBuilder.createPropertyMetric(thingType, thingTemplateId, thingId));
+        return Optional.of(new TimescaleDBPropertyExtremesQuery(database,
+            database.getMetadata().getCurrentSchema().getName(), table, thingColumn,
+            sql -> timedQuery(executor().select(sql, ResultWrappers.map()))));
     }
 
     @Override
@@ -524,7 +534,10 @@ public class TimescaleDBRowModeQueryOperations extends RowModeQueryOperationsBas
             + " AND p.source_version>=c.source_version"
             + " AND p.from_time<?::timestamp AND p.to_time>?::timestamp),false) AS proven"
             + " FROM " + manager.qualified("counter_snapshot_config") + " c"
-            + " WHERE c.raw_table=? AND c.enabled=true AND c.property_id IN ("
+            + " WHERE c.raw_table=? AND (c.enabled=true AND c.product_eligible=true OR EXISTS (SELECT 1 FROM "
+            + manager.qualified("counter_snapshot_device")
+            + " d WHERE d.product_id=c.product_id AND d.property_id=c.property_id"
+            + " AND d.present=true AND d.eligible=true AND d.enabled_override=true)) AND c.property_id IN ("
             + String.join(",", Collections.nCopies(properties.size(), "?")) + ")";
         // Insert layer before proof overlap bounds, preserving all bound parameters.
         params.add(6, layer.name());

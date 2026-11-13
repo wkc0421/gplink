@@ -20,13 +20,17 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.Future;
 import io.vertx.core.net.NetServer;
+import io.vertx.core.net.NetSocket;
+import io.vertx.core.net.SocketAddress;
 import org.jetlinks.community.gateway.DeviceGateway;
 import org.jetlinks.community.gateway.supports.DeviceGatewayProperties;
 import org.jetlinks.community.network.DefaultNetworkType;
 import org.jetlinks.community.network.NetworkManager;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.security.CertificateManager;
 import org.jetlinks.community.network.tcp.TcpMessage;
 import org.jetlinks.community.network.tcp.client.TcpClient;
+import org.jetlinks.community.network.tcp.client.VertxTcpClient;
 import org.jetlinks.community.network.tcp.gateway.device.TcpServerDeviceGatewayProvider;
 import org.jetlinks.community.network.tcp.parser.DefaultPayloadParserBuilder;
 import org.jetlinks.community.network.tcp.parser.PayloadParserType;
@@ -57,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -200,6 +205,56 @@ class VertxTcpServerTest {
                 subscription.dispose();
             }
         }
+    }
+
+    @Test
+    void runtimeDetailsShouldTrackCurrentPeersAndListeningAddress() throws Exception {
+        try (TestServer fixture = new TestServer()) {
+            NetworkRuntimeDetails empty = fixture.server.getRuntimeDetails();
+            assertTrue(empty.getListening());
+            assertEquals(0, empty.getConnectionCount());
+            CompletableFuture<TcpClient> accepted = new CompletableFuture<>();
+            CompletableFuture<Void> disconnected = new CompletableFuture<>();
+            Disposable subscription = fixture.server.handleConnection().subscribe(accepted::complete);
+            try {
+                try (Socket socket = fixture.connect()) {
+                    accepted.get(5, TimeUnit.SECONDS).onDisconnect(() -> disconnected.complete(null));
+                    NetworkRuntimeDetails details = fixture.server.getRuntimeDetails();
+                    assertTrue(List.of(details.getBindAddress().split(", "))
+                        .contains("127.0.0.1:" + socket.getPort()));
+                    assertEquals(1, details.getConnectionCount());
+                    assertEquals(1, details.getConnections().size());
+                    NetworkRuntimeDetails.Connection peer = details.getConnections().get(0);
+                    assertEquals("127.0.0.1", peer.getRemoteHost());
+                    assertEquals(socket.getLocalPort(), peer.getRemotePort());
+                }
+                disconnected.get(5, TimeUnit.SECONDS);
+                NetworkRuntimeDetails afterClose = fixture.server.getRuntimeDetails();
+                assertEquals(0, afterClose.getConnectionCount());
+                assertEquals(List.of(), afterClose.getConnections());
+                fixture.server.shutdownAsync().block(Duration.ofSeconds(5));
+                assertFalse(fixture.server.getRuntimeDetails().getListening());
+            } finally {
+                subscription.dispose();
+            }
+        }
+    }
+
+    @Test
+    void runtimeDetailsShouldLimitPeerRowsButCountEverySocket() {
+        VertxTcpServer server = new VertxTcpServer("many-clients");
+        VertxTcpServer.ServerState state = server.installServers(List.of());
+        for (int i = 0; i <= NetworkRuntimeDetails.MAX_CONNECTIONS; i++) {
+            NetSocket socket = mock(NetSocket.class);
+            when(socket.remoteAddress()).thenReturn(SocketAddress.inetSocketAddress(1000 + i, "127.0.0.1"));
+            state.clients.put(socket, new VertxTcpClient("client-" + i));
+        }
+        NetworkRuntimeDetails details = server.getRuntimeDetails();
+        assertEquals(NetworkRuntimeDetails.MAX_CONNECTIONS + 1, details.getConnectionCount());
+        assertEquals(NetworkRuntimeDetails.MAX_CONNECTIONS, details.getConnections().size());
+        assertEquals(1000, details.getConnections().get(0).getRemotePort());
+        assertEquals(999 + NetworkRuntimeDetails.MAX_CONNECTIONS,
+                     details.getConnections().get(NetworkRuntimeDetails.MAX_CONNECTIONS - 1).getRemotePort());
     }
 
     private static class TestServer implements AutoCloseable {

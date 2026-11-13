@@ -27,7 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @Slf4j
-final class TimescaleDBRetentionPolicyManager {
+public final class TimescaleDBRetentionPolicyManager {
 
     static final String SCHEDULE_INTERVAL = "1 day";
 
@@ -45,12 +45,12 @@ final class TimescaleDBRetentionPolicyManager {
     private final String schema;
     private final ReactiveSqlExecutor executor;
 
-    TimescaleDBRetentionPolicyManager(String schema, ReactiveSqlExecutor executor) {
+    public TimescaleDBRetentionPolicyManager(String schema, ReactiveSqlExecutor executor) {
         this.schema = schema;
         this.executor = executor;
     }
 
-    Mono<Void> ensure(String tableName, Interval retention) {
+    public Mono<Void> ensure(String tableName, Interval retention) {
         if (retention == null || retention.getNumber().signum() <= 0) {
             return Mono.empty();
         }

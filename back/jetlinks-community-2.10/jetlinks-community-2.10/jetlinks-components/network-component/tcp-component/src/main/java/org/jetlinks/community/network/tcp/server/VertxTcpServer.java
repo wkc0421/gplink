@@ -15,6 +15,7 @@
  */
 package org.jetlinks.community.network.tcp.server;
 
+import io.netty.util.NetUtil;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetSocket;
 import lombok.AccessLevel;
@@ -23,6 +24,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetlinks.core.utils.Reactors;
 import org.jetlinks.community.network.DefaultNetworkType;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.NetworkType;
 import org.jetlinks.community.network.tcp.client.TcpClient;
 import org.jetlinks.community.network.tcp.client.VertxTcpClient;
@@ -35,11 +37,12 @@ import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * @author bsetfeng
@@ -229,6 +232,30 @@ public class VertxTcpServer implements TcpServer {
     }
 
     @Override
+    public synchronized NetworkRuntimeDetails getRuntimeDetails() {
+        NetworkRuntimeDetails details = new NetworkRuntimeDetails();
+        boolean listening = isAlive();
+        details.setListening(listening);
+        if (listening && bind != null) {
+            details.setBindAddress(current.servers.stream()
+                .map(NetServer::actualPort)
+                .distinct()
+                .map(port -> NetUtil.toSocketAddressString(bind.getHostString(), port))
+                .collect(Collectors.joining(", ")));
+        }
+        details.setConnectionCount(current == null ? 0 : current.clients.size());
+        details.setConnections(current == null ? List.of() : current.clients.keySet().stream()
+            .limit(NetworkRuntimeDetails.MAX_CONNECTIONS)
+            .map(NetSocket::remoteAddress)
+            .map(address -> {
+                String ip = address.hostAddress();
+                return new NetworkRuntimeDetails.Connection(ip == null ? address.host() : ip, address.port(), null);
+            })
+            .collect(Collectors.toList()));
+        return details;
+    }
+
+    @Override
     public boolean isAutoReload() {
         return false;
     }
@@ -237,7 +264,7 @@ public class VertxTcpServer implements TcpServer {
         final List<NetServer> servers;
         final Supplier<PayloadParser> parserSupplier;
         final long keepAliveTimeout;
-        final Map<NetSocket, VertxTcpClient> clients = new HashMap<>();
+        final Map<NetSocket, VertxTcpClient> clients = new LinkedHashMap<>();
         boolean active = true;
         boolean listening;
         Mono<Void> closeCompletion;

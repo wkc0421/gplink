@@ -2,6 +2,7 @@
   <j-page-container>
     <FullPage :fixed="false" style="padding: 24px">
       <div class="container">
+        <RuntimeStatus v-if="id !== ':id' && view === 'true'" :key="id" :id="id" />
         <a-form
           :model="formData"
           ref="formRef1"
@@ -862,6 +863,7 @@ import { isNoCommunity } from "@/utils/utils";
 import { useTypeStore } from "../../../../store/type";
 import { storeToRefs } from "pinia";
 import NodeSelect from "./NodeSelect.vue";
+import RuntimeStatus from "./RuntimeStatus.vue";
 import { useI18n } from "vue-i18n";
 import { useTabSaveSuccessBack } from '@/hooks'
 import { getNetworkType, getNetworkTypeLabel } from '../utils';

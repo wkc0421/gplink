@@ -36,6 +36,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TimescaleDBRetentionPolicyManagerTest {
 
     @Test
+    void shouldCreateDeviceLogPolicyUsingCalendarMonths() {
+        AtomicInteger findCount = new AtomicInteger();
+        TestSqlExecutor executor = new TestSqlExecutor(request -> {
+            if (request.getSql().startsWith("SELECT job_id")) {
+                return findCount.getAndIncrement() == 0 ? Flux.empty()
+                    : Flux.just(job(1, true, true, true));
+            }
+            return Flux.empty();
+        });
+        StepVerifier.create(manager(executor).ensure("device_log_product1", Interval.of("2M")))
+            .verifyComplete();
+        assertThat(executor.mutationRequests).hasSize(1);
+        assertThat(executor.mutationRequests.get(0).getParameters())
+            .containsExactly("\"public\".\"device_log_product1\"", "2 months");
+    }
+
+    @Test
     void shouldCreateMissingPolicy() {
         AtomicInteger findCount = new AtomicInteger();
         TestSqlExecutor executor = new TestSqlExecutor(request -> {

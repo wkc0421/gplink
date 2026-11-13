@@ -22,6 +22,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetSocket;
+import io.vertx.core.net.SocketAddress;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.tcp.TcpMessage;
 import org.jetlinks.community.network.tcp.parser.PayloadParser;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -141,6 +144,8 @@ class VertxTcpClientTest {
         PayloadParser secondParser = mock(PayloadParser.class);
         NetSocket firstSocket = mockSocket();
         NetSocket secondSocket = mockSocket();
+        when(firstSocket.localAddress()).thenReturn(SocketAddress.inetSocketAddress(50101, "127.0.0.1"));
+        when(firstSocket.remoteAddress()).thenReturn(SocketAddress.inetSocketAddress(502, "127.0.0.2"));
         when(firstParser.handlePayload()).thenReturn(Flux.never());
         when(secondParser.handlePayload()).thenReturn(Flux.never());
 
@@ -150,11 +155,26 @@ class VertxTcpClientTest {
         long firstVersion = client.replaceClient(firstNetClient);
         client.setRecordParser(firstParser);
         assertTrue(client.setSocket(firstSocket, firstVersion));
+        client.setKeepAliveTimeout(Duration.ZERO);
+        assertFalse(client.isAlive());
+        NetworkRuntimeDetails connected = client.getRuntimeDetails();
+        assertTrue(connected.getConnected());
+        assertFalse(connected.getConnecting());
+        assertEquals("127.0.0.1:50101", connected.getLocalAddress());
+        assertEquals("127.0.0.2:502", connected.getRemoteAddress());
 
         long secondVersion = client.replaceClient(secondNetClient);
+        NetworkRuntimeDetails reconnecting = client.getRuntimeDetails();
+        assertFalse(reconnecting.getConnected());
+        assertTrue(reconnecting.getConnecting());
+        assertNull(reconnecting.getLocalAddress());
+        assertNull(reconnecting.getRemoteAddress());
         client.setRecordParser(secondParser);
         assertTrue(client.setSocket(secondSocket, secondVersion));
+        assertTrue(client.getRuntimeDetails().getConnected());
         client.shutdown();
+        assertFalse(client.getRuntimeDetails().getConnected());
+        assertFalse(client.getRuntimeDetails().getConnecting());
 
         assertEquals(Arrays.asList(false, true, false, true, false), states);
         subscription.dispose();

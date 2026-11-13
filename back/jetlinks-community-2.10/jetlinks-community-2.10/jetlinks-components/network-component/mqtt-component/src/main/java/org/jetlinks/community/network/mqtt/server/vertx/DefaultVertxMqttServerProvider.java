@@ -88,6 +88,7 @@ public class DefaultVertxMqttServerProvider implements NetworkProvider<VertxMqtt
                        .execute(()->{
                            instance.listen(result -> {
                                if (result.succeeded()) {
+                                   server.onListening(instance, options.getHost());
                                    log.debug("startup mqtt server [{}] on port :{} ", properties.getId(), result
                                        .result()
                                        .actualPort());

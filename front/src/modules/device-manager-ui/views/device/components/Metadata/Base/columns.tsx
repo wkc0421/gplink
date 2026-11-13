@@ -221,7 +221,7 @@ export const useColumns = (dataSource: Ref<MetadataItem[]>, type?: MetadataType,
       dataIndex: 'id',
       form: {
         required: true,
-        rules: [{
+        rules: [{ required: true, message: i18n.global.t('Base.Base.640395-9') }, {
           asyncValidator(rule:any,value: any, ...setting: any) {
             if (value) {
               const option = setting[2]

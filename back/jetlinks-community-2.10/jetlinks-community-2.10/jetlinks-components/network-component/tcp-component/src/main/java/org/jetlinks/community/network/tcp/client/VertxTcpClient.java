@@ -18,6 +18,7 @@ package org.jetlinks.community.network.tcp.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetClient;
@@ -32,6 +33,7 @@ import org.jetlinks.community.network.tcp.parser.PayloadParser;
 import org.jetlinks.core.message.codec.EncodedMessage;
 import org.jetlinks.core.utils.Reactors;
 import org.jetlinks.community.network.DefaultNetworkType;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.NetworkType;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -166,6 +168,24 @@ public class VertxTcpClient implements TcpClient {
     @Override
     public boolean isAlive() {
         return socket != null && (keepAliveTimeoutMs < 0 || System.currentTimeMillis() - lastKeepAliveTime < keepAliveTimeoutMs);
+    }
+
+    @Override
+    public synchronized NetworkRuntimeDetails getRuntimeDetails() {
+        NetworkRuntimeDetails details = new NetworkRuntimeDetails();
+        details.setConnected(connected);
+        details.setConnecting(!connected && client != null);
+        if (connected) {
+            SocketAddress local = socket.localAddress();
+            SocketAddress remote = socket.remoteAddress();
+            if (local != null) {
+                details.setLocalAddress(NetUtil.toSocketAddressString(local.host(), local.port()));
+            }
+            if (remote != null) {
+                details.setRemoteAddress(NetUtil.toSocketAddressString(remote.host(), remote.port()));
+            }
+        }
+        return details;
     }
 
     @Override

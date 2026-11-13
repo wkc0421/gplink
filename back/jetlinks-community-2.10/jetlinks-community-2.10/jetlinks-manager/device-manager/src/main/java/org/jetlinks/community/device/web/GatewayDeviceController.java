@@ -27,11 +27,13 @@ import org.hswebframework.web.authorization.annotation.Resource;
 import org.hswebframework.web.authorization.annotation.SaveAction;
 import org.jetlinks.community.device.entity.DeviceInstanceEntity;
 import org.jetlinks.community.device.entity.DeviceProductEntity;
+import org.jetlinks.community.device.enums.DeviceState;
 import org.jetlinks.community.device.enums.DeviceType;
 import org.jetlinks.community.device.service.LocalDeviceInstanceService;
 import org.jetlinks.community.device.service.LocalDeviceProductService;
 import org.jetlinks.community.device.web.response.GatewayDeviceInfo;
 import org.jetlinks.core.ProtocolSupport;
+import org.jetlinks.core.device.DeviceConfigKey;
 import org.jetlinks.core.device.DeviceOperator;
 import org.jetlinks.core.device.DeviceRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,21 +149,9 @@ public class GatewayDeviceController {
     @QueryOperation(summary = "绑定单个子设备到网关设备")
     @Transactional
     public Mono<GatewayDeviceInfo> bindDevice(@PathVariable @Parameter(description = "网关设备ID") String gatewayId,
-                                              @PathVariable @Parameter(description = "子设备ID") String deviceId) {
-        return instanceService
-            .checkCyclicDependency(deviceId, gatewayId)
-            .then(
-                instanceService
-                    .createUpdate()
-                    .set(DeviceInstanceEntity::getParentId, gatewayId)
-                    .where(DeviceInstanceEntity::getId, deviceId)
-                    .execute()
-            )
-            .then(
-                //触发绑定
-                handleBindUnbind(gatewayId, Flux.just(deviceId), ProtocolSupport::onChildBind)
-            )
-            .then(getGatewayInfo(gatewayId));
+                                              @PathVariable @Parameter(description = "子设备ID") String deviceId,
+                                              @RequestParam(name = "validateRuntime", defaultValue = "false") boolean validateRuntime) {
+        return bindDevices(gatewayId, Mono.just(Collections.singletonList(deviceId)), validateRuntime);
     }
 
     @PostMapping("/{gatewayId}/bind")
@@ -169,30 +159,69 @@ public class GatewayDeviceController {
     @QueryOperation(summary = "绑定多个子设备到网关设备")
     @Transactional
     public Mono<GatewayDeviceInfo> bindDevice(@PathVariable @Parameter(description = "网关设备ID") String gatewayId,
-                                              @RequestBody @Parameter(description = "子设备ID集合") Mono<List<String>> deviceId) {
+                                              @RequestBody @Parameter(description = "子设备ID集合") Mono<List<String>> deviceId,
+                                              @RequestParam(name = "validateRuntime", defaultValue = "false") boolean validateRuntime) {
+        return bindDevices(gatewayId, deviceId, validateRuntime);
+    }
 
-
+    private Mono<GatewayDeviceInfo> bindDevices(String gatewayId, Mono<List<String>> deviceId,
+                                               boolean validateRuntime) {
         return deviceId
             .flatMapIterable(Function.identity())
+            .distinct()
             .flatMap(childId -> instanceService
                 .checkCyclicDependency(childId, gatewayId)
                 .thenReturn(childId))
             .collectList()
             .filter(CollectionUtils::isNotEmpty)
-            .flatMap(deviceIdList -> instanceService
-                .createUpdate()
-                .set(DeviceInstanceEntity::getParentId, gatewayId)
-                .where()
-                .in(DeviceInstanceEntity::getId, deviceIdList)
-                .execute()
-                .then(registry.getDevice(gatewayId)
-                    .flatMap(gwOperator -> gwOperator.getProtocol()
-                        .flatMap(protocolSupport -> protocolSupport.onChildBind(gwOperator,
-                            Flux.fromIterable(deviceIdList).flatMap(id -> registry.getDevice(id)))
-                        )
-                    )
-                )
+            .flatMap(deviceIdList -> validateBindingDevices(gatewayId, deviceIdList, validateRuntime)
+                .then(Mono.defer(() -> instanceService
+                    .createUpdate()
+                    .set(DeviceInstanceEntity::getParentId, gatewayId)
+                    .where()
+                    .in(DeviceInstanceEntity::getId, deviceIdList)
+                    .execute()))
+                // Do not rely on entity events or the protocol consuming the child Flux.
+                .then(synchronizeBindingsAndNotify(gatewayId, deviceIdList, validateRuntime))
             ).then(getGatewayInfo(gatewayId));
+    }
+
+    Mono<Void> validateBindingDevices(String gatewayId, List<String> childIds, boolean validateRuntime) {
+        return Flux.concat(Flux.just(gatewayId), Flux.fromIterable(childIds))
+            .concatMap(id -> instanceService.findById(id)
+                .switchIfEmpty(Mono.error(new IllegalStateException("Device [" + id + "] does not exist")))
+                .flatMap(entity -> registeredForBinding(entity, validateRuntime)))
+            .then();
+    }
+
+    private Mono<DeviceOperator> registeredForBinding(DeviceInstanceEntity entity, boolean validateRuntime) {
+        if (validateRuntime && entity.getState() != DeviceState.offline && entity.getState() != DeviceState.online) {
+            return Mono.error(new IllegalStateException("Device [" + entity.getId() + "] is not activated"));
+        }
+        return Mono.defer(() -> registry.getDevice(entity.getId()))
+            .switchIfEmpty(Mono.defer(() -> !validateRuntime && entity.getState() == DeviceState.notActive
+                ? Mono.empty()
+                : Mono.error(new IllegalStateException("Device [" + entity.getId()
+                    + "] is not registered; activate it before binding"))));
+    }
+
+    Mono<Void> synchronizeBindings(String gatewayId, List<String> childIds, boolean validateRuntime) {
+        return Flux.fromIterable(childIds)
+            .concatMap(id -> instanceService.findById(id)
+                .switchIfEmpty(Mono.error(new IllegalStateException("Device [" + id + "] does not exist")))
+                .flatMap(entity -> registeredForBinding(entity, validateRuntime))
+                .flatMap(child -> child.setConfig(DeviceConfigKey.parentGatewayId, gatewayId)
+                    .filter(Boolean.TRUE::equals)
+                    .switchIfEmpty(Mono.error(new IllegalStateException("Failed to synchronize parent for device [" + id + "]")))
+                    .then(Mono.defer(() -> child.getSelfConfig(DeviceConfigKey.parentGatewayId)))
+                    .filter(gatewayId::equals)
+                    .switchIfEmpty(Mono.error(new IllegalStateException("Parent binding verification failed for device [" + id + "]")))))
+            .then();
+    }
+
+    Mono<Void> synchronizeBindingsAndNotify(String gatewayId, List<String> childIds, boolean validateRuntime) {
+        return synchronizeBindings(gatewayId, childIds, validateRuntime)
+            .then(handleBindUnbind(gatewayId, Flux.fromIterable(childIds), ProtocolSupport::onChildBind));
     }
 
     @PostMapping("/{gatewayId}/unbind/{deviceId}")

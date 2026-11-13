@@ -30,3 +30,7 @@ public/three
 
 # 插件生成文件不需要提交
 tsconfig.paths.json
+
+# Isolated property library verification artifacts
+.property-library-build*/
+.property-library-test-results/

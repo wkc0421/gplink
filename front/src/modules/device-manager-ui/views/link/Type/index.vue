@@ -36,13 +36,14 @@
             <CardBox
                 :showStatus="true"
                 :value="slotProps"
-                :actions="getActions(slotProps, 'card')"
+                :actions="getActions(slotProps)"
                 v-bind="slotProps"
                 :status="slotProps.state.value"
                 :statusText="slotProps.state.text"
                 :statusNames="{
                                 enabled: 'processing',
                                 disabled: 'error',
+                                paused: 'warning',
                             }"
                 @click="handleEye(slotProps.id)"
             >
@@ -131,7 +132,7 @@
           <template #action="slotProps">
             <a-space :size="16">
               <template
-                  v-for="i in getActions(slotProps, 'table')"
+                  v-for="i in getActions(slotProps)"
                   :key="i.key"
               >
                 <j-permission-button
@@ -162,6 +163,7 @@
                 :statusNames="{
                                 enabled: 'processing',
                                 disabled: 'error',
+                                paused: 'warning',
                             }"
             ></j-badge-status>
           </template>
@@ -236,7 +238,7 @@ const columns = [
     scopedSlots: true,
   },
   {
-    title: $t('Type.index.196842-7'),
+    title: $t('Type.runtime.configState'),
     dataIndex: 'state',
     key: 'state',
     width: 100,
@@ -247,6 +249,7 @@ const columns = [
       options: [
         {label: $t('Type.index.196842-8'), value: 'enabled'},
         {label: $t('Type.index.196842-9'), value: 'disabled'},
+        {label: $t('Type.runtime.paused'), value: 'paused'},
       ],
     },
   },
@@ -285,19 +288,16 @@ if(isNoCommunity) {
     },
   },)
 }
-const getActions = (
-    data: Partial<Record<string, any>>,
-    type: 'card' | 'table',
-): any[] => {
+const getActions = (data: Partial<Record<string, any>>): any[] => {
   if (!data) return [];
   const state = data.state.value;
   const stateText = state === 'enabled' ? $t('Type.index.196842-9') : $t('Type.index.196842-12');
-  const actions = [
+  return [
     {
       key: 'view',
-      text: $t('Type.index.196842-13'),
+      text: $t('Type.runtime.title'),
       tooltip: {
-        title: $t('Type.index.196842-13'),
+        title: $t('Type.runtime.title'),
       },
       icon: 'EyeOutlined',
       onClick: async () => {
@@ -366,9 +366,6 @@ const getActions = (
       icon: 'DeleteOutlined',
     },
   ];
-  return type === 'table'
-      ? actions
-      : actions.filter((item) => item.key !== 'view');
 };
 
 const handleAdd = () => {

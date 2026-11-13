@@ -9,6 +9,7 @@ public class CounterConfig {
     private String propertyId;
     private String rawTable;
     private boolean enabled;
+    private boolean productConfigured = true;
     private long startTime;
     private long version;
     private String status;

@@ -23,6 +23,7 @@ import org.jetlinks.community.things.data.ThingsDataRepositoryStrategy;
 import org.jetlinks.community.timescaledb.TimescaleDBOperations;
 import org.jetlinks.community.timescaledb.thing.CaggMonitorService;
 import org.jetlinks.community.timescaledb.thing.RawRetentionStartupReconciler;
+import org.jetlinks.community.timescaledb.thing.DeviceLogRetentionStartupReconciler;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBColumnModeStrategy;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBRowModeStrategy;
 import org.jetlinks.community.timescaledb.thing.TimescaleDBThingsDataProperties;
@@ -41,6 +42,14 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "timescaledb.things-data", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(TimescaleDBThingsDataProperties.class)
 public class TimescaleDBThingsDataConfiguration {
+
+    @Bean(initMethod = "init")
+    public DeviceLogRetentionStartupReconciler deviceLogRetentionStartupReconciler(
+        TimescaleDBOperations operations, TimescaleDBThingsDataProperties properties,
+        @Value("${jetlinks.device.storage.metric.log-prefix:device_log_}") String logPrefix,
+        @Value("${jetlinks.device.storage.metric.log-all-in-one:device_all_log}") String logAllInOne) {
+        return new DeviceLogRetentionStartupReconciler(operations.database(), properties, logPrefix, logAllInOne);
+    }
 
     @Bean(initMethod = "init")
     public RawRetentionStartupReconciler rawRetentionStartupReconciler(
@@ -64,6 +73,13 @@ public class TimescaleDBThingsDataConfiguration {
                                                                  TimescaleDBOperations timescaleDBOperations,
                                                                  TimescaleDBThingsDataProperties properties) {
         return new TimescaleDBRowModeStrategy(registry, timescaleDBOperations, properties);
+    }
+
+    @Bean(initMethod = "init", destroyMethod = "shutdown")
+    @ConditionalOnProperty(prefix = "timescaledb.things-data.counter-snapshot", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public org.jetlinks.community.timescaledb.thing.simulation.SimulationTaskService simulationTaskService(
+        TimescaleDBOperations operations, TimescaleDBThingsDataProperties properties, CounterSnapshotService counters) {
+        return new org.jetlinks.community.timescaledb.thing.simulation.SimulationTaskService(operations, properties, counters);
     }
 
     @Bean

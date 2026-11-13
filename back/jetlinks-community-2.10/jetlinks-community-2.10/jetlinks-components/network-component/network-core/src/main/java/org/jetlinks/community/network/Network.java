@@ -54,6 +54,11 @@ public interface Network {
      */
     boolean isAlive();
 
+    /** Read protocol-specific state without starting or reloading the network. */
+    default NetworkRuntimeDetails getRuntimeDetails() {
+        return new NetworkRuntimeDetails();
+    }
+
     /**
      * 当{@link Network#isAlive()}为false是,是否自动重新加载.
      *

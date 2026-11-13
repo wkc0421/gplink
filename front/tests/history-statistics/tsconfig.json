@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "types": ["ant-design-vue/typings/global", "vite/client", "vue/jsx"],
+    "paths": { "@/store": ["tests/history-statistics/mock.ts"] }
+  },
+  "references": [],
+  "include": [
+    "../../src/modules/device-manager-ui/views/device/HistoryStatistics/**/*.vue",
+    "../../src/modules/device-manager-ui/views/device/HistoryStatistics/**/*.ts",
+    "../../src/modules/device-manager-ui/api/historyStatistics.ts",
+    "mock.ts"
+  ]
+}

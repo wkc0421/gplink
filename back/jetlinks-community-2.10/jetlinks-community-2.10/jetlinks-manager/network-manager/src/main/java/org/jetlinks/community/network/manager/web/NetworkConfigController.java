@@ -29,14 +29,17 @@ import org.hswebframework.web.authorization.annotation.Resource;
 import org.hswebframework.web.authorization.annotation.SaveAction;
 import org.hswebframework.web.crud.web.reactive.ReactiveServiceCrudController;
 import org.hswebframework.web.exception.I18nSupportException;
+import org.hswebframework.web.exception.NotFoundException;
 import org.jetlinks.community.network.*;
 import org.jetlinks.community.network.channel.ChannelInfo;
 import org.jetlinks.community.network.manager.entity.NetworkConfigEntity;
 import org.jetlinks.community.network.manager.enums.NetworkConfigState;
 import org.jetlinks.community.network.manager.service.NetworkChannelProvider;
 import org.jetlinks.community.network.manager.service.NetworkConfigService;
+import org.jetlinks.community.network.manager.web.response.NetworkRuntimeInfo;
 import org.jetlinks.community.network.manager.web.response.NetworkTypeInfo;
 import org.jetlinks.community.reference.DataReferenceManager;
+import org.jetlinks.core.device.session.DeviceSessionManager;
 import org.springframework.web.bind.annotation.*;
 import reactor.bool.BooleanUtils;
 import reactor.core.publisher.Flux;
@@ -64,12 +67,27 @@ public class NetworkConfigController implements ReactiveServiceCrudController<Ne
 
     private final NetworkChannelProvider channelProvider;
 
+    private final DeviceSessionManager sessionManager;
+
     @Generated
     @Override
     public NetworkConfigService getService() {
         return configService;
     }
 
+    @GetMapping("/{id}/_runtime")
+    @QueryAction
+    @Operation(summary = "查询当前节点上网络组件的运行状态和连接信息")
+    public Mono<NetworkRuntimeInfo> getRuntime(@PathVariable String id) {
+        return configService.findById(id)
+            .switchIfEmpty(Mono.error(() -> new NotFoundException("error.configuration_does_not_exist", id)))
+            .flatMap(config -> {
+                String serverId = sessionManager.getCurrentServerId();
+                return networkManager.getCachedNetwork(config.lookupNetworkType(), id)
+                    .map(network -> new NetworkRuntimeInfo(config, serverId, network))
+                    .defaultIfEmpty(new NetworkRuntimeInfo(config, serverId, null));
+            });
+    }
 
     @GetMapping("/{networkType}/_detail")
     @QueryAction

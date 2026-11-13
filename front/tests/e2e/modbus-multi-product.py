@@ -55,6 +55,8 @@ class Backend:
             result = [{'id': 'tcp-server-gateway'}, {'id': 'tcp-client-gateway'}]
         elif path == '/network/certificate/_query/no-paging':
             result = []
+        elif re.fullmatch('/device-product/[^/]+/exists', path):
+            result = path.split('/')[-2] in self.products
         elif path == '/device-product' and method == 'POST':
             id = body.get('id') or f'created-product-{len(self.products)}'
             assert id not in self.products, f'duplicate product creation: {id}'
@@ -143,6 +145,9 @@ def product_csv(prop, address=0):
 
 
 def enter_products(page):
+    page.get_by_text('选择已有', exact=True).first.click()
+    expect(page.locator('.ant-spin-spinning')).to_have_count(0)
+    expect(page.locator('.ant-select-selection-item').filter(has_text='Modbus 接入')).to_be_visible()
     page.get_by_role('button', name='下一步', exact=True).click()
     page.get_by_role('button', name='下一步', exact=True).click()
 
@@ -181,9 +186,15 @@ def existing_flow(browser):
     expect(panel(page).get_by_placeholder('设备ID')).to_have_count(2)
     page.get_by_role('button', name='下一步', exact=True).click()
     save(page)
-    saved(page)
-    assert backend.devices['water']['state'] == 'notActive'
+    page.wait_for_function('() => (window.__messages || []).some(x => x.includes("产品或采集器尚未启用"))')
     assert backend.products['pb']['state'] == 0
+    assert backend.devices['water']['state'] == 'notActive'
+    assert not any(path.endswith('/bind') for _, path, _ in backend.writes)
+    backend.products['pb']['state'] = 1
+    save(page)
+    saved(page)
+    assert backend.devices['water']['state'] == 'online'
+    assert backend.products['pb']['state'] == 1
     assert backend.devices['meter']['configuration']['pollIntervalMs'] == 9999
     assert backend.devices['meter']['configuration']['pollOverrideEnabled'] is True
     assert backend.devices['meter']['configuration']['customDevice'] == 'keep'
@@ -191,9 +202,9 @@ def existing_flow(browser):
     assert backend.accesses['access']['configuration']['customAccess'] == 'keep'
     assert set(backend.accesses['access']['configuration']['childDeviceIds']) == {'meter', 'water', 'collector_2', 'outsider'}
     assert ('meter', ['voltage']) in backend.reads and ('collector_2', ['voltage']) in backend.reads
-    assert not any(id == 'water' for id, _ in backend.reads)
-    assert not any(path.endswith('/water/deploy') for _, path, _ in backend.writes)
-    print('PASS: existing groups hydrate; independent imports; shared configuration and disabled state preserved')
+    assert ('water', ['flow']) in backend.reads
+    assert any(path.endswith('/water/deploy') for _, path, _ in backend.writes)
+    print('PASS: inactive product blocks binding; retry activates existing child and preserves shared configuration')
 
     page.get_by_role('button', name='上一步', exact=True).click()
     page.get_by_role('button', name='添加产品', exact=True).click()
@@ -246,12 +257,10 @@ def new_flow(browser, server_mode):
     page.wait_for_load_state('networkidle')
     page.get_by_text('新建 TCP 服务端' if server_mode else '新建 TCP 客户端', exact=True).click()
     if server_mode:
-        panel(page).get_by_placeholder('设备实际连接的平台地址').fill('127.0.0.1')
+        panel(page).get_by_placeholder('设备实际连接的平台 IP 或域名').fill('127.0.0.1')
     else:
         panel(page).get_by_placeholder('设备网关 IP 或域名').fill('127.0.0.1')
-    page.get_by_role('button', name='下一步', exact=True).click()
-    panel(page).get_by_text('新建', exact=True).nth(0).click()
-    panel(page).get_by_text('新建', exact=True).nth(1).click()
+    page.get_by_text('高级配置', exact=True).click()
     panel(page).get_by_placeholder('留空由系统生成').nth(0).fill('new-gateway-product')
     panel(page).get_by_placeholder('留空由系统生成').nth(1).fill('new-collector')
     page.get_by_role('button', name='下一步', exact=True).click()

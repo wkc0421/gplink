@@ -47,6 +47,13 @@ public interface NetworkManager {
      */
     Flux<Network> getNetworks();
 
+    /** Look up an existing local instance without creating one on a cache miss. */
+    default Mono<Network> getCachedNetwork(NetworkType type, String id) {
+        return getNetworks()
+            .filter(network -> id.equals(network.getId()) && type.getId().equals(network.getType().getId()))
+            .next();
+    }
+
     /**
      * 获取全部网络组件提供商
      *

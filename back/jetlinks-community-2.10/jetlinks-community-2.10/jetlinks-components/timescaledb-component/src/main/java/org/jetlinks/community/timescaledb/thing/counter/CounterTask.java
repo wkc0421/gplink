@@ -7,6 +7,7 @@ public class CounterTask {
     private String id;
     private String productId;
     private String propertyId;
+    private String deviceId;
     private String status;
     private String kind;
     private long from;

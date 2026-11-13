@@ -484,10 +484,35 @@ body,
   box-shadow: 0 6px 16px rgba(47, 128, 255, .24);
 }
 
-.ant-btn-primary:hover {
+.ant-btn-primary:not(:disabled):hover {
   background: linear-gradient(135deg, @app-primary-hover 0%, #6BB4FF 100%);
   border-color: @app-primary-hover;
   box-shadow: 0 8px 20px rgba(47, 128, 255, .34);
+}
+
+// Ghost buttons need their own dark surface and readable text instead of the
+// primary gradient, which otherwise leaves their blue text on a blue fill.
+.ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not(:disabled) {
+  color: @app-text-secondary;
+  background: @app-elevated;
+  border-color: @app-border-strong;
+  box-shadow: none;
+}
+
+.ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not(:disabled):hover,
+.ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not(:disabled):focus-visible,
+.ant-btn-primary.ant-btn-background-ghost:not(.ant-btn-dangerous):not(:disabled):active {
+  color: @app-text;
+  background: @app-hover;
+  border-color: @app-primary-hover;
+}
+
+.ant-btn.ant-btn-primary:disabled,
+.ant-btn.ant-btn-primary.ant-btn-background-ghost:disabled {
+  color: @app-text-disabled;
+  background: @app-surface;
+  border-color: @app-border;
+  box-shadow: none;
 }
 
 .ant-tabs-nav,

@@ -16,6 +16,7 @@
 package org.jetlinks.community.network.mqtt.server.vertx;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.netty.util.NetUtil;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,6 +26,7 @@ import org.jetlinks.community.network.mqtt.server.MqttConnection;
 import org.jetlinks.community.network.mqtt.server.MqttServer;
 import org.jetlinks.core.utils.Reactors;
 import org.jetlinks.community.network.DefaultNetworkType;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.NetworkType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -32,8 +34,11 @@ import reactor.util.concurrent.Queues;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -45,13 +50,15 @@ public class VertxMqttServer implements MqttServer {
     private final Map<String, List<Sinks.Many<MqttConnection>>> sinks =
         new NonBlockingHashMap<>();
 
-    private Collection<io.vertx.mqtt.MqttServer> mqttServer;
+    private volatile Collection<io.vertx.mqtt.MqttServer> mqttServer = List.of();
+    private Set<VertxMqttConnection> acceptedConnections = newConnectionSet();
+    private final Set<String> listeningAddresses = new LinkedHashSet<>();
 
     private final String id;
 
     @Getter
     @Setter
-    private String lastError;
+    private volatile String lastError;
 
     @Setter(AccessLevel.PACKAGE)
     private InetSocketAddress bind;
@@ -60,20 +67,54 @@ public class VertxMqttServer implements MqttServer {
         this.id = id;
     }
 
-    public void setMqttServer(Collection<io.vertx.mqtt.MqttServer> mqttServer) {
-        if (this.mqttServer != null && !this.mqttServer.isEmpty()) {
+    private static Set<VertxMqttConnection> newConnectionSet() {
+        return Collections.synchronizedSet(new LinkedHashSet<>());
+    }
+
+    public synchronized void setMqttServer(Collection<io.vertx.mqtt.MqttServer> mqttServer) {
+        if (!this.mqttServer.isEmpty()) {
             shutdown();
         }
-        this.mqttServer = mqttServer;
+        // A late handshake from a replaced listener must stay in its original connection set.
+        Set<VertxMqttConnection> connections = acceptedConnections;
+        this.mqttServer = List.copyOf(mqttServer);
         for (io.vertx.mqtt.MqttServer server : this.mqttServer) {
             server
                 .exceptionHandler(error -> {
                     log.error(error.getMessage(), error);
                 })
                 .endpointHandler(endpoint -> {
-                    handleConnection(new VertxMqttConnection(endpoint));
+                    handleConnection(new VertxMqttConnection(endpoint, connections));
                 });
         }
+    }
+
+    synchronized void onListening(io.vertx.mqtt.MqttServer instance, String host) {
+        if (mqttServer.contains(instance)) {
+            listeningAddresses.add(NetUtil.toSocketAddressString(host, instance.actualPort()));
+        }
+    }
+
+    @Override
+    public synchronized NetworkRuntimeDetails getRuntimeDetails() {
+        NetworkRuntimeDetails details = new NetworkRuntimeDetails();
+        details.setListening(!listeningAddresses.isEmpty());
+        if (!listeningAddresses.isEmpty()) {
+            details.setBindAddress(String.join(", ", listeningAddresses));
+        }
+        List<VertxMqttConnection> clients;
+        // Capture membership together, then read peer addresses without blocking accept/close.
+        synchronized (acceptedConnections) {
+            details.setConnectionCount(acceptedConnections.size());
+            clients = acceptedConnections.stream().limit(NetworkRuntimeDetails.MAX_CONNECTIONS).toList();
+        }
+        details.setConnections(clients.stream().map(connection -> {
+            InetSocketAddress remote = connection.getClientAddress();
+            return new NetworkRuntimeDetails.Connection(
+                remote == null ? null : remote.getHostString(), remote == null ? null : remote.getPort(),
+                connection.getClientId());
+        }).toList());
+        return details;
     }
 
     private boolean emitNext(Sinks.Many<MqttConnection> sink, VertxMqttConnection connection){
@@ -135,7 +176,7 @@ public class VertxMqttServer implements MqttServer {
 
     @Override
     public boolean isAlive() {
-        return mqttServer != null && !mqttServer.isEmpty();
+        return !mqttServer.isEmpty();
     }
 
     @Override
@@ -154,8 +195,11 @@ public class VertxMqttServer implements MqttServer {
     }
 
     @Override
-    public void shutdown() {
-        if (mqttServer != null) {
+    public synchronized void shutdown() {
+        listeningAddresses.clear();
+        if (!mqttServer.isEmpty()) {
+            acceptedConnections.clear();
+            acceptedConnections = newConnectionSet();
             // Complete main sink
             sink.tryEmitComplete();
             // Complete all per-holder sinks
@@ -172,7 +216,7 @@ public class VertxMqttServer implements MqttServer {
                     }
                 });
             }
-            mqttServer.clear();
+            mqttServer = List.of();
         }
 
     }

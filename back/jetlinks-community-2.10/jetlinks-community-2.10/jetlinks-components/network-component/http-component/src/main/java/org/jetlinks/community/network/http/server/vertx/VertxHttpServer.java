@@ -16,6 +16,7 @@
 package org.jetlinks.community.network.http.server.vertx;
 
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
+import io.netty.util.NetUtil;
 import io.vertx.core.http.HttpClosedException;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import org.jetlinks.core.lang.SeparatedCharSequence;
 import org.jetlinks.core.lang.SharedPathString;
 import org.jetlinks.core.topic.Topic;
 import org.jetlinks.community.network.DefaultNetworkType;
+import org.jetlinks.community.network.NetworkRuntimeDetails;
 import org.jetlinks.community.network.NetworkType;
 import org.jetlinks.community.network.http.server.HttpExchange;
 import org.jetlinks.community.network.http.server.HttpServer;
@@ -38,7 +40,9 @@ import reactor.core.publisher.FluxSink;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.stream.Collectors;
@@ -59,6 +63,8 @@ public class VertxHttpServer implements HttpServer {
     private static final Map<HttpMethod, SeparatedCharSequence> HTTP_PREFIX_CACHE = new ConcurrentHashMap<>();
 
     private Collection<io.vertx.core.http.HttpServer> httpServers;
+
+    private final Set<String> listeningAddresses = new LinkedHashSet<>();
 
     private HttpServerConfig config;
 
@@ -90,7 +96,7 @@ public class VertxHttpServer implements HttpServer {
         return bindAddress;
     }
 
-    public void setHttpServers(Collection<io.vertx.core.http.HttpServer> httpServers) {
+    public synchronized void setHttpServers(Collection<io.vertx.core.http.HttpServer> httpServers) {
         if (isAlive()) {
             shutdown();
         }
@@ -216,6 +222,22 @@ public class VertxHttpServer implements HttpServer {
         }
     }
 
+    synchronized void markListening(io.vertx.core.http.HttpServer instance, String host) {
+        if (httpServers != null && httpServers.contains(instance)) {
+            listeningAddresses.add(NetUtil.toSocketAddressString(host, instance.actualPort()));
+        }
+    }
+
+    @Override
+    public synchronized NetworkRuntimeDetails getRuntimeDetails() {
+        NetworkRuntimeDetails details = new NetworkRuntimeDetails();
+        details.setListening(!listeningAddresses.isEmpty());
+        if (!listeningAddresses.isEmpty()) {
+            details.setBindAddress(String.join(", ", listeningAddresses));
+        }
+        return details;
+    }
+
     private SeparatedCharSequence parsePath(String url) {
         while (url.charAt(url.length() - 1) == '/') {
             url = url.substring(0, url.length() - 1);
@@ -301,7 +323,8 @@ public class VertxHttpServer implements HttpServer {
     }
 
     @Override
-    public void shutdown() {
+    public synchronized void shutdown() {
+        listeningAddresses.clear();
         if (httpServers != null) {
             for (io.vertx.core.http.HttpServer httpServer : httpServers) {
                 httpServer.close(res -> {
@@ -321,7 +344,7 @@ public class VertxHttpServer implements HttpServer {
     }
 
     @Override
-    public boolean isAlive() {
+    public synchronized boolean isAlive() {
         return httpServers != null && !httpServers.isEmpty();
     }
 

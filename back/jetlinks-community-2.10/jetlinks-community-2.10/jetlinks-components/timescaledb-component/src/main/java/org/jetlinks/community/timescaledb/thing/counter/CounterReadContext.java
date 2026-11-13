@@ -6,14 +6,27 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class CounterReadContext {
     private boolean enabled;
     private long configVersion;
     private long sourceVersion;
     private long publishedVersion;
+    private long policyRevision;
+
+    public CounterReadContext(boolean enabled, long configVersion, long sourceVersion, long publishedVersion) {
+        this(enabled, configVersion, sourceVersion, publishedVersion, 0);
+    }
+
+    public CounterReadContext(boolean enabled, long configVersion, long sourceVersion,
+                              long publishedVersion, long policyRevision) {
+        this.enabled = enabled;
+        this.configVersion = configVersion;
+        this.sourceVersion = sourceVersion;
+        this.publishedVersion = publishedVersion;
+        this.policyRevision = policyRevision;
+    }
 
     public String getVersion() {
-        return configVersion + ":" + sourceVersion + ":" + publishedVersion;
+        return configVersion + ":" + sourceVersion + ":" + publishedVersion + ":" + policyRevision;
     }
 }

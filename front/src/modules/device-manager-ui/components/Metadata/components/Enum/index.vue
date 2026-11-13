@@ -2,13 +2,14 @@
   <PopoverModal
     v-model:visible="visible"
     :placement="placement"
+    overlay-class-name="metadata-enum-popover"
     @ok="onOk"
     @cancel="onCancel"
   >
     <template #content>
-      <div style="width: 450px" v-if="visible">
+      <div class="metadata-enum-content" v-if="visible">
         <a-form ref="formRef" layout="vertical" :model="formData">
-          <Item ref="tableRef" :value="formData.elements"/>
+          <Item ref="tableRef" v-model:value="formData.elements"/>
         </a-form>
       </div>
     </template>
@@ -82,6 +83,21 @@ watch(
 
 </script>
 
-<style scoped>
-
+<style>
+.metadata-enum-popover {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+.metadata-enum-popover .ant-popover-inner {
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+.metadata-enum-content {
+  width: min(450px, calc(100vw - 56px));
+}
+.metadata-enum-popover .metadata-edit-table-body {
+  height: min(200px, max(70px, calc(100vh - 270px))) !important;
+}
 </style>

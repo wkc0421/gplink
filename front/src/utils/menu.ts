@@ -34,9 +34,8 @@ const menuIconOverrides: Record<string, string> = {
   'system/ApiToken': 'KeyOutlined',
 }
 
-// Keep the subscription-management route available for compatibility, but
-// remove its navigation entry from the top header and sidebar.
-const hiddenMenuCodes = new Set(['system/NoticeRule', 'message-subscribe'])
+// Preserve routes for saved menus that have moved out of the sidebar.
+const hiddenMenuCodes = new Set(['system/NoticeRule', 'message-subscribe', 'device/LatestDeviceData'])
 const hiddenMenuUrls = new Set(['/system/NoticeRule', '/message-subscribe'])
 const hiddenMenuTitles = new Set(['订阅管理', 'Subscription Management'])
 

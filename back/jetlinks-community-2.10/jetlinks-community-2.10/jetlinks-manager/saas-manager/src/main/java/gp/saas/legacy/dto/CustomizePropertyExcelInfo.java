@@ -148,7 +148,20 @@ public class CustomizePropertyExcelInfo {
             .map(CustomizePropertyExcelInfo::fromPropertyJson);
     }
 
+    public static Flux<CustomizePropertyExcelInfo> getExportContentMapping(JSONArray properties) {
+        if (properties == null) {
+            return Flux.empty();
+        }
+        return Flux.fromIterable(properties)
+            .map(item -> JSONObject.parseObject(JSONObject.toJSONString(item)))
+            .map(property -> fromPropertyJson(property, true));
+    }
+
     private static CustomizePropertyExcelInfo fromPropertyJson(JSONObject property) {
+        return fromPropertyJson(property, false);
+    }
+
+    private static CustomizePropertyExcelInfo fromPropertyJson(JSONObject property, boolean preserveUnit) {
         CustomizePropertyExcelInfo info = new CustomizePropertyExcelInfo();
         info.setId(property.getString("id"));
         info.setName(property.getString("name"));
@@ -158,7 +171,8 @@ public class CustomizePropertyExcelInfo {
         if (valueType != null) {
             info.setValueType(valueType.getString("type"));
             info.setScale(valueType.getString("scale"));
-            info.setUnit(convertUnit(valueType.getString("unit")));
+            String unit = valueType.getString("unit");
+            info.setUnit(preserveUnit ? (unit == null ? "" : unit) : convertUnit(unit));
         }
 
         JSONObject expands = property.getJSONObject("expands");
@@ -202,7 +216,6 @@ public class CustomizePropertyExcelInfo {
         return List.of(
             PoiWriteOptions.addNormalPullDownSheet(0, 1, AddNormalPullDownSheetOption.MAX_ROW, 8, 8, PropertyType.allToList().toArray(new String[0])),
             PoiWriteOptions.addNormalPullDownSheet(0, 1, AddNormalPullDownSheetOption.MAX_ROW, 9, 9, DATA_TYPES.toArray(new String[0])),
-            PoiWriteOptions.addNormalPullDownSheet(0, 1, AddNormalPullDownSheetOption.MAX_ROW, 11, 11, allToListByUnit().toArray(new String[0])),
             PoiWriteOptions.addNormalPullDownSheet(0, 1, AddNormalPullDownSheetOption.MAX_ROW, 7, 7, SourceType.allToList().toArray(new String[0])),
             PoiWriteOptions.addNormalPullDownSheet(0, 1, AddNormalPullDownSheetOption.MAX_ROW, 5, 5, allToListByParse().toArray(new String[0]))
         );

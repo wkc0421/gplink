@@ -37,6 +37,9 @@ public class TimescaleDBThingsDataProperties {
      */
     private Interval retentionPolicy = Interval.of(5, Interval.year);
 
+    /** 日志表独立保留期；未配置时保持原存储策略行为。 */
+    private Interval logRetentionPolicy;
+
     /**
      * 是否对属性表启用 TimescaleDB 列压缩（仅属性表）
      */

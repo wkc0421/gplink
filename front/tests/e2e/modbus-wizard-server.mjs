@@ -14,7 +14,7 @@ const virtual = {
     export const ndJson = () => {};
   `,
   '@jetlinks-web/utils': `export const getToken = () => ''; export const onlyMessage = (message) => { (window.__messages ||= []).push(message) };`,
-  '@jetlinks-web/constants': `export const BASE_API = '/mock'; export const TOKEN_KEY_URL = 'token';`,
+  '@jetlinks-web/constants': `export const BASE_API = '/mock'; export const TOKEN_KEY_URL = 'token'; export const TOKEN_KEY = 'token';`,
   '/__wizard-entry': `
     import { createApp, defineComponent, h } from 'vue';
     import Antd, { Button } from 'ant-design-vue';

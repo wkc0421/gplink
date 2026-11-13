@@ -6,7 +6,7 @@
     <div class="metadata-edit-table-extra">
       <slot name="extra" :isFullscreen="isFullscreen" :fullScreenToggle="toggle"/>
     </div>
-    <div v-if="horizontalOverflow" class="metadata-edit-table-horizontal-controls">
+    <div v-if="horizontalOverflow && !$slots.displayBody" class="metadata-edit-table-horizontal-controls">
       <div class="metadata-edit-table-horizontal-hint">
         <span>左右拖动滚动条查看全部列</span>
         <div class="metadata-edit-table-horizontal-buttons">
@@ -19,14 +19,16 @@
       </div>
     </div>
     <div class="metadata-edit-table">
-      <div ref="headerViewport" class="metadata-edit-table-header" style="height: 50px" :style="{paddingRight: scrollWidth + 'px'}">
+      <div v-show="!$slots.displayBody" ref="headerViewport" class="metadata-edit-table-header" style="height: 50px" :style="{paddingRight: scrollWidth + 'px'}">
         <Header
           :columns="myColumns"
           :style="{width: `${contentWidth}px`}"
         />
       </div>
-      <div class="metadata-edit-table-body" :style="{width: tableStyle.width, height: `${height}px`}">
+      <div class="metadata-edit-table-body" :style="{width: tableStyle.width, height: $slots.displayBody ? 'auto' : `${height}px`}">
+        <slot v-if="$slots.displayBody" name="displayBody" :records="bodyDataSource"/>
         <Body
+          v-show="!$slots.displayBody"
           ref="tableBody"
           :dataSource="bodyDataSource"
           :columns="myColumns"
@@ -57,7 +59,7 @@
         @add="addGroup"
         @delete="groupDelete"
         @edit="groupEdit"
-        @change="updateGroupActive"
+        @change="(...args) => { updateGroupActive(...args); emit('groupChange') }"
       />
     </div>
   </div>
@@ -92,7 +94,7 @@ import { useI18n } from 'vue-i18n';
 
 const { t: $t } = useI18n();
 
-const emit = defineEmits(['scrollDown', 'rightMenuClick', 'editChange', 'groupDelete', 'groupEdit'])
+const emit = defineEmits(['scrollDown', 'rightMenuClick', 'editChange', 'groupDelete', 'groupEdit', 'groupChange', 'validationError'])
 
 const props = defineProps({
   ...tableProps(),
@@ -107,6 +109,14 @@ const props = defineProps({
   validateRowKey: {
     type: Boolean,
     default: false
+  },
+  validationColumns: {
+    type: Array,
+    default: undefined
+  },
+  shouldValidateRow: {
+    type: Function,
+    default: undefined
   },
   readonly: {
     type: Boolean,
@@ -220,7 +230,7 @@ const {isFullscreen, toggle} = useFullscreen(tableWrapper);
 
 const {rules, validateItem, validate, errorMap} = useValidate(
   _dataSource,
-  props.columns,
+  () => props.validationColumns || props.columns,
   props.rowKey,
   {
     onError: (err) => {
@@ -247,13 +257,14 @@ const {rules, validateItem, validate, errorMap} = useValidate(
             }
 
             setTimeout(() => {
-              tableBody.value.scrollTo(e.__serial - 1)
+              tableBody.value?.scrollTo(e.__serial - 1)
             }, 10)
           }
         })
       })
 
       fieldsErrMap.value = errMap
+      emit('validationError', err)
 
     },
     onSuccess: () => {
@@ -262,7 +273,8 @@ const {rules, validateItem, validate, errorMap} = useValidate(
     onEdit: () => {
       emit('editChange', true)
     },
-    validateRowKey: props.validateRowKey
+    validateRowKey: props.validateRowKey,
+    shouldValidateRow: (record) => props.shouldValidateRow?.(record)
   }
 )
 
@@ -398,6 +410,10 @@ watch(maxHorizontalScroll, (max) => {
   if (horizontalScrollLeft.value > max) scrollHorizontally(max - horizontalScrollLeft.value)
 })
 
+watch(() => props.columns, () => {
+  onResize({ width: viewportWidth.value || tableWrapper.value?.clientWidth || 0 })
+}, { deep: true })
+
 const onScrollDown = (len) => {
   emit('scrollDown', len)
 }
@@ -407,12 +423,22 @@ function rightMenu(menuType, record, copyValue) {
 }
 
 const scrollToById = (key) => {
-  const _index = _dataSource.value.findIndex(item => item[props.rowKey] === key)
-  tableBody.value.scrollTo(_index)
+  const record = _dataSource.value.find(item => item[props.rowKey] === key)
+  scrollToRecord(record)
 }
 
 const scrollToByIndex = (index) => {
-  tableBody.value.scrollTo(index)
+  scrollToRecord(_dataSource.value[index])
+}
+
+const scrollToRecord = (record) => {
+  if (!record) return
+  if (props.openGroup) updateGroupActive(record.expands?.groupId, record.expands?.groupName)
+  nextTick(() => {
+    // The viewport contains only the active group, not the full metadata array.
+    const index = bodyDataSource.value.indexOf(record)
+    if (index >= 0) tableBody.value?.scrollTo(index)
+  })
 }
 
 const getTableWrapperRef = () => {
@@ -440,6 +466,7 @@ const groupEdit = (record) => {
 const getGroupActive = () => {
   return groupActive.value
 }
+const getGroupOptions = () => groupOptions.value
 
 watch(() => fieldsErrMap.value, (errorMap) => {
   fieldsGroupError.value = {}
@@ -498,7 +525,8 @@ defineExpose({
   scrollToById,
   scrollToByIndex,
   getTableWrapperRef,
-  getGroupActive
+  getGroupActive,
+  getGroupOptions
 })
 </script>
 

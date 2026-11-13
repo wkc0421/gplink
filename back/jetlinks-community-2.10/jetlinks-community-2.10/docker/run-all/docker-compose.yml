@@ -63,6 +63,7 @@ services:
             - "logging.level.org.springframework.data.r2dbc.connectionfactory=warn"
             - "network.resources[0]=0.0.0.0:8800-8810/tcp"
             - "network.resources[1]=0.0.0.0:1883-1890"
+            - "network.resources[2]=0.0.0.0:8000-8060/tcp"
             - "hsweb.cors.enable=true"
             - "hsweb.cors.configs[0].path=/**"
             - "hsweb.cors.configs[0].allowed-credentials=true"

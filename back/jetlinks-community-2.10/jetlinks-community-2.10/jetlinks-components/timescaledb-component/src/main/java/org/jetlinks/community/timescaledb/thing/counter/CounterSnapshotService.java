@@ -239,6 +239,24 @@ public class CounterSnapshotService {
             .then(execute("CREATE TABLE IF NOT EXISTS " + device + " ("
                 + "product_id text NOT NULL,property_id text NOT NULL,device_id text NOT NULL,"
                 + "PRIMARY KEY(product_id,property_id,device_id))"))
+            // Additive migration: existing rows continue to inherit the product setting.
+            .then(execute("ALTER TABLE " + config
+                + " ADD COLUMN IF NOT EXISTS product_configured boolean NOT NULL DEFAULT true,"
+                + " ADD COLUMN IF NOT EXISTS product_eligible boolean NOT NULL DEFAULT true"))
+            .then(execute("ALTER TABLE " + device
+                + " ADD COLUMN IF NOT EXISTS enabled_override boolean,"
+                + " ADD COLUMN IF NOT EXISTS policy_revision bigint NOT NULL DEFAULT 0,"
+                + " ADD COLUMN IF NOT EXISTS eligible boolean NOT NULL DEFAULT true,"
+                + " ADD COLUMN IF NOT EXISTS present boolean NOT NULL DEFAULT true,"
+                + " ADD COLUMN IF NOT EXISTS start_time timestamp without time zone,"
+                + " ADD COLUMN IF NOT EXISTS updated_by text,"
+                + " ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()"))
+            .then(execute("ALTER TABLE " + task + " ADD COLUMN IF NOT EXISTS batch_device_ids text[]"))
+            .then(execute("CREATE INDEX IF NOT EXISTS " + q("idx_counter_device_policy")
+                + " ON " + device + " (device_id,product_id,property_id)"))
+            .then(execute("CREATE UNIQUE INDEX IF NOT EXISTS " + q("idx_counter_task_active_catchup")
+                + " ON " + task + " (product_id,property_id,device_id,kind)"
+                + " WHERE kind='CATCHUP' AND status IN ('PENDING','RUNNING')"))
             .then(execute("CREATE TABLE IF NOT EXISTS " + refresh + " ("
                 + "product_id text NOT NULL,property_id text NOT NULL,raw_table text NOT NULL,"
                 + "layer text NOT NULL DEFAULT 'HOURLY',"
@@ -390,10 +408,11 @@ public class CounterSnapshotService {
         item.setProductId(string(row.get("product_id")));
         item.setPropertyId(string(row.get("property_id")));
         item.setRawTable(string(row.get("raw_table")));
-        item.setEnabled(Boolean.TRUE.equals(row.get("enabled")));
+        item.setEnabled(Boolean.TRUE.equals(row.get("enabled")) && !Boolean.FALSE.equals(row.get("product_eligible")));
+        item.setProductConfigured(!Boolean.FALSE.equals(row.get("product_configured")));
         item.setStartTime(instant(row.get("start_time")));
         item.setVersion(number(row.get("version")));
-        item.setStatus(string(row.get("status")));
+        item.setStatus(Boolean.FALSE.equals(row.get("product_eligible")) ? "SUSPENDED" : string(row.get("status")));
         item.setCoverageFrom(instantOrNull(row.get("coverage_from")));
         item.setCoverageTo(instantOrNull(row.get("coverage_to")));
         item.setPendingFrom(instantOrNull(row.get("pending_from")));
@@ -410,6 +429,7 @@ public class CounterSnapshotService {
         item.setId(string(row.get("id")));
         item.setProductId(string(row.get("product_id")));
         item.setPropertyId(string(row.get("property_id")));
+        item.setDeviceId(string(row.get("device_id")));
         item.setStatus(string(row.get("status")));
         item.setKind(string(row.get("kind")));
         item.setFrom(instant(row.get("from_time")));
@@ -424,7 +444,7 @@ public class CounterSnapshotService {
 
     public Flux<CounterConfig> list(String productId) {
         return requireReady().thenMany(rows("SELECT * FROM " + table(CONFIG)
-            + " WHERE product_id=? ORDER BY property_id", productId).map(this::config));
+            + " WHERE product_id=? AND product_configured=true ORDER BY property_id", productId).map(this::config));
     }
 
     public Mono<CounterConfig> upsert(String productId, String propertyId, boolean enabled,
@@ -440,26 +460,293 @@ public class CounterSnapshotService {
         long start = requestedStart == null ? today : requestedStart;
         if (start > today) return Mono.error(new IllegalArgumentException("startTime must not be in the future"));
         return requireReady()
-            .then(writeRows("INSERT INTO " + table(CONFIG) + " (product_id,property_id,raw_table,enabled,start_time,updated_by) "
+            .then(rows("SELECT enabled,product_configured,product_eligible FROM " + table(CONFIG)
+                + " WHERE product_id=? AND property_id=? FOR UPDATE", productId, propertyId).next().defaultIfEmpty(Collections.emptyMap()))
+            .flatMap(previous -> writeRows("INSERT INTO " + table(CONFIG) + " (product_id,property_id,raw_table,enabled,start_time,updated_by) "
                 + "VALUES (?,?,?,?,?::timestamp,?) ON CONFLICT (product_id,property_id) DO UPDATE SET "
-                + "raw_table=EXCLUDED.raw_table,enabled=EXCLUDED.enabled,version=" + table(CONFIG) + ".version+1,"
+                + "raw_table=EXCLUDED.raw_table,enabled=EXCLUDED.enabled,product_configured=true,product_eligible=true,version=" + table(CONFIG) + ".version+1,"
                 + "status=CASE WHEN EXCLUDED.enabled THEN 'PENDING' ELSE 'DISABLED' END,"
                 + "task_id=CASE WHEN EXCLUDED.enabled THEN " + table(CONFIG) + ".task_id ELSE NULL END,"
                 + "pending_from=CASE WHEN EXCLUDED.enabled THEN " + table(CONFIG) + ".pending_from ELSE NULL END,"
                 + "pending_to=CASE WHEN EXCLUDED.enabled THEN " + table(CONFIG) + ".pending_to ELSE NULL END,"
-                + "start_time=CASE WHEN EXCLUDED.enabled AND NOT " + table(CONFIG) + ".enabled "
+                + "start_time=CASE WHEN EXCLUDED.enabled AND NOT " + table(CONFIG) + ".product_configured THEN EXCLUDED.start_time"
+                + " WHEN EXCLUDED.enabled AND NOT " + table(CONFIG) + ".enabled "
                 + "THEN LEAST(" + table(CONFIG) + ".start_time,EXCLUDED.start_time) ELSE "
                 + table(CONFIG) + ".start_time END,updated_by=EXCLUDED.updated_by,updated_at=now()"
                 + " WHERE " + table(CONFIG) + ".raw_table=EXCLUDED.raw_table RETURNING *",
                 productId, propertyId, rawTable, enabled, local(start), operator).next()
                 .switchIfEmpty(Mono.error(new IllegalStateException(
-                    "Configured raw table cannot change without explicit migration"))))
+                    "Configured raw table cannot change without explicit migration")))
             .map(this::config)
-            .flatMap(item -> enabled ? Mono.just(item) :
-                execute("UPDATE " + table(TASK)
-                    + " SET status='CANCELLED',lease_owner=NULL,lease_until=NULL,updated_at=now()"
-                    + " WHERE product_id=? AND property_id=? AND status IN ('PENDING','RUNNING','FAILED')",
-                    productId, propertyId).thenReturn(item));
+            .flatMap(item -> cancelInactiveTasks(productId, propertyId)
+                .then(enabled && (!Boolean.TRUE.equals(previous.get("enabled"))
+                    || Boolean.FALSE.equals(previous.get("product_eligible")) || Boolean.FALSE.equals(previous.get("product_configured")))
+                    ? enqueueInheritedCatchup(productId, propertyId) : Mono.empty())
+                .thenReturn(item)))
+            .as(transaction::transactional);
+    }
+
+    private static String effectiveSql(String config, String device) {
+        return "(COALESCE(" + device + ".present,true) AND COALESCE(" + device + ".eligible,true) AND COALESCE("
+            + device + ".enabled_override,(" + config + ".enabled AND " + config + ".product_eligible)))";
+    }
+
+    private String activeConfigSql(String config) {
+        return "(" + config + ".enabled AND " + config + ".product_eligible OR EXISTS (SELECT 1 FROM "
+            + table(DEVICE) + " ad WHERE ad.product_id=" + config + ".product_id AND ad.property_id="
+            + config + ".property_id AND ad.present=true AND ad.eligible=true AND ad.enabled_override=true))";
+    }
+
+    private Mono<Void> cancelInactiveTasks(String product, String property) {
+        return execute("UPDATE " + table(TASK) + " t SET status='CANCELLED',lease_owner=NULL,lease_until=NULL,updated_at=now()"
+            + " FROM " + table(CONFIG) + " c WHERE t.product_id=c.product_id AND t.property_id=c.property_id"
+            + " AND t.product_id=? AND t.property_id=? AND t.status IN ('PENDING','RUNNING','FAILED')"
+            + " AND (NOT " + activeConfigSql("c") + " OR (t.device_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "
+            + table(DEVICE) + " d WHERE d.product_id=t.product_id AND d.property_id=t.property_id"
+            + " AND d.device_id=t.device_id AND " + effectiveSql("c", "d") + ")))", product, property);
+    }
+
+    public Flux<String> configuredProductIds() {
+        return requireReady().thenMany(rows("SELECT DISTINCT product_id FROM " + table(CONFIG) + " ORDER BY product_id")
+            .map(row -> string(row.get("product_id"))));
+    }
+
+    public Flux<String> configuredDeviceIds() {
+        return requireReady().thenMany(rows("SELECT DISTINCT device_id FROM " + table(DEVICE) + " ORDER BY device_id")
+            .map(row -> string(row.get("device_id"))));
+    }
+
+    public Mono<CounterPolicyPage> queryPolicies(CounterPolicyQuery query) {
+        if (query == null || !("PRODUCT".equals(query.getScope()) || "DEVICE".equals(query.getScope()))) {
+            return Mono.error(new IllegalArgumentException("scope must be PRODUCT or DEVICE"));
+        }
+        if (query.getPageIndex() < 0 || query.getPageSize() < 1 || query.getPageSize() > 200) {
+            return Mono.error(new IllegalArgumentException("Invalid policy page"));
+        }
+        boolean device = "DEVICE".equals(query.getScope());
+        String enabled = device ? effectiveSql("c", "d") : "(c.enabled AND c.product_eligible)";
+        String mode = device ? "CASE WHEN d.enabled_override IS NULL THEN 'INHERIT'"
+            + " WHEN d.enabled_override THEN 'ENABLE' ELSE 'DISABLE' END"
+            : "CASE WHEN c.enabled THEN 'ENABLE' ELSE 'DISABLE' END";
+        String status = device ? "CASE WHEN NOT d.eligible THEN 'SUSPENDED' WHEN NOT " + enabled
+            + " THEN 'DISABLED' ELSE COALESCE(t.status,'IDLE') END"
+            : "CASE WHEN NOT c.product_eligible THEN 'SUSPENDED' WHEN NOT c.enabled THEN 'DISABLED' ELSE c.status END";
+        String from = " FROM " + table(CONFIG) + " c";
+        String fields = "c.*," + enabled + " AS effective_enabled," + mode + " AS policy_mode," + status + " AS policy_status";
+        if (device) {
+            from += " JOIN " + table(DEVICE) + " d ON d.product_id=c.product_id AND d.property_id=c.property_id"
+                + " LEFT JOIN LATERAL (SELECT x.* FROM " + table(TASK)
+                + " x WHERE x.product_id=d.product_id AND x.property_id=d.property_id AND x.device_id=d.device_id"
+                + " ORDER BY CASE WHEN x.status IN ('PENDING','RUNNING') THEN 0 ELSE 1 END,x.created_at DESC LIMIT 1) t ON true";
+            fields += ",d.device_id,d.eligible,d.policy_revision,CASE WHEN d.enabled_override=true"
+                + " THEN COALESCE(d.start_time,c.start_time) ELSE c.start_time END AS device_start_time,"
+                + "t.id AS device_task_id,t.status AS device_task_status,t.kind AS device_task_kind,t.from_time AS device_pending_from,"
+                + "t.to_time AS device_pending_to,t.last_error AS device_last_error,"
+                + "t.last_success AS device_last_success,t.last_failure AS device_last_failure";
+        } else {
+            fields += ",c.product_eligible AS eligible,0::bigint AS policy_revision";
+        }
+        StringBuilder where = new StringBuilder(device ? " WHERE d.present=true" : " WHERE c.product_configured=true");
+        List<Object> params = new ArrayList<>();
+        appendIds(where, params, "c.product_id", query.getProductIds());
+        appendIds(where, params, "c.property_id", query.getPropertyIds());
+        if (device) appendIds(where, params, "d.device_id", query.getDeviceIds());
+        if (query.getEnabled() != null) { where.append(" AND ").append(enabled).append("=?"); params.add(query.getEnabled()); }
+        if (StringUtils.hasText(query.getSource())) {
+            if ("OVERRIDE".equals(query.getSource())) where.append(device ? " AND d.enabled_override IS NOT NULL" : " AND false");
+            else { where.append(" AND (").append(mode).append(")=?"); params.add(query.getSource()); }
+        }
+        if (StringUtils.hasText(query.getStatus())) { where.append(" AND (").append(status).append(")=?"); params.add(query.getStatus()); }
+        String countSql = "SELECT count(*) AS total" + from + where;
+        String dataSql = "SELECT " + fields + from + where + " ORDER BY c.product_id,c.property_id"
+            + (device ? ",d.device_id" : "") + " LIMIT ? OFFSET ?";
+        List<Object> pageParams = new ArrayList<>(params);
+        pageParams.add(query.getPageSize());
+        pageParams.add(Math.multiplyExact((long) query.getPageIndex(), query.getPageSize()));
+        return requireReady().then(Mono.zip(
+            rows(countSql, params.toArray()).next().map(row -> number(row.get("total"))).defaultIfEmpty(0L),
+            rows(dataSql, pageParams.toArray()).map(this::policy).collectList()))
+            .map(tuple -> {
+                CounterPolicyPage page = new CounterPolicyPage();
+                page.setTotal(tuple.getT1()); page.setData(tuple.getT2());
+                page.setPageIndex(query.getPageIndex()); page.setPageSize(query.getPageSize());
+                return page;
+            });
+    }
+
+    private static void appendIds(StringBuilder where, List<Object> params, String column, Collection<String> ids) {
+        if (ids == null) return;
+        if (ids.isEmpty()) { where.append(" AND false"); return; }
+        if (ids.size() > 50000) throw new IllegalArgumentException("Too many policy filters");
+        where.append(" AND ").append(column).append(" IN (").append(placeholders(ids.size())).append(")");
+        params.addAll(ids);
+    }
+
+    private CounterPolicyRow policy(Map<String, Object> row) {
+        CounterPolicyRow result = new CounterPolicyRow();
+        result.setProductId(string(row.get("product_id"))); result.setPropertyId(string(row.get("property_id")));
+        result.setDeviceId(string(row.get("device_id"))); result.setMode(string(row.get("policy_mode")));
+        result.setEnabled(Boolean.TRUE.equals(row.get("effective_enabled")));
+        result.setProductEnabled(Boolean.TRUE.equals(row.get("enabled")) && !Boolean.FALSE.equals(row.get("product_eligible")));
+        result.setEligible(!Boolean.FALSE.equals(row.get("eligible"))); result.setPolicyRevision(number(row.get("policy_revision")));
+        CounterConfig state = config(row);
+        state.setEnabled(result.isEnabled()); state.setStatus(string(row.get("policy_status")));
+        if (result.getDeviceId() != null) {
+            state.setTaskId(string(row.get("device_task_id")));
+            if (row.get("device_start_time") != null) state.setStartTime(instant(row.get("device_start_time")));
+            boolean pending = List.of("PENDING", "RUNNING", "FAILED").contains(String.valueOf(row.get("device_task_status")));
+            if (pending && "CATCHUP".equals(row.get("device_task_kind"))) {
+                state.setCoverageFrom(null); state.setCoverageTo(null);
+            } else if (state.getCoverageFrom() != null) {
+                state.setCoverageFrom(Math.max(state.getCoverageFrom(), state.getStartTime()));
+                if (state.getCoverageTo() != null && state.getCoverageFrom() > state.getCoverageTo()) {
+                    state.setCoverageFrom(null); state.setCoverageTo(null);
+                }
+            }
+            state.setPendingFrom(pending ? instantOrNull(row.get("device_pending_from")) : null);
+            state.setPendingTo(pending ? instantOrNull(row.get("device_pending_to")) : null);
+            state.setLastError(string(row.get("device_last_error")));
+            state.setLastSuccess(instantOrNull(row.get("device_last_success")));
+            state.setLastFailure(instantOrNull(row.get("device_last_failure")));
+        }
+        result.setConfig(state);
+        return result;
+    }
+
+    public Mono<CounterPolicyRow> upsertDevice(String productId, String propertyId, String deviceId,
+                                               Boolean enabled, String rawTable, String operator) {
+        if (!StringUtils.hasText(productId) || !StringUtils.hasText(propertyId)
+            || !StringUtils.hasText(deviceId) || !safeTable(rawTable)) {
+            return Mono.error(new IllegalArgumentException("Invalid device counter policy"));
+        }
+        LocalDateTime today = LocalDate.now(ZONE).atStartOfDay();
+        CounterPolicyQuery query = new CounterPolicyQuery();
+        query.setScope("DEVICE"); query.setProductIds(List.of(productId));
+        query.setDeviceIds(List.of(deviceId)); query.setPropertyIds(List.of(propertyId));
+        return requireReady().then(execute("INSERT INTO " + table(CONFIG)
+            + " (product_id,property_id,raw_table,enabled,start_time,product_configured,product_eligible,updated_by)"
+            + " VALUES (?,?,?,false,?::timestamp,false,false,?) ON CONFLICT DO NOTHING",
+            productId, propertyId, rawTable, today, operator))
+            .then(rows("SELECT * FROM " + table(CONFIG) + " WHERE product_id=? AND property_id=? FOR UPDATE", productId, propertyId).next())
+            .flatMap(config -> {
+                if (!rawTable.equals(string(config.get("raw_table")))) return Mono.error(new IllegalStateException("Configured raw table cannot change without explicit migration"));
+                return readContext(productId, propertyId, deviceId).flatMap(before ->
+                    execute("INSERT INTO " + table(DEVICE)
+                        + " (product_id,property_id,device_id,enabled_override,policy_revision,start_time,updated_by)"
+                        + " VALUES (?,?,?,?::boolean,1,?::timestamp,?) ON CONFLICT (product_id,property_id,device_id) DO UPDATE SET"
+                        + " enabled_override=EXCLUDED.enabled_override,policy_revision=" + table(DEVICE)
+                        + ".policy_revision+CASE WHEN " + table(DEVICE) + ".enabled_override IS DISTINCT FROM EXCLUDED.enabled_override THEN 1 ELSE 0 END,"
+                        + " start_time=COALESCE(" + table(DEVICE) + ".start_time,EXCLUDED.start_time),"
+                        + " updated_by=EXCLUDED.updated_by,updated_at=now()",
+                        productId, propertyId, deviceId, enabled,
+                        before.isEnabled() && config.get("start_time") != null ? config.get("start_time") : today, operator)
+                    .then(readContext(productId, propertyId, deviceId))
+                    .flatMap(after -> !before.isEnabled() && after.isEnabled()
+                        ? enqueueDeviceCatchup(productId, propertyId, deviceId, today)
+                        : Mono.empty())
+                    .then(cancelInactiveTasks(productId, propertyId)));
+            })
+            .then(queryPolicies(query)).map(page -> page.getData().get(0))
+            .as(transaction::transactional);
+    }
+
+    private Mono<Void> enqueueDeviceCatchup(String product, String property, String device, LocalDateTime earliest) {
+        return rows("SELECT c.source_version,GREATEST(c.coverage_to,(SELECT max(t.to_time) FROM " + table(TASK)
+            + " t WHERE t.product_id=c.product_id AND t.property_id=c.property_id AND t.kind='AUTO'"
+            + " AND t.status IN ('PENDING','RUNNING'))) AS covered_to,"
+            + "CASE WHEN d.enabled_override=true THEN COALESCE(d.start_time,c.start_time,?::timestamp)"
+            + " ELSE c.start_time END AS from_time FROM " + table(CONFIG)
+            + " c JOIN " + table(DEVICE) + " d ON d.product_id=c.product_id AND d.property_id=c.property_id"
+            + " WHERE c.product_id=? AND c.property_id=? AND d.device_id=? AND " + effectiveSql("c", "d"),
+            earliest, product, property, device).next().flatMap(row -> {
+                long from = instant(row.get("from_time"));
+                long to = Math.max(instant(row.get("covered_to")), floorHour(System.currentTimeMillis() - settings.getBoundaryDelay().toMillis()));
+                if (from > to) return Mono.empty();
+                return execute("INSERT INTO " + table(TASK)
+                    + " (id,product_id,property_id,device_id,kind,from_time,to_time,cursor_time,status,source_version,total)"
+                    + " VALUES (?,?,?,?,'CATCHUP',?::timestamp,?::timestamp,?::timestamp,'PENDING',?,?) ON CONFLICT DO NOTHING",
+                    UUID.randomUUID().toString(), product, property, device, local(from), local(to), local(from),
+                    number(row.get("source_version")), hourCount(from, to));
+            });
+    }
+
+    private Mono<Void> enqueueInheritedCatchup(String product, String property) {
+        return rows("SELECT device_id FROM " + table(DEVICE)
+            + " WHERE product_id=? AND property_id=? AND present=true AND eligible=true AND enabled_override IS NULL ORDER BY device_id",
+            product, property).concatMap(row -> enqueueDeviceCatchup(product, property,
+                string(row.get("device_id")), LocalDate.now(ZONE).atStartOfDay())).then();
+    }
+
+    public Mono<Void> markDeviceInactive(String deviceId) {
+        return requireReady().then(lockDeviceConfigurations("", deviceId))
+            .thenMany(rows("SELECT DISTINCT product_id,property_id FROM " + table(DEVICE) + " WHERE device_id=? ORDER BY product_id,property_id", deviceId))
+            .concatMap(row -> rows("SELECT product_id FROM " + table(CONFIG)
+                + " WHERE product_id=? AND property_id=? FOR UPDATE", row.get("product_id"), row.get("property_id")).next()
+                .then(execute("UPDATE " + table(DEVICE) + " SET present=false,policy_revision=policy_revision+1,updated_at=now()"
+                + " WHERE product_id=? AND property_id=? AND device_id=? AND present=true", row.get("product_id"), row.get("property_id"), deviceId)
+                .then(cancelInactiveTasks(string(row.get("product_id")), string(row.get("property_id"))))))
+            .then().as(transaction::transactional);
+    }
+
+    public Mono<Void> markProductInactive(String productId) {
+        return requireReady().thenMany(rows("SELECT property_id FROM " + table(CONFIG)
+            + " WHERE product_id=? ORDER BY property_id FOR UPDATE", productId))
+            .concatMap(row -> {
+                String property = string(row.get("property_id"));
+                return execute("UPDATE " + table(CONFIG) + " SET product_eligible=false,version=version+1,updated_at=now()"
+                    + " WHERE product_id=? AND property_id=? AND product_eligible=true", productId, property)
+                    .then(execute("UPDATE " + table(DEVICE) + " SET present=false,policy_revision=policy_revision+1,updated_at=now()"
+                        + " WHERE product_id=? AND property_id=? AND present=true", productId, property))
+                    .then(cancelInactiveTasks(productId, property));
+            }).then().as(transaction::transactional);
+    }
+
+    public Mono<Void> syncProductProperties(String productId, Collection<String> numericPropertyIds) {
+        Set<String> ids = new HashSet<>(numericPropertyIds);
+        return requireReady().thenMany(rows("SELECT property_id,product_eligible,enabled FROM " + table(CONFIG) + " WHERE product_id=? ORDER BY property_id FOR UPDATE", productId))
+            .concatMap(row -> {
+                String property = string(row.get("property_id"));
+                boolean eligible = ids.contains(property);
+                return execute("UPDATE " + table(CONFIG) + " SET product_eligible=?,version=version+1,updated_at=now()"
+                    + " WHERE product_id=? AND property_id=? AND product_eligible IS DISTINCT FROM ?", eligible, productId, property, eligible)
+                    .then(cancelInactiveTasks(productId, property))
+                    .then(eligible && Boolean.TRUE.equals(row.get("enabled")) && Boolean.FALSE.equals(row.get("product_eligible"))
+                        ? enqueueInheritedCatchup(productId, property) : Mono.empty());
+            }).then().as(transaction::transactional);
+    }
+
+    public Mono<Void> syncDeviceProperties(String productId, String deviceId, Map<String, Boolean> numericProperties) {
+        return requireReady().then(lockDeviceConfigurations(productId, deviceId))
+            .then(execute("UPDATE " + table(DEVICE)
+            + " SET present=false,policy_revision=policy_revision+1,updated_at=now() WHERE device_id=? AND product_id<>? AND present=true",
+            deviceId, productId))
+            .thenMany(rows("SELECT DISTINCT product_id,property_id FROM " + table(DEVICE)
+                + " WHERE device_id=? AND product_id<>? ORDER BY product_id,property_id", deviceId, productId))
+            .concatMap(row -> cancelInactiveTasks(string(row.get("product_id")), string(row.get("property_id"))))
+            .then()
+            .thenMany(rows("SELECT property_id FROM " + table(CONFIG) + " WHERE product_id=? ORDER BY property_id FOR UPDATE", productId))
+            .concatMap(row -> {
+                String property = string(row.get("property_id"));
+                boolean eligible = Boolean.TRUE.equals(numericProperties.get(property));
+                return writeRows("INSERT INTO " + table(DEVICE)
+                    + " (product_id,property_id,device_id,eligible,present) VALUES (?,?,?,?,true)"
+                    + " ON CONFLICT (product_id,property_id,device_id) DO UPDATE SET eligible=EXCLUDED.eligible,present=true,"
+                    + "policy_revision=" + table(DEVICE) + ".policy_revision+CASE WHEN NOT " + table(DEVICE)
+                    + ".present OR " + table(DEVICE) + ".eligible IS DISTINCT FROM EXCLUDED.eligible THEN 1 ELSE 0 END,updated_at=now()"
+                    + " WHERE NOT " + table(DEVICE) + ".present OR " + table(DEVICE) + ".eligible IS DISTINCT FROM EXCLUDED.eligible RETURNING device_id",
+                    productId, property, deviceId, eligible)
+                    .next().flatMap(changed -> readContext(productId, property, deviceId)
+                        .flatMap(after -> after.isEnabled()
+                            ? enqueueDeviceCatchup(productId, property, deviceId, LocalDate.now(ZONE).atStartOfDay()) : Mono.empty()))
+                    .then(cancelInactiveTasks(productId, property));
+            }).then().as(transaction::transactional);
+    }
+
+    private Mono<Void> lockDeviceConfigurations(String productId, String deviceId) {
+        return rows("SELECT c.product_id,c.property_id FROM " + table(CONFIG)
+            + " c WHERE c.product_id=? OR EXISTS (SELECT 1 FROM " + table(DEVICE)
+            + " d WHERE d.product_id=c.product_id AND d.property_id=c.property_id AND d.device_id=?)"
+            + " ORDER BY c.product_id,c.property_id FOR UPDATE OF c", productId, deviceId).then();
     }
 
     private static boolean safeTable(String value) {
@@ -471,8 +758,9 @@ public class CounterSnapshotService {
     }
 
     private Mono<Long> rosterCount(String productId, String propertyId) {
-        return rows("SELECT count(*) AS n FROM " + table(DEVICE)
-            + " WHERE product_id=? AND property_id=?", productId, propertyId)
+        return rows("SELECT count(*) AS n FROM " + table(DEVICE) + " d JOIN " + table(CONFIG)
+            + " c ON c.product_id=d.product_id AND c.property_id=d.property_id"
+            + " WHERE d.product_id=? AND d.property_id=? AND " + effectiveSql("c", "d"), productId, propertyId)
             .next().map(row -> number(row.get("n"))).defaultIfEmpty(0L);
     }
 
@@ -516,16 +804,42 @@ public class CounterSnapshotService {
             });
     }
 
+    public Mono<String> rebuildDevice(String productId, String propertyId, String deviceId,
+                                      long from, long to, String operator) {
+        if (from > to || from <= 0 || to > System.currentTimeMillis()) {
+            return Mono.error(new IllegalArgumentException("Invalid rebuild time range"));
+        }
+        long first = floorHour(from);
+        long last = Math.min(ceilHour(to), floorHour(System.currentTimeMillis() - settings.getBoundaryDelay().toMillis()));
+        long earliest = LocalDate.now(ZONE).minusYears(5).atStartOfDay(ZONE).toInstant().toEpochMilli();
+        if (first > last || first < earliest) return Mono.error(new IllegalArgumentException("Rebuild range is outside retained mature boundaries"));
+        String id = UUID.randomUUID().toString();
+        return requireReady().then(rows("SELECT product_id FROM " + table(CONFIG)
+            + " WHERE product_id=? AND property_id=? FOR UPDATE", productId, propertyId).next())
+            .switchIfEmpty(Mono.error(new IllegalArgumentException("Counter property is not configured")))
+            .then(readContext(productId, propertyId, deviceId))
+            .flatMap(context -> {
+                if (!context.isEnabled()) return Mono.error(new IllegalArgumentException("Counter property is disabled for this device"));
+                return writeRows("UPDATE " + table(CONFIG)
+                    + " SET source_version=source_version+1,updated_at=now() WHERE product_id=? AND property_id=? RETURNING source_version",
+                    productId, propertyId).next().flatMap(updated -> execute("INSERT INTO " + table(TASK)
+                    + " (id,product_id,property_id,device_id,kind,from_time,to_time,cursor_time,status,source_version,total,created_by)"
+                    + " VALUES (?,?,?,?,'REBUILD',?::timestamp,?::timestamp,?::timestamp,'PENDING',?,?,?)",
+                    id, productId, propertyId, deviceId, local(first), local(last), local(first),
+                    number(updated.get("source_version")), hourCount(first, last), operator).thenReturn(id));
+            }).as(transaction::transactional);
+    }
+
     public Mono<CounterTask> task(String taskId) {
         return requireReady().then(rows("SELECT * FROM " + table(TASK) + " WHERE id=?", taskId)
             .next().map(this::task));
     }
 
     public Mono<CounterTask> cancel(String taskId) {
-        return requireReady().then(writeRows("UPDATE " + table(TASK)
+        return requireReady().then(lockTaskConfig(taskId).then(writeRows("UPDATE " + table(TASK)
             + " SET status='CANCELLED',lease_owner=NULL,lease_until=NULL,updated_at=now()"
             + " WHERE id=? AND status IN ('PENDING','RUNNING','FAILED') RETURNING *", taskId)
-            .next()
+            .next())
             .switchIfEmpty(rows("SELECT * FROM " + table(TASK) + " WHERE id=?", taskId).next())
             .flatMap(row -> !"CANCELLED".equals(row.get("status")) ? Mono.just(row)
                 : execute("UPDATE " + table(CONFIG)
@@ -538,18 +852,21 @@ public class CounterSnapshotService {
             .map(this::task));
     }
 
+    private Mono<Void> lockTaskConfig(String taskId) {
+        return rows("SELECT c.product_id FROM " + table(CONFIG) + " c JOIN " + table(TASK)
+            + " t ON t.product_id=c.product_id AND t.property_id=c.property_id WHERE t.id=? FOR UPDATE OF c", taskId).then();
+    }
+
     /** Pause an invalid product property without deleting snapshots or configuration. */
     public Mono<Void> suspend(String productId, String propertyId, String reason) {
         String message = reason == null ? "Property is no longer numeric" : reason;
         return requireReady().then(execute("UPDATE " + table(CONFIG)
-            + " SET enabled=false,status='SUSPENDED',version=version+1,last_error=?,"
+            + " SET enabled=false,product_eligible=false,status='SUSPENDED',version=version+1,last_error=?,"
             + "task_id=NULL,pending_from=NULL,pending_to=NULL,"
             + "updated_at=now() WHERE product_id=? AND property_id=? AND enabled=true",
             message, productId, propertyId))
-            .then(execute("UPDATE " + table(TASK)
-                + " SET status='CANCELLED',lease_owner=NULL,lease_until=NULL,updated_at=now()"
-                + " WHERE product_id=? AND property_id=? AND status IN ('PENDING','RUNNING','FAILED')",
-                productId, propertyId));
+            .then(cancelInactiveTasks(productId, propertyId))
+            .as(transaction::transactional);
     }
 
     /** Register product devices (including devices without a valid historical sample). */
@@ -562,7 +879,7 @@ public class CounterSnapshotService {
             + "(SELECT max(t.to_time) FROM " + table(TASK)
             + " t WHERE t.product_id=c.product_id AND t.property_id=c.property_id"
             + " AND t.kind='AUTO' AND t.status IN ('PENDING','RUNNING')) AS active_to"
-            + " FROM " + table(CONFIG) + " c WHERE c.product_id=? AND c.enabled=true"
+            + " FROM " + table(CONFIG) + " c WHERE c.product_id=? AND c.enabled=true AND c.product_eligible=true"
             + " ORDER BY c.property_id FOR UPDATE OF c", productId))
             .concatMap(row -> Flux.fromIterable(ids)
                 .concatMap(id -> writeRows("INSERT INTO " + table(DEVICE)
@@ -594,12 +911,52 @@ public class CounterSnapshotService {
             }
             return Mono.just(new CounterReadContext(false, 0, 0, 0));
         }
-        return rows("SELECT enabled,version,source_version,published_version FROM "
+        return rows("SELECT (enabled AND product_eligible) AS enabled,version,source_version,published_version FROM "
             + table(CONFIG) + " WHERE product_id=? AND property_id=?", productId, propertyId)
             .next().map(row -> new CounterReadContext(Boolean.TRUE.equals(row.get("enabled")),
                 number(row.get("version")), number(row.get("source_version")),
                 number(row.get("published_version"))))
             .defaultIfEmpty(new CounterReadContext(false, 0, 0, 0));
+    }
+
+    public Mono<CounterReadContext> readContext(String productId, String propertyId, String deviceId) {
+        return readContexts(productId, propertyId, List.of(deviceId))
+            .map(contexts -> contexts.getOrDefault(deviceId, new CounterReadContext(false, 0, 0, 0)));
+    }
+
+    public Mono<Map<String, CounterReadContext>> readContexts(String productId, String propertyId,
+                                                              Collection<String> deviceIds) {
+        Set<String> ids = new LinkedHashSet<>(deviceIds);
+        if (ids.isEmpty()) return Mono.just(Collections.emptyMap());
+        if (ids.size() > 1000) return Mono.error(new IllegalArgumentException("Too many counter devices"));
+        Map<String, CounterReadContext> result = new LinkedHashMap<>();
+        ids.forEach(id -> result.put(id, new CounterReadContext(false, 0, 0, 0)));
+        if (!ready.get()) return Mono.just(result);
+        List<Object> params = new ArrayList<>(ids);
+        Collections.addAll(params, productId, propertyId);
+        return rows("WITH requested(device_id) AS (VALUES "
+            + ids.stream().map(id -> "(?::text)").collect(Collectors.joining(",")) + ")"
+            + " SELECT r.device_id," + effectiveSql("c", "d") + " AS enabled,c.version,c.source_version,c.published_version,"
+            + "COALESCE(d.policy_revision,0) AS policy_revision FROM requested r CROSS JOIN " + table(CONFIG)
+            + " c LEFT JOIN " + table(DEVICE) + " d ON d.product_id=c.product_id AND d.property_id=c.property_id"
+            + " AND d.device_id=r.device_id WHERE c.product_id=? AND c.property_id=?", params.toArray())
+            .doOnNext(row -> result.put(string(row.get("device_id")), new CounterReadContext(
+                Boolean.TRUE.equals(row.get("enabled")), number(row.get("version")), number(row.get("source_version")),
+                number(row.get("published_version")), number(row.get("policy_revision")))))
+            .then(Mono.fromSupplier(() -> result));
+    }
+
+    private Mono<Map<String, Object>> configForDevices(String projection, String productId, String propertyId,
+                                                       Collection<String> deviceIds) {
+        List<Object> params = new ArrayList<>();
+        Collections.addAll(params, productId, propertyId);
+        params.addAll(deviceIds);
+        return requireReady().then(rows("SELECT " + projection + " FROM " + table(CONFIG)
+            + " c WHERE c.product_id=? AND c.property_id=? AND NOT EXISTS (SELECT 1 FROM (VALUES "
+            + deviceIds.stream().map(id -> "(?::text)").collect(Collectors.joining(",")) + ") r(device_id) LEFT JOIN "
+            + table(DEVICE) + " d ON d.product_id=c.product_id AND d.property_id=c.property_id AND d.device_id=r.device_id"
+            + " WHERE NOT " + effectiveSql("c", "d") + ")", params.toArray()).next())
+            .switchIfEmpty(Mono.error(new IllegalArgumentException("Counter property is not enabled for the requested devices")));
     }
 
     public Mono<Boolean> enabled(String productId, String propertyId) {
@@ -694,9 +1051,7 @@ public class CounterSnapshotService {
         if ((long) deviceIds.size() * boundaries.size() > 100_000) {
             return Mono.error(new IllegalArgumentException("Counter boundary result exceeds 100000 cells"));
         }
-        return requireReady().then(rows("SELECT * FROM " + table(CONFIG)
-            + " WHERE product_id=? AND property_id=? AND enabled=true", productId, propertyId).next())
-            .switchIfEmpty(Mono.error(new IllegalArgumentException("Counter property is not enabled")))
+        return configForDevices("*", productId, propertyId, deviceIds)
             .flatMap(config -> Mono.defer(() -> {
                 Map<String, Map<Long, CounterBoundary>> result = new LinkedHashMap<>();
                 Set<String> devices = new LinkedHashSet<>(deviceIds);
@@ -720,9 +1075,12 @@ public class CounterSnapshotService {
                     : Mono.empty();
                 return snapshots.then(Mono.defer(() -> {
                     List<BoundaryRequest> missing = pending(result, times);
-                    Mono<Void> daily = hourlyOnlySnapshot ? Mono.empty()
-                        : loadCagg(config, propertyId, missing, result, false, "DAILY");
-                    return daily.then(Mono.defer(() -> loadCagg(config, propertyId,
+                    // Large historical gaps otherwise repeat the same empty seeks in every
+                    // CAGG/raw batch. Establish each device's first available raw sample once.
+                    return resolveBeforeFirstSample(config, propertyId, missing, result)
+                        .then(Mono.defer(() -> hourlyOnlySnapshot ? Mono.empty()
+                            : loadCagg(config, propertyId, pending(result, times), result, false, "DAILY")))
+                        .then(Mono.defer(() -> loadCagg(config, propertyId,
                             pending(result, times), result, false, "HOURLY")))
                         .then(Mono.defer(() -> loadRaw(config, propertyId,
                             pending(result, times), result)))
@@ -731,25 +1089,65 @@ public class CounterSnapshotService {
             }));
     }
 
+    private Mono<Void> resolveBeforeFirstSample(Map<String, Object> config, String property,
+                                                List<BoundaryRequest> missing,
+                                                Map<String, Map<Long, CounterBoundary>> target) {
+        if (missing.isEmpty()) return Mono.empty();
+        Map<String, List<BoundaryRequest>> byDevice = missing.stream()
+            .collect(Collectors.groupingBy(pair -> pair.device, LinkedHashMap::new, Collectors.toList()));
+        List<String> devices = new ArrayList<>(byDevice.keySet());
+        // A one-point seek is cheaper for a short range or the live tail.
+        if (missing.size() < devices.size() * 4L) return Mono.empty();
+        String raw = string(config.get("raw_table"));
+        if (!safeTable(raw)) return Mono.error(new IllegalStateException("Invalid configured raw table"));
+        long upper = missing.stream().mapToLong(pair -> pair.time).max().orElseThrow();
+        return relationExists(raw).flatMap(exists -> {
+            if (!exists) return loadRaw(config, property, missing, target);
+            return Flux.fromIterable(partition(devices, 500)).concatMap(batch -> {
+                List<Object> params = new ArrayList<>(batch);
+                params.add(property);
+                params.add(local(upper));
+                String sql = "WITH requested(device_id) AS (VALUES "
+                    + batch.stream().map(device -> "(?::text)").collect(Collectors.joining(",")) + ") "
+                    + "SELECT r.device_id,x.\"timestamp\" AS first_sample FROM requested r LEFT JOIN LATERAL "
+                    + "(SELECT \"timestamp\" FROM " + table(raw)
+                    + " WHERE \"deviceId\"=r.device_id AND property=? AND \"timestamp\"<=?::timestamp"
+                    + " AND value IS NOT NULL ORDER BY \"timestamp\" ASC LIMIT 1) x ON TRUE";
+                return rows(sql, params.toArray()).doOnNext(row -> {
+                    String device = string(row.get("device_id"));
+                    Long first = instantOrNull(row.get("first_sample"));
+                    for (BoundaryRequest pair : byDevice.getOrDefault(device, Collections.emptyList())) {
+                        // Do not overwrite retained snapshot hits. CAGG also needs a raw text
+                        // sample to return a value, so absence here proves absence on that route.
+                        if (first == null || pair.time < first) {
+                            target.get(device).putIfAbsent(pair.time, new CounterBoundary(pair.time,
+                                null, null, CounterBoundary.NO_VALUE, "BEFORE_FIRST_RAW"));
+                            hit("before_first_raw");
+                        }
+                    }
+                }).then();
+            }).then();
+        });
+    }
+
     public Mono<Map<String, String>> firstValuesInRange(String productId, String propertyId,
                                                          Collection<String> deviceIds, long start, long end) {
         if (start > end) return Mono.error(new IllegalArgumentException("Invalid time range"));
         if (deviceIds.isEmpty()) return Mono.just(Collections.emptyMap());
-        return requireReady().then(rows("SELECT raw_table FROM " + table(CONFIG)
-            + " WHERE product_id=? AND property_id=? AND enabled=true", productId, propertyId).next())
-            .switchIfEmpty(Mono.error(new IllegalArgumentException("Counter property is not enabled")))
+        return configForDevices("raw_table", productId, propertyId, deviceIds)
             .flatMap(config -> {
                 String rawTable = string(config.get("raw_table"));
                 if (!safeTable(rawTable)) return Mono.error(new IllegalStateException("Invalid configured raw table"));
-                List<Object> params = new ArrayList<>();
+                List<Object> params = new ArrayList<>(deviceIds);
                 params.add(propertyId);
                 params.add(local(start));
                 params.add(local(end));
-                params.addAll(deviceIds);
-                String sql = "SELECT DISTINCT ON (\"deviceId\") \"deviceId\" AS device_id,value "
-                    + "FROM " + table(rawTable) + " WHERE property=? AND \"timestamp\">?::timestamp"
-                    + " AND \"timestamp\"<=?::timestamp AND value IS NOT NULL AND \"deviceId\" IN ("
-                    + placeholders(deviceIds.size()) + ") ORDER BY \"deviceId\",\"timestamp\" ASC";
+                String sql = "WITH requested(device_id) AS (VALUES "
+                    + deviceIds.stream().map(id -> "(?::text)").collect(Collectors.joining(",")) + ") "
+                    + "SELECT r.device_id,x.value FROM requested r JOIN LATERAL (SELECT value FROM "
+                    + table(rawTable) + " WHERE \"deviceId\"=r.device_id AND property=?"
+                    + " AND \"timestamp\">?::timestamp AND \"timestamp\"<=?::timestamp"
+                    + " AND value IS NOT NULL ORDER BY \"timestamp\" ASC LIMIT 1) x ON TRUE";
                 return rows(sql, params.toArray()).collectMap(row -> string(row.get("device_id")),
                     row -> string(row.get("value")))
                     .onErrorResume(error -> missingTable(error)
@@ -776,9 +1174,7 @@ public class CounterSnapshotService {
                                                           boolean end, boolean daily) {
         if (devices.isEmpty()) return Mono.just(Collections.emptyMap());
         if (devices.size() > 500) return Mono.error(new IllegalArgumentException("Too many summary devices"));
-        return requireReady().then(rows("SELECT raw_table FROM " + table(CONFIG)
-            + " WHERE product_id=? AND property_id=? AND enabled=true", productId, propertyId).next())
-            .switchIfEmpty(Mono.error(new IllegalArgumentException("Counter property is not enabled")))
+        return configForDevices("raw_table", productId, propertyId, devices)
             .flatMap(config -> {
                 String raw = string(config.get("raw_table"));
                 if (!safeTable(raw)) return Mono.error(new IllegalStateException("Invalid configured raw table"));
@@ -895,6 +1291,7 @@ public class CounterSnapshotService {
             + " AND c.pending_from<=s.boundary_time AND c.pending_to>=s.boundary_time)"
             + " AND NOT EXISTS (SELECT 1 FROM " + table(TASK)
             + " t WHERE t.product_id=s.product_id AND t.property_id=s.property_id"
+            + " AND (t.device_id IS NULL OR t.device_id=s.device_id)"
             + " AND t.kind='REBUILD' AND t.status<>'SUCCESS'"
             + " AND t.source_version>s.source_version"
             + " AND t.from_time<=s.boundary_time AND t.to_time>=s.boundary_time)"
@@ -939,20 +1336,13 @@ public class CounterSnapshotService {
                     .concatMap(batch -> {
                         List<Object> params = new ArrayList<>();
                         String requested = requested(batch, params);
-                        params.add(string(config.get("product_id")));
-                        params.add(propertyId);
-                        params.add(propertyId);
                         String sql = "WITH requested(device_id,boundary_time) AS (VALUES " + requested + ") "
-                            + "SELECT r.device_id,r.boundary_time,c.bucket_start,c.last_timestamp,raw.value,"
-                            + "raw.\"timestamp\" AS sample_time FROM requested r "
+                            + "SELECT r.device_id,r.boundary_time,c.bucket_start,c.last_timestamp FROM requested r "
                             + "LEFT JOIN LATERAL (SELECT c.bucket_start,c.last_timestamp FROM " + table(view)
                             + " c WHERE c.\"deviceId\"=r.device_id AND c.property=?"
+                            + " AND c.bucket_start<?::timestamp"
                             + " AND c.bucket_start<r.boundary_time AND c.numeric_count>0"
                             + " ORDER BY c.bucket_start DESC LIMIT 1) c ON TRUE "
-                            + "LEFT JOIN LATERAL (SELECT x.value,x.\"timestamp\" FROM " + table(raw)
-                            + " x WHERE x.\"deviceId\"=r.device_id AND x.property=?"
-                            + " AND x.\"timestamp\"<=r.boundary_time AND x.\"timestamp\">=c.last_timestamp"
-                            + " AND x.value IS NOT NULL ORDER BY x.\"timestamp\" DESC LIMIT 1) raw ON TRUE "
                             + "WHERE c.bucket_start IS NOT NULL AND EXISTS (SELECT 1 FROM " + table(REFRESH)
                             + " p WHERE p.product_id=? AND p.property_id=?"
                             + " AND p.raw_table=? AND p.layer=?"
@@ -961,10 +1351,11 @@ public class CounterSnapshotService {
                             + (workerAfterRefresh ? "" : " AND NOT EXISTS (SELECT 1 FROM " + table(CHANGE)
                             + " d WHERE d.product_id=? AND d.property_id=? AND d.device_id=r.device_id"
                             + " AND d.dirty_from<=r.boundary_time)");
-                        // requested VALUES, then cagg/raw property, proof pair, dirty pair.
-                        List<Object> ordered = new ArrayList<>(params.subList(0, batch.size() * 2));
+                        // Resolve candidates before referencing raw: a correlated timestamp cannot
+                        // prune raw chunks during planning, even when no CAGG candidate exists.
+                        List<Object> ordered = new ArrayList<>(params);
                         ordered.add(propertyId);
-                        ordered.add(propertyId);
+                        ordered.add(local(batch.stream().mapToLong(pair -> pair.time).max().orElseThrow()));
                         ordered.add(string(config.get("product_id")));
                         ordered.add(propertyId);
                         ordered.add(raw);
@@ -974,19 +1365,57 @@ public class CounterSnapshotService {
                             ordered.add(string(config.get("product_id")));
                             ordered.add(propertyId);
                         }
-                        return rows(sql, ordered.toArray()).doOnNext(row -> {
-                            String device = string(row.get("device_id"));
-                            long boundary = instant(row.get("boundary_time"));
-                            String value = string(row.get("value"));
-                            // A null point read cannot prove that the CAGG timestamp denotes a valid sample.
-                            if (value != null && target.containsKey(device)
-                                && !target.get(device).containsKey(boundary)) {
-                                target.get(device).put(boundary, new CounterBoundary(boundary, value,
-                                    instantOrNull(row.get("sample_time")), CounterBoundary.VALID, "CAGG"));
-                                hit("cagg_" + layer.toLowerCase(Locale.ROOT));
-                            }
-                        }).then();
+                        return rows(sql, ordered.toArray()).collectList()
+                            .flatMap(candidates -> loadCaggValues(config, propertyId, raw, layer,
+                                candidates, target, workerAfterRefresh));
                     }).then());
+    }
+
+    private Mono<Void> loadCaggValues(Map<String, Object> config, String property, String raw, String layer,
+                                      List<Map<String, Object>> candidates,
+                                      Map<String, Map<Long, CounterBoundary>> target, boolean workerAfterRefresh) {
+        List<Map<String, Object>> valid = candidates.stream()
+            .filter(row -> row.get("last_timestamp") != null).toList();
+        if (valid.isEmpty()) return Mono.empty();
+        List<Object> params = new ArrayList<>();
+        StringJoiner requested = new StringJoiner(",");
+        long lower = Long.MAX_VALUE, upper = Long.MIN_VALUE;
+        for (Map<String, Object> row : valid) {
+            long sample = instant(row.get("last_timestamp"));
+            long boundary = instant(row.get("boundary_time"));
+            requested.add("(?::text,?::timestamp,?::timestamp,?::timestamp)");
+            Collections.addAll(params, row.get("device_id"), local(boundary), local(sample), row.get("bucket_start"));
+            lower = Math.min(lower, sample);
+            upper = Math.max(upper, boundary);
+        }
+        Collections.addAll(params, property, local(lower), local(upper), config.get("product_id"), property,
+            raw, layer, number(config.get("source_version")));
+        String sql = "WITH requested(device_id,boundary_time,sample_time,bucket_start) AS (VALUES " + requested + ") "
+            + "SELECT r.device_id,r.boundary_time,x.value,x.\"timestamp\" AS sample_time "
+            + "FROM requested r LEFT JOIN LATERAL (SELECT value,\"timestamp\" FROM " + table(raw)
+            + " WHERE \"deviceId\"=r.device_id AND property=?"
+            + " AND \"timestamp\">=?::timestamp AND \"timestamp\"<=?::timestamp"
+            + " AND \"timestamp\">=r.sample_time AND \"timestamp\"<=r.boundary_time"
+            + " AND value IS NOT NULL ORDER BY \"timestamp\" DESC LIMIT 1) x ON TRUE"
+            + " WHERE EXISTS (SELECT 1 FROM " + table(REFRESH)
+            + " p WHERE p.product_id=? AND p.property_id=? AND p.raw_table=? AND p.layer=?"
+            + " AND p.from_time<=r.bucket_start AND p.to_time>r.bucket_start AND p.source_version>=?)";
+        if (!workerAfterRefresh) {
+            sql += " AND NOT EXISTS (SELECT 1 FROM " + table(CHANGE)
+                + " d WHERE d.product_id=? AND d.property_id=? AND d.device_id=r.device_id"
+                + " AND d.dirty_from<=r.boundary_time)";
+            Collections.addAll(params, config.get("product_id"), property);
+        }
+        return rows(sql, params.toArray()).doOnNext(row -> {
+            String device = string(row.get("device_id"));
+            long boundary = instant(row.get("boundary_time"));
+            String value = string(row.get("value"));
+            if (value != null && target.containsKey(device) && !target.get(device).containsKey(boundary)) {
+                target.get(device).put(boundary, new CounterBoundary(boundary, value,
+                    instantOrNull(row.get("sample_time")), CounterBoundary.VALID, "CAGG"));
+                hit("cagg_" + layer.toLowerCase(Locale.ROOT));
+            }
+        }).then();
     }
 
     private Mono<Boolean> relationExists(String name) {
@@ -1003,8 +1432,8 @@ public class CounterSnapshotService {
         return false;
     }
 
-    private static List<List<BoundaryRequest>> partition(List<BoundaryRequest> items, int size) {
-        List<List<BoundaryRequest>> parts = new ArrayList<>();
+    private static <T> List<List<T>> partition(List<T> items, int size) {
+        List<List<T>> parts = new ArrayList<>();
         for (int i = 0; i < items.size(); i += size) {
             parts.add(items.subList(i, Math.min(items.size(), i + size)));
         }
@@ -1044,10 +1473,12 @@ public class CounterSnapshotService {
                 List<Object> params = new ArrayList<>();
                 String values = requested(batch, params);
                 params.add(propertyId);
+                params.add(local(batch.stream().mapToLong(pair -> pair.time).max().orElseThrow()));
                 String sql = "WITH requested(device_id,boundary_time) AS (VALUES " + values + ") "
                     + "SELECT r.device_id,r.boundary_time,x.value,x.\"timestamp\" AS sample_time "
                     + "FROM requested r LEFT JOIN LATERAL (SELECT value,\"timestamp\" FROM " + table(raw)
-                    + " WHERE \"deviceId\"=r.device_id AND property=? AND \"timestamp\"<=r.boundary_time"
+                    + " WHERE \"deviceId\"=r.device_id AND property=? AND \"timestamp\"<=?::timestamp"
+                    + " AND \"timestamp\"<=r.boundary_time"
                     + " AND value IS NOT NULL ORDER BY \"timestamp\" DESC LIMIT 1) x ON TRUE";
                 return rows(sql, params.toArray()).doOnNext(row -> {
                     String device = string(row.get("device_id"));
@@ -1087,11 +1518,14 @@ public class CounterSnapshotService {
 
     private Mono<Void> scheduleDue() {
         long mature = floorHour(System.currentTimeMillis() - settings.getBoundaryDelay().toMillis());
-        return rows("SELECT product_id,property_id,start_time,coverage_to,source_version FROM "
-            + table(CONFIG) + " WHERE enabled=true")
+        return rows("SELECT c.product_id,c.property_id,LEAST(CASE WHEN c.enabled AND c.product_eligible THEN c.start_time END,"
+            + "(SELECT min(CASE WHEN sd.enabled_override=true THEN COALESCE(sd.start_time,c.start_time) ELSE c.start_time END)"
+            + " FROM " + table(DEVICE) + " sd WHERE sd.product_id=c.product_id AND sd.property_id=c.property_id AND "
+            + effectiveSql("c", "sd") + ")) AS start_time,c.coverage_to,c.source_version FROM "
+            + table(CONFIG) + " c WHERE " + activeConfigSql("c"))
             .concatMap(row -> {
-                long from = row.get("coverage_to") == null
-                    ? instant(row.get("start_time")) : nextHour(instant(row.get("coverage_to")));
+                long from = Math.max(instant(row.get("start_time")), row.get("coverage_to") == null
+                    ? 0 : nextHour(instant(row.get("coverage_to"))));
                 if (from > mature) return Mono.empty();
                 String product = string(row.get("product_id"));
                 String property = string(row.get("property_id"));
@@ -1115,12 +1549,16 @@ public class CounterSnapshotService {
         long retainedFrom = LocalDate.now(ZONE).minusYears(5).atStartOfDay(ZONE)
             .toInstant().toEpochMilli();
         return rows("SELECT d.product_id,d.property_id,d.device_id,d.dirty_from,"
-            + "d.changed_through,d.version,c.raw_table,c.source_version FROM "
+            + "d.changed_through,d.version,c.raw_table,c.source_version,"
+            + "LEAST(CASE WHEN p.enabled_override=true THEN COALESCE(p.start_time,c.start_time) ELSE c.start_time END,"
+            + "(SELECT min(s.boundary_time) FROM " + table(HOUR)
+            + " s WHERE s.product_id=d.product_id AND s.property_id=d.property_id AND s.device_id=d.device_id)) AS first_boundary FROM "
             + table(CHANGE) + " d JOIN " + table(CONFIG)
             + " c ON c.product_id=d.product_id AND c.property_id=d.property_id"
-            + " WHERE c.enabled=true AND d.dirty_from<=?::timestamp", local(mature))
+            + " JOIN " + table(DEVICE) + " p ON p.product_id=d.product_id AND p.property_id=d.property_id AND p.device_id=d.device_id"
+            + " WHERE " + effectiveSql("c", "p") + " AND d.dirty_from<=?::timestamp", local(mature))
             .concatMap(row -> {
-                long from = Math.max(ceilHour(instant(row.get("dirty_from"))), retainedFrom);
+                long from = Math.max(Math.max(ceilHour(instant(row.get("dirty_from"))), retainedFrom), instant(row.get("first_boundary")));
                 String raw = string(row.get("raw_table"));
                 if (!safeTable(raw)) return Mono.error(new IllegalStateException("Invalid counter raw table"));
                 long changedThrough = row.get("changed_through") == null
@@ -1169,7 +1607,7 @@ public class CounterSnapshotService {
             + " OR (candidate.status='RUNNING' AND candidate.lease_until<now())"
             + " OR (candidate.status='FAILED' AND candidate.attempts<5"
             + " AND candidate.updated_at<now()-interval '5 minutes'"
-            + " AND (candidate.kind NOT IN ('AUTO','DIRTY') OR NOT EXISTS (SELECT 1 FROM " + table(TASK)
+            + " AND (candidate.kind NOT IN ('AUTO','DIRTY','CATCHUP') OR NOT EXISTS (SELECT 1 FROM " + table(TASK)
             + " active WHERE active.product_id=candidate.product_id AND active.property_id=candidate.property_id"
             + " AND active.kind=candidate.kind AND active.id<>candidate.id"
             + " AND active.status IN ('PENDING','RUNNING')"
@@ -1189,7 +1627,8 @@ public class CounterSnapshotService {
                 && "23505".equals(((io.r2dbc.spi.R2dbcException) cause).getSqlState())) {
                 String message = String.valueOf(cause.getMessage());
                 return message.contains("idx_counter_task_active_auto")
-                    || message.contains("idx_counter_task_active_dirty");
+                    || message.contains("idx_counter_task_active_dirty")
+                    || message.contains("idx_counter_task_active_catchup");
             }
         }
         return false;
@@ -1227,19 +1666,15 @@ public class CounterSnapshotService {
         String id = string(task.get("id"));
         String product = string(task.get("product_id"));
         String property = string(task.get("property_id"));
-        return rows("SELECT id FROM " + table(TASK)
-            + " WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=? FOR UPDATE",
-            id, owner, number(task.get("attempts")))
-            .next().flatMap(locked -> rows("SELECT * FROM " + table(CONFIG)
-                + " WHERE product_id=? AND property_id=? FOR UPDATE", product, property).next())
+        // Policy mutations use the same lock order: configuration, then task, then device membership.
+        return rows("SELECT * FROM " + table(CONFIG)
+                + " WHERE product_id=? AND property_id=? FOR UPDATE", product, property).next()
             .switchIfEmpty(Mono.error(new IllegalStateException("Counter configuration disappeared")))
-            .flatMap(config -> devicesForTask(task).flatMap(devices -> {
-                if (!Boolean.TRUE.equals(config.get("enabled"))) {
-                    return execute("UPDATE " + table(TASK)
-                        + " SET status='CANCELLED',lease_owner=NULL,lease_until=NULL,updated_at=now()"
-                        + " WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=?",
-                        id, owner, number(task.get("attempts")));
-                }
+            .flatMap(config -> rows("SELECT id FROM " + table(TASK)
+                + " WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=? FOR UPDATE",
+                id, owner, number(task.get("attempts"))).next()
+                .flatMap(locked -> devicesForTask(task).flatMap(deviceStarts -> {
+                List<String> devices = new ArrayList<>(deviceStarts.keySet());
                 if (devices.isEmpty()) return completeTask(task, config, 0);
                 long taskFrom = instant(task.get("from_time"));
                 long cursor = task.get("cursor_time") == null ? taskFrom : instant(task.get("cursor_time"));
@@ -1249,32 +1684,66 @@ public class CounterSnapshotService {
                 List<Long> boundaries = new ArrayList<>();
                 for (long time = cursor; time <= end; time = nextHour(time)) boundaries.add(time);
                 Map<String, Map<Long, CounterBoundary>> values = new LinkedHashMap<>();
-                for (String device : devices) values.put(device, new LinkedHashMap<>());
+                for (String device : devices) {
+                    Map<Long, CounterBoundary> deviceValues = new LinkedHashMap<>();
+                    if (deviceStarts.get(device) == Long.MAX_VALUE || "AUTO".equals(task.get("kind")) || "CATCHUP".equals(task.get("kind"))) {
+                        for (long boundary : boundaries) {
+                            if (boundary < deviceStarts.get(device)) deviceValues.put(boundary,
+                                new CounterBoundary(boundary, null, null, CounterBoundary.NOT_GENERATED, "BEFORE_POLICY"));
+                        }
+                    }
+                    values.put(device, deviceValues);
+                }
                 List<BoundaryRequest> pairs = pending(values, boundaries);
-                return loadCagg(config, property, pairs, values, true, "DAILY")
+                return rememberDeviceBatch(task, devices).then(loadCagg(config, property, pairs, values, true, "DAILY"))
                     .then(Mono.defer(() -> loadCagg(config, property,
                         pending(values, boundaries), values, true, "HOURLY")))
                     .then(Mono.defer(() -> loadRaw(config, property, pending(values, boundaries), values)))
                     .then(Mono.defer(() -> writeSnapshots(config, product, property, values)))
-                    .then(advanceTask(task, config, devices, boundaries));
-            }));
+                    .then(advanceTask(task, config, devices, boundaries, pairs.size()));
+            })));
     }
 
-    private Mono<List<String>> devicesForTask(Map<String, Object> task) {
+    private Mono<Map<String, Long>> devicesForTask(Map<String, Object> task) {
         String specific = string(task.get("device_id"));
-        if (specific != null) return Mono.just(Collections.singletonList(specific));
+        List<String> batch = storedDeviceBatch(task.get("batch_device_ids"));
         String after = string(task.get("cursor_device"));
         if (after == null) after = "";
-        return rows("SELECT device_id FROM " + table(DEVICE)
-            + " WHERE product_id=? AND property_id=? AND device_id>=?"
-            + " ORDER BY device_id LIMIT ?", string(task.get("product_id")),
-            string(task.get("property_id")), after, Math.max(1, settings.getBatchDevices()))
-            .map(row -> string(row.get("device_id"))).collectList();
+        List<Object> params = new ArrayList<>();
+        Collections.addAll(params, task.get("product_id"), task.get("property_id"));
+        String selection;
+        if (specific != null) { selection = " AND d.device_id=?"; params.add(specific); }
+        else if (!batch.isEmpty()) { selection = " AND d.device_id IN (" + placeholders(batch.size()) + ")"; params.addAll(batch); }
+        else { selection = " AND d.device_id>=?"; params.add(after); }
+        params.add(batch.isEmpty() ? Math.max(1, settings.getBatchDevices()) : batch.size());
+        return rows("SELECT d.device_id," + effectiveSql("c", "d")
+            + " AS effective_enabled,CASE WHEN d.enabled_override=true THEN COALESCE(d.start_time,c.start_time)"
+            + " ELSE c.start_time END AS effective_start FROM " + table(DEVICE) + " d JOIN " + table(CONFIG)
+            + " c ON c.product_id=d.product_id AND c.property_id=d.property_id"
+            + " WHERE d.product_id=? AND d.property_id=?" + selection
+            + " ORDER BY d.device_id LIMIT ?", params.toArray())
+            .collectMap(row -> string(row.get("device_id")), row -> Boolean.FALSE.equals(row.get("effective_enabled"))
+                ? Long.MAX_VALUE : instant(row.get("effective_start")), LinkedHashMap::new);
+    }
+
+    private static List<String> storedDeviceBatch(Object value) {
+        if (value instanceof String[]) return Arrays.asList((String[]) value);
+        if (value instanceof Collection<?>) return ((Collection<?>) value).stream().map(String::valueOf).collect(Collectors.toList());
+        return Collections.emptyList();
+    }
+
+    private Mono<Void> rememberDeviceBatch(Map<String, Object> task, List<String> devices) {
+        if (task.get("device_id") != null || !storedDeviceBatch(task.get("batch_device_ids")).isEmpty()) return Mono.empty();
+        List<Object> params = new ArrayList<>(devices);
+        Collections.addAll(params, task.get("id"), owner, number(task.get("attempts")));
+        return execute("UPDATE " + table(TASK) + " SET batch_device_ids=ARRAY["
+            + devices.stream().map(id -> "?::text").collect(Collectors.joining(","))
+            + "] WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=?", params.toArray());
     }
 
     private Mono<Void> maybeRefresh(Map<String, Object> config, long from, long to,
                                     String kind, String taskId) {
-        if ("AUTO".equals(kind)) return Mono.empty();
+        if ("AUTO".equals(kind) || "CATCHUP".equals(kind)) return Mono.empty();
         String raw = string(config.get("raw_table"));
         if (!safeTable(raw)) return Mono.empty();
         long refreshFrom = local(from).minusHours(1).atZone(ZONE).toInstant().toEpochMilli();
@@ -1333,6 +1802,66 @@ public class CounterSnapshotService {
         LocalDateTime start = from.isAfter(day) ? from : day;
         LocalDateTime end = to.isBefore(completedHour) ? to : completedHour;
         return start.isBefore(end) ? new LocalDateTime[]{start, end} : null;
+    }
+
+    /** Explicit historical simulation refresh; never treats an old proof as a reason to skip refresh. */
+    public Mono<Void> refreshSimulationLayer(String raw, String layer, LocalDateTime from, LocalDateTime to, long proofEnd) {
+        if (!safeTable(raw) || !Set.of("HOURLY", "DAILY", "MONTHLY").contains(layer)) {
+            return Mono.error(new IllegalArgumentException("Invalid simulation refresh target"));
+        }
+        String view = table(raw + ("MONTHLY".equals(layer) ? "_monthly_agg" : "DAILY".equals(layer) ? "_daily_agg" : "_hourly_agg"));
+        return requireReady().then(caggReady(raw, layer)).flatMap(compatible -> {
+            if (!compatible) return Mono.error(new IllegalStateException("Aggregate structure unavailable: " + layer));
+            return sourceVersions(raw).flatMap(before -> refreshOutsideTransaction(view, layer, from, to, true)
+                .then(sourceVersions(raw)).flatMap(after -> {
+                    if (!before.equals(after)) return Mono.error(new IllegalStateException("Source changed during aggregate refresh; retry task"));
+                    LocalDateTime cap=local(Math.min(proofEnd,System.currentTimeMillis()));
+                    LocalDateTime provenTo = to.isAfter(cap) ? cap : to;
+                    return from.isBefore(provenTo) ? publishRefreshProofs(raw, layer, from, provenTo, before, after) : Mono.empty();
+                }));
+        });
+    }
+
+    /** Targeted recomputation, including any already dirty tail for this device only. */
+    public Mono<Void> generateSimulationSnapshots(String product, String property, String device, long from, long to) {
+        return requireReady().then(rows("SELECT * FROM " + table(CONFIG)
+            + " WHERE product_id=? AND property_id=? FOR UPDATE", product, property).single())
+            .flatMap(config -> readContext(product, property, device).flatMap(context -> context.isEnabled()
+                ? Mono.just(config) : Mono.error(new IllegalArgumentException("Counter property is disabled for this device"))))
+            .flatMap(config -> {
+                if (config.get("pending_from") != null || config.get("pending_to") != null) {
+                    return Mono.error(new IllegalStateException("Product/property rebuild is pending; retry after it finishes"));
+                }
+                return Mono.zip(rows("SELECT * FROM " + table(CHANGE) + " WHERE product_id=? AND property_id=? AND device_id=?",
+                    product, property, device).collectList(),
+                    rows("SELECT max(boundary_time) AS last_boundary FROM " + table(HOUR)
+                        + " WHERE product_id=? AND property_id=? AND device_id=?", product, property, device).next())
+                    .flatMap(tuple -> {
+                    List<Map<String, Object>> dirty = tuple.getT1();
+                    long first = floorHour(from), last = Math.min(ceilHour(to), floorHour(System.currentTimeMillis()));
+                    if (!dirty.isEmpty()) {
+                        first = Math.min(first, floorHour(instant(dirty.get(0).get("dirty_from"))));
+                        // Repair already generated later boundaries only. A dirty mark must not create years
+                        // of previously unrequested history for a newly enabled simulation device.
+                        last = Math.min(floorHour(System.currentTimeMillis()), Math.max(last,
+                            instant(tuple.getT2().get("last_boundary"))));
+                    }
+                    long earliest = LocalDate.now(ZONE).minusYears(5).atStartOfDay(ZONE).toInstant().toEpochMilli();
+                    if (first < earliest) return Mono.error(new IllegalStateException("Dirty snapshot range is outside retention"));
+                    List<Long> boundaries = new ArrayList<>();
+                    for (long time = first; time <= last; time = nextHour(time)) boundaries.add(time);
+                    return Flux.fromIterable(partition(boundaries, 168)).concatMap(batch -> {
+                        Map<String, Map<Long, CounterBoundary>> values = new LinkedHashMap<>();
+                        values.put(device, new LinkedHashMap<>());
+                        return loadRaw(config, property, pending(values, batch), values)
+                            .then(Mono.defer(() -> writeSnapshots(config, product, property, values)));
+                    }).then(execute("DELETE FROM " + table(CHANGE) + " WHERE product_id=? AND property_id=? AND device_id=?",
+                        product, property, device))
+                        // Do not publish a product-wide coverage interval for a single-device operation.
+                        .then(execute("UPDATE " + table(CONFIG) + " SET version=version+1,updated_at=now() WHERE product_id=? AND property_id=?",
+                            product, property));
+                });
+            }).as(transaction::transactional);
     }
 
     private Mono<Void> refreshHierarchy(Map<String, Object> config, LocalDateTime from,
@@ -1511,6 +2040,7 @@ public class CounterSnapshotService {
         List<CounterRow> day = new ArrayList<>();
         for (Map.Entry<String, Map<Long, CounterBoundary>> device : values.entrySet()) {
             for (CounterBoundary boundary : device.getValue().values()) {
+                if ("BEFORE_POLICY".equals(boundary.getSource())) continue;
                 CounterRow row = new CounterRow(device.getKey(), boundary);
                 hour.add(row);
                 if (midnight(boundary.getBoundary())) day.add(row);
@@ -1557,6 +2087,11 @@ public class CounterSnapshotService {
 
     private Mono<Void> advanceTask(Map<String, Object> task, Map<String, Object> config,
                                    List<String> devices, List<Long> boundaries) {
+        return advanceTask(task, config, devices, boundaries, (long) devices.size() * boundaries.size());
+    }
+
+    private Mono<Void> advanceTask(Map<String, Object> task, Map<String, Object> config,
+                                   List<String> devices, List<Long> boundaries, long processedCells) {
         long last = boundaries.get(boundaries.size() - 1);
         long next = nextHour(last);
         String id = string(task.get("id"));
@@ -1565,25 +2100,27 @@ public class CounterSnapshotService {
                 + " SET cursor_time=?::timestamp,cursor_device=?,processed=processed+?,"
                 + "lease_until=now()+interval '2 minutes',updated_at=now()"
                 + " WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=?",
-                local(next), devices.get(0), (long) devices.size() * boundaries.size(), id, owner,
+                local(next), devices.get(0), processedCells, id, owner,
                 number(task.get("attempts")));
         }
         if (task.get("device_id") != null) {
-            return completeTask(task, config, (long) devices.size() * boundaries.size());
+            return completeTask(task, config, processedCells);
         }
-        return rows("SELECT device_id FROM " + table(DEVICE)
-            + " WHERE product_id=? AND property_id=? AND device_id>? ORDER BY device_id LIMIT 1",
+        return rows("SELECT d.device_id FROM " + table(DEVICE) + " d JOIN " + table(CONFIG)
+            + " c ON c.product_id=d.product_id AND c.property_id=d.property_id"
+            + " WHERE d.product_id=? AND d.property_id=? AND d.device_id>?"
+            + " ORDER BY d.device_id LIMIT 1",
             string(task.get("product_id")), string(task.get("property_id")),
             devices.get(devices.size() - 1)).next()
             .flatMap(row -> execute("UPDATE " + table(TASK)
-                + " SET cursor_time=from_time,cursor_device=?,processed=processed+?,"
+                + " SET cursor_time=from_time,cursor_device=?,batch_device_ids=NULL,processed=processed+?,"
                 + "lease_until=now()+interval '2 minutes',updated_at=now()"
                 + " WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=?",
-                string(row.get("device_id")), (long) devices.size() * boundaries.size(), id, owner,
+                string(row.get("device_id")), processedCells, id, owner,
                 number(task.get("attempts"))).thenReturn(true))
             .defaultIfEmpty(false)
             .flatMap(hasMore -> hasMore ? Mono.<Void>empty()
-                : completeTask(task, config, (long) devices.size() * boundaries.size()));
+                : completeTask(task, config, processedCells));
     }
 
     private Mono<Void> completeTask(Map<String, Object> task, Map<String, Object> config,
@@ -1625,11 +2162,11 @@ public class CounterSnapshotService {
         String message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
         if (message.length() > 1024) message = message.substring(0, 1024);
         String failure = message;
-        return writeRows("UPDATE " + table(TASK)
+        return lockTaskConfig(id).then(writeRows("UPDATE " + table(TASK)
             + " SET status='FAILED',last_error=?,last_failure=now() AT TIME ZONE 'Asia/Shanghai',"
             + "lease_owner=NULL,lease_until=NULL,updated_at=now()"
             + " WHERE id=? AND status='RUNNING' AND lease_owner=? AND attempts=? RETURNING id",
-            failure, id, owner, attempt).next()
+            failure, id, owner, attempt).next())
             .flatMap(updated -> execute("UPDATE " + table(CONFIG)
                 + " SET status='FAILED',last_error=?,last_failure=now() AT TIME ZONE 'Asia/Shanghai',"
                 + "updated_at=now() WHERE task_id=?", failure, id))

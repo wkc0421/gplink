@@ -1,4 +1,4 @@
-import {Ref} from "vue";
+import {ref, watch, type Ref} from "vue";
 import Schema from "async-validator";
 import {handlePureRecord, collectValidateRules} from "../utils";
 import type {ColumnsType } from "../utils";
@@ -23,9 +23,10 @@ export type OptionsType = {
     onEdit?: (item: any) => void
 
     validateRowKey?: Boolean
+    shouldValidateRow?: (record: Record<string, any>) => boolean
 }
 
-export const useValidate = (dataSource: Ref<DataSourceType>, columns: ColumnsType, rowKey: string, options: OptionsType = {}): {
+export const useValidate = (dataSource: Ref<DataSourceType>, columns: ColumnsType | (() => ColumnsType), rowKey: string, options: OptionsType = {}): {
     validate: () => Promise<any>
     validateItem: (data: Record<string, any> ) => Promise<any>
     errorMap: Ref<Record<string, any>>
@@ -78,7 +79,7 @@ export const useValidate = (dataSource: Ref<DataSourceType>, columns: ColumnsTyp
 
             if (filterDataSource.length) {
                 filterDataSource.forEach((record, index) => {
-                    if (validateRowKey || record[rowKey]) {
+                    if (validateRowKey || record[rowKey] || _options.shouldValidateRow?.(record)) {
                         validateItem(record, index).then(res => {
                             success.push(handlePureRecord(res))
                             end()
@@ -97,11 +98,11 @@ export const useValidate = (dataSource: Ref<DataSourceType>, columns: ColumnsTyp
     }
 
     const createValidate = () => {
-        rules.value = collectValidateRules(columns)
+        rules.value = collectValidateRules(typeof columns === 'function' ? columns() : columns)
         schemaInstance = new Schema(rules.value)
     }
 
-    createValidate()
+    watch(() => typeof columns === 'function' ? columns() : columns, createValidate, { immediate: true, deep: true })
 
     return {
         validate,

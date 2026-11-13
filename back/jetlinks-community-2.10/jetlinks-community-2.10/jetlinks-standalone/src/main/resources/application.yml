@@ -76,9 +76,21 @@ timescaledb:
                 interval: 30d
             -   table: redis_latest
                 interval: 30d
+            # 系统、访问、规则执行日志及通知历史，只保留7天
+            -   table: system_logger
+                interval: 7d
+            -   table: access_logger
+                interval: 7d
+            -   table: rule_engine_execute_log
+                interval: 7d
+            -   table: rule_engine_execute_event
+                interval: 7d
+            -   table: notify_history
+                interval: 7d
     things-data:
         enabled: true # 开启设备数据存储
         retention-policy: 5y  # 原始数据保留 5 年后自动删除
+        log-retention-policy: 2M # 设备日志保留 2 个自然月
         chunk-time-interval: 4h # 32GB × 2500msg/min × 100采集项 ≈ 4167 rows/s，目标chunk≈80M行/4167≈5.3h，取4h
         compress: true          # 启用列压缩（30 天以上自动压缩）
         compress-after: 30d
@@ -250,7 +262,7 @@ logging:
             max-history: 7
             total-size-cap: 10GB
     file:
-        name: ./data/logs/${spring.application.name}_${server.port}.log
+        name: ./data/logs/gplink.log
         path: ./data/logs
     threshold:
         file: INFO # 文件只记录INFO以上的日志
@@ -360,6 +372,7 @@ network:
         - 1883-1890
         - 8800-8810
         - 5060-5061
+        - 8000-8060/tcp
 trace:
     # 开启链路追踪
     enabled: true

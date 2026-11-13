@@ -92,10 +92,12 @@ const useMetadata = (type: 'device' | 'product', key?: MetadataType, ): {
         data.value = newMetadata
     }
 
-    watch(() => [instanceCurrent.value.metadata, productCurrent.value.metadata], () => {
+    watch(() => [instanceCurrent.value.metadata, instanceCurrent.value.productMetadata, productCurrent.value.metadata], () => {
         init()
         if (type === 'device') {
-            handleMetadata(instanceCurrent.value.metadata)
+            // A device without an independent model can return only productMetadata.
+            // A present metadata value is already the server's merged model and must win.
+            handleMetadata(instanceCurrent.value.metadata || instanceCurrent.value.productMetadata)
         } else {
             handleMetadata(productCurrent.value.metadata)
         }

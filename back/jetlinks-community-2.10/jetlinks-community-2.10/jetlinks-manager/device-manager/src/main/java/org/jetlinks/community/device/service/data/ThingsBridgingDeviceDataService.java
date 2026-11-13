@@ -28,6 +28,8 @@ import org.jetlinks.community.device.entity.DeviceProperty;
 import org.jetlinks.community.things.ThingsDataRepository;
 import org.jetlinks.community.things.data.PropertyAggregation;
 import org.jetlinks.community.things.data.PropertyBoundaryValues;
+import org.jetlinks.community.things.data.PropertyExtremes;
+import org.jetlinks.community.things.data.operations.PropertyExtremesQuery;
 import org.jetlinks.community.things.data.operations.ColumnModeQueryOperations;
 import org.jetlinks.community.things.data.operations.SaveOperations;
 import org.jetlinks.community.things.data.operations.TemplateOperations;
@@ -39,6 +41,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,6 +56,49 @@ public class ThingsBridgingDeviceDataService implements DeviceDataService ,Devic
     private final ThingsDataRepository repository;
 
     static final String thingType = DeviceThingType.device.getId();
+
+    private record ExtremesBatch(PropertyExtremesQuery query, List<PropertyExtremes.Target> targets) { }
+
+    @Override
+    public Flux<PropertyExtremes> queryPropertyExtremes(List<PropertyExtremes.Target> targets,
+                                                      long startTime, long endTime) {
+        return Flux.defer(() -> {
+            Map<String, List<PropertyExtremes.Target>> byDevice = new LinkedHashMap<>();
+            targets.stream().distinct().forEach(target -> byDevice
+                .computeIfAbsent(target.thingId(), ignored -> new ArrayList<>()).add(target));
+            return Flux.fromIterable(byDevice.keySet())
+                .flatMapSequential(id -> repository.opsForThing(thingType, id)
+                    .switchIfEmpty(Mono.error(new IllegalStateException("Device storage unavailable: " + id)))
+                    .map(ops -> Map.entry(id, ops.forQuery().propertyExtremesQuery())), PropertyExtremesQuery.MAX_CONCURRENCY)
+                .collectList()
+                .flatMapMany(resolved -> {
+                    Map<Object, ExtremesBatch> groups = new LinkedHashMap<>();
+                    List<PropertyExtremes> unsupported = new ArrayList<>();
+                    for (Map.Entry<String, Optional<PropertyExtremesQuery>> entry : resolved) {
+                        List<PropertyExtremes.Target> members = byDevice.get(entry.getKey());
+                        if (entry.getValue().isEmpty()) {
+                            members.forEach(target -> unsupported.add(PropertyExtremes.empty(
+                                target, PropertyExtremes.Status.UNSUPPORTED_STORAGE)));
+                        } else {
+                            PropertyExtremesQuery query = entry.getValue().get();
+                            groups.computeIfAbsent(query.storageKey(), ignored ->
+                                new ExtremesBatch(query, new ArrayList<>())).targets().addAll(members);
+                        }
+                    }
+                    // Flatten batches before flatMap: the concurrency limit is global, not per product.
+                    List<ExtremesBatch> batches = new ArrayList<>();
+                    groups.values().forEach(group -> {
+                        for (int offset = 0; offset < group.targets().size(); offset += PropertyExtremesQuery.MAX_BATCH_SIZE) {
+                            batches.add(new ExtremesBatch(group.query(), List.copyOf(group.targets().subList(
+                                offset, Math.min(group.targets().size(), offset + PropertyExtremesQuery.MAX_BATCH_SIZE)))));
+                        }
+                    });
+                    return Flux.concat(Flux.fromIterable(unsupported), Flux.fromIterable(batches)
+                        .flatMap(batch -> batch.query().query(batch.targets(), startTime, endTime),
+                            PropertyExtremesQuery.MAX_CONCURRENCY));
+                });
+        });
+    }
 
     @Override
     public Mono<Void> registerMetadata(@Nonnull String productId, @Nonnull DeviceMetadata metadata) {

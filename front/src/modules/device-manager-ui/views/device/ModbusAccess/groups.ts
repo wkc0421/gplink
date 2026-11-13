@@ -2,7 +2,7 @@ import type { ProductGroup, SlaveRow } from './types'
 import { createRegisterRow, serializeRegisterMap, validateRegisterRows, validateSlaveRows } from './utils'
 
 export const defaultPollingConfig = () => ({
-    pollEnabled: false, pollScheduleType: 'FIXED_DELAY', pollIntervalMs: 300000,
+    pollEnabled: true, pollScheduleType: 'FIXED_DELAY', pollIntervalMs: 300000,
     pollCron: '0/30 * * * * ?', pollDeviceIntervalMs: 100, pollFrameIntervalMs: 100,
     pollPropertyIds: [] as string[], pollRetryCount: 0,
     maxReadRegistersPerRequest: 60, maxReadBitsPerRequest: 512, maxReadAddressGap: 2,

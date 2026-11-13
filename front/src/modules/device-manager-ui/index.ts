@@ -48,6 +48,12 @@ const getExtraRoutesMap = () => {
                     url: '/data-query-test',
                     name: '设备数据接口测试',
                     component: () => import('./views/device/DataQueryTest/index.vue')
+                },
+                {
+                    code: 'LatestDeviceData',
+                    url: '/latest-data',
+                    name: i18n.global.t('device-manager-ui.latest-device-data'),
+                    component: () => import('./views/device/LatestDeviceData/index.vue')
                 }
             ]
         },
@@ -77,7 +83,7 @@ const getExtraRoutesMap = () => {
                     code: 'Detail',
                     url: '/detail/:id',
                     name: i18n.global.t('device-manager-ui.index.106686-0'),
-                    component: () => import('./views/link/Type/Detail/index.vue')
+                    component: () => import('./views/link/Type/Detail/Route.vue')
                 }
             ]
         },

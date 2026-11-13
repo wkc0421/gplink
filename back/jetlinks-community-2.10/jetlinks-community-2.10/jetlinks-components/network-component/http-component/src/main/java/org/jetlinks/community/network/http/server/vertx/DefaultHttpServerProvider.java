@@ -135,6 +135,7 @@ public class DefaultHttpServerProvider implements NetworkProvider<HttpServerConf
                         .execute(()->{
                             httpServer.listen(result -> {
                                 if (result.succeeded()) {
+                                    server.markListening(httpServer, options.getHost());
                                     log.debug("startup http server on [{}]", server.getBindAddress());
                                 } else {
                                     server.setLastError(result.cause().getMessage());

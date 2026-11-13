@@ -15,6 +15,7 @@
  */
 package org.jetlinks.community.network.mqtt.client;
 
+import io.netty.util.NetUtil;
 import io.vertx.core.Vertx;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
@@ -102,6 +103,7 @@ public class MqttClientProvider implements NetworkProvider<MqttClientProperties>
                 mqttClient.setTopicPrefix(properties.getTopicPrefix());
                 mqttClient.setLoading(true);
                 MqttClient client = MqttClient.create(vertx, options);
+                mqttClient.setRemoteAddress(NetUtil.toSocketAddressString(properties.getRemoteHost(), properties.getRemotePort()));
                 mqttClient.setClient(client);
                 client.connect(properties.getRemotePort(), properties.getRemoteHost(), result -> {
                     mqttClient.setLoading(false);

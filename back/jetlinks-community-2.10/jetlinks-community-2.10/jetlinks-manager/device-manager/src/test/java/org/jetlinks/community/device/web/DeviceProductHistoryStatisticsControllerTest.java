@@ -4,6 +4,7 @@ import org.jetlinks.community.device.entity.DeviceProductEntity;
 import org.jetlinks.community.device.service.LocalDeviceInstanceService;
 import org.jetlinks.community.device.service.LocalDeviceProductService;
 import org.jetlinks.community.device.service.data.DeviceDataStorageProperties;
+import org.jetlinks.community.device.service.data.HistoryStatisticsMetadataService;
 import org.jetlinks.community.timescaledb.thing.counter.CounterSnapshotService;
 import org.jetlinks.community.timescaledb.thing.counter.CounterTask;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,8 @@ class DeviceProductHistoryStatisticsControllerTest {
         otherProductTask.setProductId("other");
         when(snapshots.task("task-1")).thenReturn(Mono.just(otherProductTask));
         DeviceProductHistoryStatisticsController controller = new DeviceProductHistoryStatisticsController(
-            products, mock(LocalDeviceInstanceService.class), new DeviceDataStorageProperties(), provider);
+            products, mock(LocalDeviceInstanceService.class), new DeviceDataStorageProperties(), provider,
+            mock(HistoryStatisticsMetadataService.class));
 
         StepVerifier.create(controller.task("allowed", "task-1"))
             .expectError(ResponseStatusException.class)
@@ -49,7 +51,8 @@ class DeviceProductHistoryStatisticsControllerTest {
         @SuppressWarnings("unchecked")
         ObjectProvider<CounterSnapshotService> provider = mock(ObjectProvider.class);
         DeviceProductHistoryStatisticsController controller = new DeviceProductHistoryStatisticsController(
-            products, mock(LocalDeviceInstanceService.class), new DeviceDataStorageProperties(), provider);
+            products, mock(LocalDeviceInstanceService.class), new DeviceDataStorageProperties(), provider,
+            mock(HistoryStatisticsMetadataService.class));
         DeviceProductHistoryStatisticsController.RebuildRequest request =
             new DeviceProductHistoryStatisticsController.RebuildRequest();
         request.setFrom(200L);

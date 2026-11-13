@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 import {
+    buildTcpResourceDefaults,
+    decodeCsvBuffer,
     buildTcpAccessPayload,
     buildTcpNetworkPayload,
     buildTcpNetworkConfigurationUpdate,
@@ -15,6 +17,34 @@ import {
     waitForDeviceState,
 } from '../../src/modules/device-manager-ui/views/device/ModbusAccess/utils'
 import type { TcpQuickConfigForm } from '../../src/modules/device-manager-ui/views/device/ModbusAccess/types'
+
+test('CSV 解码兼容 UTF-8、UTF-8 BOM 和纯 ASCII', () => {
+    const csv = 'propertyId,propertyName,functionCode,address,quantity,dataType\r\ntemp,温度,3,0,1,INT16\r\n'
+    for (const text of [csv, '\uFEFF' + csv]) {
+        const decoded = decodeCsvBuffer(new TextEncoder().encode(text).buffer)
+        expect(decoded).toBe(csv)
+        expect(parseRegisterMapText(decoded).rows[0].propertyName).toBe('温度')
+    }
+    expect(decodeCsvBuffer(new TextEncoder().encode('a,b\n1,2').buffer)).toBe('a,b\n1,2')
+    expect(decodeCsvBuffer(new ArrayBuffer(0))).toBe('')
+})
+
+test('GBK 点位和从机 CSV 保留中文名称、单位和说明', () => {
+    const fromHex = (hex: string) => Uint8Array.from(hex.match(/../g)!, byte => parseInt(byte, 16)).buffer
+    const register = decodeCsvBuffer(fromHex('70726f706572747949642c70726f70657274794e616d652c66756e6374696f6e436f64652c616464726573732c7175616e746974792c64617461547970652c756e69740d0a74656d702ccec2b6c82c332c302c312c494e5431362ca1e60d0a'))
+    expect(parseRegisterMapText(register).errors).toEqual([])
+    expect(parseRegisterMapText(register).rows[0]).toMatchObject({ propertyName: '温度', unit: '℃' })
+    const slave = decodeCsvBuffer(fromHex('736c61766549642c6465766963654e616d652c6465736372697074696f6e0d0a312cd2bbbac5c9e8b1b82cb3b5bce4b2c9bcaf0d0a'))
+    expect(parseSlaveText(slave, 'gateway').errors).toEqual([])
+    expect(parseSlaveText(slave, 'gateway').rows[0]).toMatchObject({ deviceName: '一号设备', description: '车间采集' })
+})
+
+test('无法解码及损坏的 BOM 文件明确报错，不生成替代字符', () => {
+    expect(() => decodeCsvBuffer(Uint8Array.of(0x81).buffer)).toThrow('无法按 UTF-8 或 GBK 解码')
+    expect(() => decodeCsvBuffer(Uint8Array.of(0xef, 0xbb, 0xbf, 0x81).buffer)).toThrow('内容编码损坏')
+    expect(() => decodeCsvBuffer(Uint8Array.of(0xff, 0xfe, 0x41, 0).buffer)).toThrow('UTF-16')
+    expect(() => decodeCsvBuffer(Uint8Array.of(0xfe, 0xff, 0, 0x41).buffer)).toThrow('UTF-16')
+})
 
 test.describe('Modbus 接入向导工具函数', () => {
     const tcpForm: TcpQuickConfigForm = {
@@ -347,4 +377,20 @@ test.describe('Modbus 接入向导工具函数', () => {
         })
         expect(metadata.properties.find(item => item.id === 'humidity')?.name).toBe('湿度')
     })
+})
+
+test('网关默认值严格匹配服务端和客户端规则，支持域名及未完成输入', () => {
+    expect(buildTcpResourceDefaults('tcp-server', '0.0.0.0', 8004)).toEqual({
+        networkName: 'Modbus TCP 网络组件 8004', accessName: 'Modbus TCP 接入网关 8004',
+        productId: 'mb_8004', deviceId: 'mb_8004',
+        productName: 'Modbus 网关产品 8004', deviceName: 'Modbus 网关 8004',
+    })
+    expect(buildTcpResourceDefaults('tcp-client', ' 192.168.110.170 ', 10001)).toEqual({
+        networkName: 'Modbus TCP 网络组件 170_10001', accessName: 'Modbus TCP 接入网关 170_10001',
+        productId: 'mb_170_10001', deviceId: 'mb_170_10001',
+        productName: 'Modbus 网关产品 170_10001', deviceName: 'Modbus 网关 170_10001',
+    })
+    expect(buildTcpResourceDefaults('tcp-client', 'gateway.example.com', 10001).deviceId).toBe('mb_gateway_example_com_10001')
+    expect(buildTcpResourceDefaults('tcp-client', '', 10001).deviceId).toBe('')
+    expect(buildTcpResourceDefaults('tcp-server', '0.0.0.0', undefined).deviceId).toBe('')
 })

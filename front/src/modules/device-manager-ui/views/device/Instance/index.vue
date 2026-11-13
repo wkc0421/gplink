@@ -46,6 +46,12 @@
                         <a-button @click="menuStory.jumpPage('device/Instance/DataQueryTest', {})">
                             数据接口测试
                         </a-button>
+                        <j-permission-button
+                            hasPermission="device/Instance:view"
+                            @click="menuStory.jumpPage('device/Instance/LatestDeviceData', {})"
+                        >
+                            {{ $t('device-manager-ui.latest-device-data') }}
+                        </j-permission-button>
                     </a-space>
                 </template>
                 <template #card="slotProps">

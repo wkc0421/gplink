@@ -35,11 +35,11 @@
                 </div>
 
                 <div class="steps-wrap">
-                    <a-steps :current="currentStep">
-                        <a-step title="接入连接" />
-                        <a-step title="采集器" />
-                        <a-step title="产品与从机" />
-                        <a-step title="确认与测试" />
+                    <a-steps :current="visibleSteps.indexOf(currentStep)">
+                        <a-step title="连接配置" />
+                        <a-step v-if="!simplifiedFlow" title="采集器" />
+                        <a-step title="点位与从机" />
+                        <a-step title="保存并测试" />
                     </a-steps>
                 </div>
 
@@ -71,7 +71,7 @@
                 <div class="content-panel">
                     <a-spin :spinning="loading || saving || testing">
                         <a-form layout="vertical">
-                            <section v-show="currentStep === 0" class="step-panel">
+                            <section v-show="currentStep === 0" class="step-panel" :class="{ 'compact-panel': simplifiedFlow }">
                                 <div class="section-title">配置 Modbus 接入网关</div>
                                 <a-form-item label="配置方式">
                                     <a-radio-group
@@ -139,107 +139,26 @@
                                 <template v-else>
                                     <a-row :gutter="16" class="form-row">
                                         <a-col :span="12">
-                                            <a-form-item label="网络组件名称">
-                                                <a-input
-                                                    v-model:value="tcpQuickForm.networkName"
-                                                    :disabled="!!quickCreated.networkId"
-                                                    :maxlength="64"
-                                                    placeholder="例如：Modbus TCP 网络组件"
-                                                />
+                                            <a-form-item label="公网 IP">
+                                                <a-input v-model:value="connectionHost" :disabled="saving || loading || testing"
+                                                    :placeholder="accessMode === 'tcp-server' ? '设备实际连接的平台 IP 或域名' : '设备网关 IP 或域名'" />
                                             </a-form-item>
                                         </a-col>
                                         <a-col :span="12">
-                                            <a-form-item label="接入网关名称">
-                                                <a-input
-                                                    v-model:value="tcpQuickForm.accessName"
-                                                    :disabled="!!quickCreated.accessId"
-                                                    :maxlength="64"
-                                                    placeholder="例如：Modbus TCP 接入网关"
-                                                />
+                                            <a-form-item label="监听端口" :help="accessMode === 'tcp-client' ? '设备侧监听端口，平台将连接此端口' : undefined">
+                                                <a-input-number v-model:value="tcpQuickForm.port" :disabled="saving || loading || testing"
+                                                    :min="1" :max="65535" style="width: 100%" />
                                             </a-form-item>
                                         </a-col>
                                     </a-row>
-                                    <a-row :gutter="16">
-                                        <a-col :span="12">
-                                            <a-form-item :label="accessMode === 'tcp-server' ? '监听地址' : '远程主机'">
-                                                <a-input
-                                                    v-model:value="tcpQuickForm.host"
-                                                    :disabled="saving || loading || testing"
-                                                    :placeholder="accessMode === 'tcp-server' ? '0.0.0.0' : '设备网关 IP 或域名'"
-                                                />
-                                            </a-form-item>
-                                        </a-col>
-                                        <a-col :span="12">
-                                            <a-form-item :label="accessMode === 'tcp-server' ? '监听端口' : '远程端口'">
-                                                <a-input-number
-                                                    v-model:value="tcpQuickForm.port"
-                                                    :disabled="saving || loading || testing"
-                                                    :min="1"
-                                                    :max="65535"
-                                                    style="width: 100%"
-                                                />
-                                            </a-form-item>
-                                        </a-col>
-                                    </a-row>
-                                    <a-row v-if="accessMode === 'tcp-server'" :gutter="16">
-                                        <a-col :span="12">
-                                            <a-form-item label="公网地址">
-                                                <a-input
-                                                    v-model:value="tcpQuickForm.publicHost"
-                                                    :disabled="saving || loading || testing"
-                                                    placeholder="设备实际连接的平台地址"
-                                                />
-                                            </a-form-item>
-                                        </a-col>
-                                        <a-col :span="12">
-                                            <a-form-item label="公网端口">
-                                                <a-input-number
-                                                    v-model:value="tcpQuickForm.publicPort"
-                                                    :disabled="saving || loading || testing"
-                                                    :min="1"
-                                                    :max="65535"
-                                                    style="width: 100%"
-                                                />
-                                            </a-form-item>
-                                        </a-col>
-                                    </a-row>
-                                    <a-form-item label="说明">
-                                        <a-textarea
-                                            v-model:value="tcpQuickForm.description"
-                                            :disabled="!!quickCreated.networkId && !!quickCreated.accessId"
-                                            :maxlength="200"
-                                            :rows="2"
-                                            show-count
-                                        />
-                                    </a-form-item>
-
-                                    <a-collapse ghost>
-                                        <a-collapse-panel key="tls" header="TLS（可选）">
-                                            <a-row :gutter="16">
-                                                <a-col :span="8">
-                                                    <a-form-item label="启用 TLS">
-                                                        <a-switch
-                                                            v-model:checked="tcpQuickForm.tlsEnabled"
-                                                            :disabled="saving || loading || testing"
-                                                        />
-                                                    </a-form-item>
-                                                </a-col>
-                                                <a-col :span="16">
-                                                    <a-form-item v-if="tcpQuickForm.tlsEnabled" label="证书">
-                                                        <a-select
-                                                            v-model:value="tcpQuickForm.certId"
-                                                            :disabled="saving || loading || testing"
-                                                            show-search
-                                                            option-filter-prop="label"
-                                                            :options="certificateOptions"
-                                                            placeholder="请选择已有网络证书"
-                                                        />
-                                                    </a-form-item>
-                                                </a-col>
-                                            </a-row>
-                                        </a-collapse-panel>
-                                    </a-collapse>
-
+                                    <a-descriptions title="资源配置摘要" bordered size="small" :column="2" class="resource-summary">
+                                        <a-descriptions-item label="网络组件名称">{{ tcpQuickForm.networkName }}</a-descriptions-item>
+                                        <a-descriptions-item label="接入网关名称">{{ tcpQuickForm.accessName }}</a-descriptions-item>
+                                        <a-descriptions-item label="产品 ID">{{ gatewayProductMode === 'create' ? gatewayProductForm.id || '--' : selectedGatewayProductId || '--' }}</a-descriptions-item>
+                                        <a-descriptions-item label="设备 ID">{{ gatewayDeviceMode === 'create' ? gatewayDeviceForm.id || '--' : selectedGatewayDeviceId || '--' }}</a-descriptions-item>
+                                        <a-descriptions-item label="产品名称">{{ gatewayProductMode === 'create' ? gatewayProductForm.name : gatewayProducts.find(item => item.id === selectedGatewayProductId)?.name || '--' }}</a-descriptions-item>
+                                        <a-descriptions-item label="设备名称">{{ gatewayDeviceMode === 'create' ? gatewayDeviceForm.name : gatewayDeviceList.find(item => item.id === selectedGatewayDeviceId)?.name || '--' }}</a-descriptions-item>
+                                    </a-descriptions>
                                     <a-alert
                                         show-icon
                                         type="info"
@@ -256,122 +175,210 @@
                                 </template>
                             </section>
 
-                            <section v-show="currentStep === 1" class="step-panel">
-                                <div class="section-title">网关产品与网关设备</div>
-                                <a-row :gutter="16">
-                                    <a-col :span="12">
-                                        <a-form-item label="网关产品">
-                                            <a-radio-group v-model:value="gatewayProductMode" button-style="solid" :disabled="!!gatewayCreated.productId">
-                                                <a-radio-button value="select">选择已有</a-radio-button>
-                                                <a-radio-button value="create">新建</a-radio-button>
-                                            </a-radio-group>
-                                        </a-form-item>
-                                        <a-form-item v-if="gatewayProductMode === 'select'" label="选择网关产品">
-                                            <a-select
-                                                :value="selectedGatewayProductId"
-                                                @change="value => chooseContext('product', value)"
-                                                :disabled="!!gatewayCreated.productId"
-                                                show-search
-                                                allow-clear
-                                                option-filter-prop="label"
-                                                placeholder="请选择 deviceType=gateway 的产品"
-                                            >
-                                                <a-select-option
-                                                    v-for="item in gatewayProducts"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                    :label="item.name"
-                                                >
-                                                    {{ item.name }}（{{ item.id }}）
-                                                </a-select-option>
-                                            </a-select>
-                                        </a-form-item>
-                                        <template v-else>
-                                            <a-form-item label="产品 ID">
-                                                <a-input v-model:value="gatewayProductForm.id" :disabled="!!gatewayCreated.productId" placeholder="留空由系统生成" />
+                            <section v-show="simplifiedFlow ? currentStep === 0 : currentStep === 1" class="step-panel" :class="{ 'compact-panel': simplifiedFlow }">
+                                <a-collapse v-model:activeKey="advancedKeys" ghost>
+                                    <a-collapse-panel key="advanced" header="高级配置">
+                                        <template v-if="accessMode !== 'existing'">
+                                            <a-button type="link" @click="restoreAutomaticDefaults" :disabled="saving || loading || testing">恢复自动生成</a-button>
+                                            <a-row :gutter="16" class="form-row">
+                                                <a-col :span="12">
+                                                    <a-form-item label="网络组件名称">
+                                                        <a-input
+                                                            v-model:value="tcpQuickForm.networkName" @update:value="manualDefaults.add('networkName')"
+                                                            :disabled="!!quickCreated.networkId"
+                                                            :maxlength="64"
+                                                            placeholder="例如：Modbus TCP 网络组件"
+                                                        />
+                                                    </a-form-item>
+                                                </a-col>
+                                                <a-col :span="12">
+                                                    <a-form-item label="接入网关名称">
+                                                        <a-input
+                                                            v-model:value="tcpQuickForm.accessName" @update:value="manualDefaults.add('accessName')"
+                                                            :disabled="!!quickCreated.accessId"
+                                                            :maxlength="64"
+                                                            placeholder="例如：Modbus TCP 接入网关"
+                                                        />
+                                                    </a-form-item>
+                                                </a-col>
+                                            </a-row>
+                                            <a-row v-if="accessMode === 'tcp-server'" :gutter="16">
+                                                <a-col :span="12">
+                                                    <a-form-item label="监听地址">
+                                                        <a-input
+                                                            v-model:value="tcpQuickForm.host"
+                                                            :disabled="saving || loading || testing"
+                                                            placeholder="0.0.0.0"
+                                                        />
+                                                    </a-form-item>
+                                                </a-col>
+                                                <a-col :span="12">
+                                                    <a-form-item label="公网端口">
+                                                        <a-input-number
+                                                            v-model:value="tcpQuickForm.publicPort" @update:value="manualDefaults.add('publicPort')"
+                                                            :disabled="saving || loading || testing"
+                                                            :min="1"
+                                                            :max="65535"
+                                                            style="width: 100%"
+                                                        />
+                                                    </a-form-item>
+                                                </a-col>
+                                            </a-row>
+                                            <a-form-item label="说明">
+                                                <a-textarea
+                                                    v-model:value="tcpQuickForm.description"
+                                                    :disabled="!!quickCreated.networkId && !!quickCreated.accessId"
+                                                    :maxlength="200"
+                                                    :rows="2"
+                                                    show-count
+                                                />
                                             </a-form-item>
-                                            <a-form-item label="产品名称">
-                                                <a-input v-model:value="gatewayProductForm.name" :disabled="!!gatewayCreated.productId" placeholder="例如：Modbus 网关产品" />
-                                            </a-form-item>
-                                        </template>
-                                    </a-col>
 
-                                    <a-col :span="12">
-                                        <a-form-item label="网关设备">
-                                            <a-radio-group v-model:value="gatewayDeviceMode" button-style="solid" :disabled="!!gatewayCreated.productId" @change="handleGatewayDeviceModeChange">
-                                                <a-radio-button value="select">选择已有</a-radio-button>
-                                                <a-radio-button value="create">新建</a-radio-button>
-                                            </a-radio-group>
-                                        </a-form-item>
-                                        <a-form-item v-if="gatewayDeviceMode === 'select'" label="选择网关设备">
-                                            <a-select
-                                                :value="selectedGatewayDeviceId"
-                                                @change="value => chooseContext('device', value)"
-                                                :disabled="!!gatewayCreated.productId"
-                                                show-search
-                                                allow-clear
-                                                option-filter-prop="label"
-                                                placeholder="请选择网关产品下的设备"
-                                            >
-                                                <a-select-option
-                                                    v-for="item in gatewayDeviceList"
-                                                    :key="item.id"
-                                                    :value="item.id"
-                                                    :label="item.name"
-                                                >
-                                                    {{ item.name }}（{{ item.id }}）
-                                                </a-select-option>
-                                            </a-select>
-                                        </a-form-item>
-                                        <template v-else>
-                                            <a-form-item label="设备 ID">
-                                                <a-input v-model:value="gatewayDeviceForm.id" :disabled="!!gatewayCreated.productId" placeholder="留空由系统生成" />
-                                            </a-form-item>
-                                            <a-form-item label="设备名称">
-                                                <a-input v-model:value="gatewayDeviceForm.name" :disabled="!!gatewayCreated.productId" placeholder="例如：Modbus 网关 1" />
-                                            </a-form-item>
-                                        </template>
-                                    </a-col>
-                                </a-row>
+                                            <a-collapse ghost>
+                                                <a-collapse-panel key="tls" header="TLS（可选）">
+                                                    <a-row :gutter="16">
+                                                        <a-col :span="8">
+                                                            <a-form-item label="启用 TLS">
+                                                                <a-switch
+                                                                    v-model:checked="tcpQuickForm.tlsEnabled"
+                                                                    :disabled="saving || loading || testing"
+                                                                />
+                                                            </a-form-item>
+                                                        </a-col>
+                                                        <a-col :span="16">
+                                                            <a-form-item v-if="tcpQuickForm.tlsEnabled" label="证书">
+                                                                <a-select
+                                                                    v-model:value="tcpQuickForm.certId"
+                                                                    :disabled="saving || loading || testing"
+                                                                    show-search
+                                                                    option-filter-prop="label"
+                                                                    :options="certificateOptions"
+                                                                    placeholder="请选择已有网络证书"
+                                                                />
+                                                            </a-form-item>
+                                                        </a-col>
+                                                    </a-row>
+                                                </a-collapse-panel>
+                                            </a-collapse>
 
-                                <div class="section-title sub">通讯参数</div>
-                                <a-row :gutter="16">
-                                    <a-col :span="8">
-                                        <a-form-item label="响应超时(ms)">
-                                            <a-input-number
-                                                v-model:value="communicationForm.responseTimeoutMs"
-                                                :min="100"
-                                                :max="60000"
-                                                style="width: 100%"
-                                            />
-                                        </a-form-item>
-                                    </a-col>
-                                    <a-col :span="8">
-                                        <a-form-item label="探测周期(ms)">
-                                            <a-input-number
-                                                v-model:value="communicationForm.probeIntervalMs"
-                                                :min="1000"
-                                                :max="3600000"
-                                                style="width: 100%"
-                                            />
-                                        </a-form-item>
-                                    </a-col>
-                                    <a-col :span="8">
-                                        <a-form-item label="保活超时(s)">
-                                            <a-input-number
-                                                v-model:value="communicationForm.keepOnlineTimeout"
-                                                :min="10"
-                                                :max="86400"
-                                                style="width: 100%"
-                                            />
-                                        </a-form-item>
-                                    </a-col>
-                                </a-row>
-                                <a-alert
-                                    show-icon
-                                    type="warning"
-                                    message="当前协议读取超时会从从机产品配置读取；保存时会把通讯参数同时写入网关产品和从机产品。"
-                                />
+                                        </template>
+                                        <div class="section-title">网关产品与网关设备</div>
+                                        <a-row :gutter="16">
+                                            <a-col :span="12">
+                                                <a-form-item label="网关产品">
+                                                    <a-radio-group v-model:value="gatewayProductMode" button-style="solid" :disabled="!!gatewayCreated.productId">
+                                                        <a-radio-button value="select">选择已有</a-radio-button>
+                                                        <a-radio-button value="create">新建</a-radio-button>
+                                                    </a-radio-group>
+                                                </a-form-item>
+                                                <a-form-item v-if="gatewayProductMode === 'select'" label="选择网关产品">
+                                                    <a-select
+                                                        :value="selectedGatewayProductId"
+                                                        @change="value => chooseContext('product', value)"
+                                                        :disabled="!!gatewayCreated.productId"
+                                                        show-search
+                                                        allow-clear
+                                                        option-filter-prop="label"
+                                                        placeholder="请选择 deviceType=gateway 的产品"
+                                                    >
+                                                        <a-select-option
+                                                            v-for="item in gatewayProducts"
+                                                            :key="item.id"
+                                                            :value="item.id"
+                                                            :label="item.name"
+                                                        >
+                                                            {{ item.name }}（{{ item.id }}）
+                                                        </a-select-option>
+                                                    </a-select>
+                                                </a-form-item>
+                                                <template v-else>
+                                                    <a-form-item label="产品 ID">
+                                                        <a-input v-model:value="gatewayProductForm.id" @update:value="manualDefaults.add('productId')" :disabled="!!gatewayCreated.productId" placeholder="留空由系统生成" />
+                                                    </a-form-item>
+                                                    <a-form-item label="产品名称">
+                                                        <a-input v-model:value="gatewayProductForm.name" @update:value="manualDefaults.add('productName')" :disabled="!!gatewayCreated.productId" placeholder="例如：Modbus 网关产品" />
+                                                    </a-form-item>
+                                                </template>
+                                            </a-col>
+
+                                            <a-col :span="12">
+                                                <a-form-item label="网关设备">
+                                                    <a-radio-group v-model:value="gatewayDeviceMode" button-style="solid" :disabled="!!gatewayCreated.productId" @change="handleGatewayDeviceModeChange">
+                                                        <a-radio-button value="select">选择已有</a-radio-button>
+                                                        <a-radio-button value="create">新建</a-radio-button>
+                                                    </a-radio-group>
+                                                </a-form-item>
+                                                <a-form-item v-if="gatewayDeviceMode === 'select'" label="选择网关设备">
+                                                    <a-select
+                                                        :value="selectedGatewayDeviceId"
+                                                        @change="value => chooseContext('device', value)"
+                                                        :disabled="!!gatewayCreated.productId"
+                                                        show-search
+                                                        allow-clear
+                                                        option-filter-prop="label"
+                                                        placeholder="请选择网关产品下的设备"
+                                                    >
+                                                        <a-select-option
+                                                            v-for="item in gatewayDeviceList"
+                                                            :key="item.id"
+                                                            :value="item.id"
+                                                            :label="item.name"
+                                                        >
+                                                            {{ item.name }}（{{ item.id }}）
+                                                        </a-select-option>
+                                                    </a-select>
+                                                </a-form-item>
+                                                <template v-else>
+                                                    <a-form-item label="设备 ID">
+                                                        <a-input v-model:value="gatewayDeviceForm.id" @update:value="manualDefaults.add('deviceId')" :disabled="!!gatewayCreated.productId" placeholder="留空由系统生成" />
+                                                    </a-form-item>
+                                                    <a-form-item label="设备名称">
+                                                        <a-input v-model:value="gatewayDeviceForm.name" @update:value="manualDefaults.add('deviceName')" :disabled="!!gatewayCreated.productId" placeholder="例如：Modbus 网关 1" />
+                                                    </a-form-item>
+                                                </template>
+                                            </a-col>
+                                        </a-row>
+
+                                        <div class="section-title sub">通讯参数</div>
+                                        <a-row :gutter="16">
+                                            <a-col :span="8">
+                                                <a-form-item label="响应超时(ms)">
+                                                    <a-input-number
+                                                        v-model:value="communicationForm.responseTimeoutMs"
+                                                        :min="100"
+                                                        :max="60000"
+                                                        style="width: 100%"
+                                                    />
+                                                </a-form-item>
+                                            </a-col>
+                                            <a-col :span="8">
+                                                <a-form-item label="探测周期(ms)">
+                                                    <a-input-number
+                                                        v-model:value="communicationForm.probeIntervalMs"
+                                                        :min="1000"
+                                                        :max="3600000"
+                                                        style="width: 100%"
+                                                    />
+                                                </a-form-item>
+                                            </a-col>
+                                            <a-col :span="8">
+                                                <a-form-item label="保活超时(s)">
+                                                    <a-input-number
+                                                        v-model:value="communicationForm.keepOnlineTimeout"
+                                                        :min="10"
+                                                        :max="86400"
+                                                        style="width: 100%"
+                                                    />
+                                                </a-form-item>
+                                            </a-col>
+                                        </a-row>
+                                        <a-alert
+                                            show-icon
+                                            type="warning"
+                                            message="当前协议读取超时会从从机产品配置读取；保存时会把通讯参数同时写入网关产品和从机产品。"
+                                        />
+                                    </a-collapse-panel>
+                                </a-collapse>
                             </section>
 
                             <section v-show="currentStep === 2" class="step-panel">
@@ -670,7 +677,7 @@
 
                 <div class="footer-actions">
                     <a-space>
-                        <a-button :disabled="currentStep === 0" @click="currentStep -= 1">上一步</a-button>
+                        <a-button :disabled="currentStep === 0" @click="goPrevious">上一步</a-button>
                         <a-button v-if="currentStep < 3" type="primary" @click="goNext">下一步</a-button>
                         <j-permission-button
                             v-else
@@ -730,6 +737,7 @@ import {
     detail as getProductDetail,
     modify as modifyProduct,
     queryGatewayList,
+    queryProductId,
     queryNoPagingPost as queryProductNoPaging,
     updateDevice as updateProductAccess,
     _deploy as deployProduct,
@@ -780,6 +788,7 @@ import {
     MODBUS_PROTOCOL_ID,
     TCP_GATEWAY_PROVIDER,
     TCP_NETWORK_TYPE,
+    buildTcpResourceDefaults,
     buildTcpAccessPayload,
     buildTcpNetworkPayload,
     buildTcpNetworkConfigurationUpdate,
@@ -789,6 +798,7 @@ import {
     buildSlaveDeviceId,
     createRegisterRow,
     createSlaveRow,
+    decodeCsvBuffer,
     ensureQuickResourceId,
     formatTcpEndpoint,
     getReadablePropertyIds,
@@ -802,6 +812,7 @@ import {
 
 import { createProductGroup, defaultPollingConfig, groupName, groupSignature, pendingUnbind,
     nextSlaveId, validateProductGroups, mergeChildDeviceIds, sameConfiguration, assertDeviceOwnership, assertProductAccess, deviceRowSignature } from './groups'
+import { ensureDeviceActivated, isDeviceActive as deviceActive } from './activation'
 
 const productGroups = ref<ProductGroup[]>([createProductGroup()])
 const activeGroupKey = ref(productGroups.value[0].key)
@@ -842,12 +853,17 @@ const gatewayDeviceList = ref<any[]>([])
 const selectedAccessId = ref<string>()
 const selectedGatewayProductId = ref<string>()
 const selectedGatewayDeviceId = ref<string>()
-const gatewayProductMode = ref<'select' | 'create'>('select')
-const gatewayDeviceMode = ref<'select' | 'create'>('select')
+const gatewayProductMode = ref<'select' | 'create'>('create')
+const gatewayDeviceMode = ref<'select' | 'create'>('create')
 const testResults = ref<TestResultRow[]>([])
 const importErrors = ref<string[]>([])
 const importErrorVisible = ref(false)
-const accessMode = ref<AccessMode>('existing')
+const accessMode = ref<AccessMode>('tcp-server')
+const simplifiedFlow = ref(true)
+const advancedKeys = ref<string[]>([])
+const visibleSteps = computed(() => simplifiedFlow.value ? [0, 2, 3] : [0, 1, 2, 3])
+const manualDefaults = reactive(new Set<string>())
+const tcpHosts = { 'tcp-server': '0.0.0.0', 'tcp-client': '' }
 const networkSupportIds = ref<string[]>([])
 const accessProviderIds = ref<string[]>([])
 const certificateOptions = ref<Array<{ label: string; value: string }>>([])
@@ -911,7 +927,12 @@ const guideSteps = [
       example: '未选择测试范围时，默认读取本产品每台可测试从机的第一个可读点位。', next: '检查各产品测试结果。' },
 ] as const
 
-const currentGuide = computed(() => guideSteps[currentStep.value] || guideSteps[0])
+const currentGuide = computed(() => currentStep.value === 0 && simplifiedFlow.value ? {
+    title: '配置接入连接', summary: '选择平台角色，填写 IP 和监听端口，自动生成网关资源。',
+    items: ['平台服务端使用公网 IP 接收设备连接，默认监听 0.0.0.0。', '平台客户端主动连接设备 IP 和设备侧监听端口。', '名称、ID 和通讯参数可在高级配置中修改。'],
+    example: '服务端端口 8004 生成 mb_8004；客户端 192.168.110.170:10001 生成 mb_170_10001。',
+    next: '配置点位与从机。',
+} : guideSteps[currentStep.value] || guideSteps[0])
 
 const registerColumns: TableColumnsType<RegisterMappingRow> = [
     { title: '属性ID', key: 'propertyId', width: 150 },
@@ -1078,7 +1099,7 @@ function handleGroupModeChange() {
     group.savedSignature = undefined
 }
 function handleGatewayDeviceModeChange() {
-    if (gatewayDeviceMode.value !== 'create' || currentStep.value !== 1) return
+    if (gatewayDeviceMode.value !== 'create') return
     ++collectorLoadVersion
     collectorLoadError.value = ''
     selectedGatewayDeviceId.value = undefined
@@ -1113,7 +1134,8 @@ function applyProductToGroup(group: ProductGroup, product: any) {
     group.form = { id: product.id, name: product.name }
     const rows = parseRegisterMapValue(product.configuration?.registerMap)
     group.registerRows = rows.length ? rows : [createRegisterRow()]
-    const defaults = defaultPollingConfig()
+    // Existing products without a polling flag retain the previous disabled behavior.
+    const defaults = { ...defaultPollingConfig(), pollEnabled: false }
     group.pollingConfig = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, product.configuration?.[key] ?? value]))
     group.savedSignature = groupSignature(group)
     group.status = '已加载'
@@ -1214,7 +1236,7 @@ async function loadBaseData() {
             value: item.id,
         }))
         capabilityLoadFailed.value = !networkSupportResp || !accessProviderResp
-        if (!selectedAccessId.value && modbusAccessList.value.length) {
+        if (accessMode.value === 'existing' && !selectedAccessId.value && modbusAccessList.value.length) {
             selectedAccessId.value = modbusAccessList.value[0].id
         }
     } finally {
@@ -1308,6 +1330,8 @@ watch(selectedAccessId, async (id) => {
         upsertAccess(detail.result)
         const deviceId = detail.result?.configuration?.deviceId
         if (deviceId) {
+            gatewayProductMode.value = 'select'
+            gatewayDeviceMode.value = 'select'
             const device = await getDeviceDetail(deviceId, true)
             if (version !== accessLoadVersion) return
             if (!isOk(device)) throw new Error(`加载采集器 ${deviceId} 失败`)
@@ -1318,15 +1342,52 @@ watch(selectedAccessId, async (id) => {
     } catch (error: any) { onlyMessage(error.message, 'error') }
 })
 
-watch(accessMode, (mode) => {
-    if (quickCreated.networkId || quickCreated.accessId) return
-    if (mode === 'tcp-server') {
-        if (!tcpQuickForm.host) tcpQuickForm.host = '0.0.0.0'
-        if (!tcpQuickForm.publicPort) tcpQuickForm.publicPort = tcpQuickForm.port
-    } else if (mode === 'tcp-client' && tcpQuickForm.host === '0.0.0.0') {
-        tcpQuickForm.host = ''
-    }
+const connectionHost = computed({
+    get: () => accessMode.value === 'tcp-server' ? tcpQuickForm.publicHost : tcpQuickForm.host,
+    set: value => {
+        if (accessMode.value === 'tcp-server') tcpQuickForm.publicHost = value
+        else tcpQuickForm.host = value
+    },
 })
+
+watch(accessMode, (mode, previous) => {
+    if (saving.value || quickCreated.networkId || quickCreated.accessId || gatewayCreated.productId) return
+    simplifiedFlow.value = mode !== 'existing'
+    advancedKeys.value = mode === 'existing' ? ['advanced'] : []
+    ++accessLoadVersion
+    if (previous !== 'existing') tcpHosts[previous] = tcpQuickForm.host
+    if (mode === 'existing') {
+        gatewayProductMode.value = 'select'
+        gatewayDeviceMode.value = 'select'
+        selectedAccessId.value = modbusAccessList.value[0]?.id
+    } else {
+        selectedAccessId.value = undefined
+        selectedGatewayProductId.value = undefined
+        selectedGatewayDeviceId.value = undefined
+        gatewayProductMode.value = 'create'
+        gatewayDeviceMode.value = 'create'
+        tcpQuickForm.host = tcpHosts[mode]
+    }
+}, { flush: 'sync' })
+
+function applyAutomaticDefaults() {
+    if (accessMode.value === 'existing' || saving.value) return
+    const defaults = buildTcpResourceDefaults(accessMode.value, tcpQuickForm.host, tcpQuickForm.port)
+    if (!quickCreated.networkId && !manualDefaults.has('networkName')) tcpQuickForm.networkName = defaults.networkName
+    if (!quickCreated.accessId && !manualDefaults.has('accessName')) tcpQuickForm.accessName = defaults.accessName
+    if (!gatewayCreated.productId) {
+        if (!manualDefaults.has('productId')) gatewayProductForm.id = defaults.productId
+        if (!manualDefaults.has('productName')) gatewayProductForm.name = defaults.productName
+        if (!manualDefaults.has('deviceId')) gatewayDeviceForm.id = defaults.deviceId
+        if (!manualDefaults.has('deviceName')) gatewayDeviceForm.name = defaults.deviceName
+    }
+    if (!manualDefaults.has('publicPort')) tcpQuickForm.publicPort = tcpQuickForm.port
+}
+function restoreAutomaticDefaults() {
+    manualDefaults.clear()
+    applyAutomaticDefaults()
+}
+watch(() => [accessMode.value, tcpQuickForm.host, tcpQuickForm.port], applyAutomaticDefaults, { immediate: true })
 
 watch(() => tcpQuickForm.tlsEnabled, (enabled) => {
     if (!enabled) tcpQuickForm.certId = undefined
@@ -1365,9 +1426,15 @@ function handleSlaveIdChange(row: Record<string, any>) {
 function readFileAsText(file: File) {
     return new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
-        reader.onload = () => resolve(String(reader.result || ''))
+        reader.onload = () => {
+            try {
+                resolve(decodeCsvBuffer(reader.result as ArrayBuffer))
+            } catch (error) {
+                reject(error)
+            }
+        }
         reader.onerror = () => reject(reader.error)
-        reader.readAsText(file)
+        reader.readAsArrayBuffer(file)
     })
 }
 
@@ -1471,9 +1538,11 @@ function validateStep(step: number) {
         const errors: string[] = []
         if (collectorLoadError.value) errors.push(collectorLoadError.value)
         if (gatewayProductMode.value === 'select' && !selectedGatewayProductId.value) errors.push('请选择网关产品')
-        if (gatewayProductMode.value === 'create' && !gatewayProductForm.name) errors.push('请输入网关产品名称')
+        if (gatewayProductMode.value === 'create' && !gatewayProductForm.name.trim()) errors.push('请输入网关产品名称')
+        if (quickMode.value && gatewayProductMode.value === 'create' && !gatewayProductForm.id.trim()) errors.push('请填写 IP 和端口以生成网关产品 ID，或在高级配置中填写')
         if (gatewayDeviceMode.value === 'select' && !selectedGatewayDeviceId.value) errors.push('请选择网关设备')
-        if (gatewayDeviceMode.value === 'create' && !gatewayDeviceForm.name) errors.push('请输入网关设备名称')
+        if (gatewayDeviceMode.value === 'create' && !gatewayDeviceForm.name.trim()) errors.push('请输入网关设备名称')
+        if (quickMode.value && gatewayDeviceMode.value === 'create' && !gatewayDeviceForm.id.trim()) errors.push('请填写 IP 和端口以生成网关设备 ID，或在高级配置中填写')
         return errors
     }
 
@@ -1491,12 +1560,16 @@ function validateAll() {
 }
 
 function goNext() {
-    const errors = validateStep(currentStep.value)
+    const errors = currentStep.value === 0 && simplifiedFlow.value
+        ? [...validateStep(0), ...validateStep(1)] : validateStep(currentStep.value)
     if (errors.length) {
         showImportErrors(errors)
         return
     }
-    currentStep.value += 1
+    currentStep.value = visibleSteps.value[visibleSteps.value.indexOf(currentStep.value) + 1]
+}
+function goPrevious() {
+    currentStep.value = visibleSteps.value[Math.max(0, visibleSteps.value.indexOf(currentStep.value) - 1)]
 }
 
 function upsertAccess(access: any) {
@@ -1650,6 +1723,10 @@ async function ensureProduct(mode: 'select' | 'create', productId: string | unde
     if (!isOk(resp)) throw new Error(`创建产品 ${form.name} 失败`)
     const id = resp?.result?.id || form.id
     if (!id) throw new Error(`创建产品 ${form.name} 后未返回产品ID`)
+    if (deviceType === 'gateway') {
+        gatewayCreated.productId = id
+        gatewayCreated.productNew = true
+    }
     return loadProductDetail(id)
 }
 
@@ -1707,7 +1784,16 @@ async function ensureGatewayDevice(productId: string) {
 }
 
 function productActive(product: any) { return ['1', 'enabled', 'deployed'].includes(stateValue(product).toLowerCase()) }
-function deviceActive(device: any) { return !['notActive', 'disabled', '0'].includes(stateValue(device)) }
+async function ensureWizardDeviceActive(device: any, canActivate: boolean) {
+    return ensureDeviceActivated(device, canActivate, async () => {
+        const response = await deployDevice(device.id)
+        if (!isOk(response)) throw new Error(`启用设备 ${device.id} 失败`)
+    }, async () => {
+        const response = await getDeviceDetail(device.id, true)
+        if (!isOk(response) || !response.result?.id) throw new Error(`确认设备 ${device.id} 启用状态失败`)
+        return response.result
+    })
+}
 function checkpointDevice(row: SlaveRow, device: any) {
     row.persisted = true
     row.autoDeviceId = false
@@ -1764,15 +1850,9 @@ async function saveGroupDevices(group: ProductGroup, gatewayId: string, canActiv
         const stored = sourceToRow(detail.result)
         if (deviceRowSignature(stored) !== deviceRowSignature(row)) throw new Error(`从机 ${id} 的保存结果与配置不一致，请重试`)
         checkpointDevice(row, detail.result)
-        if ((isNew || row.createdDevice) && canActivate && !deviceActive(detail.result)) {
-            row.createdDevice = true
-            const deploy = await deployDevice(id)
-            if (!isOk(deploy)) throw new Error(`启用新增从机 ${id} 失败`)
-            row.createdDevice = false
-            const enabled = await getDeviceDetail(id, true)
-            if (!isOk(enabled)) throw new Error(`确认新增从机 ${id} 启用状态失败`)
-            checkpointDevice(row, enabled.result)
-        } else if (isNew && !canActivate) row.createdDevice = true
+        const enabled = await ensureWizardDeviceActive(detail.result, canActivate)
+        row.createdDevice = false
+        checkpointDevice(row, enabled)
     }
 }
 async function syncAccessChildren(gatewayId: string, desired: string[], removed: string[]) {
@@ -1803,6 +1883,16 @@ async function syncAccessChildren(gatewayId: string, desired: string[], removed:
     } else upsertAccess(access)
 }
 async function preflight(gatewayId: string) {
+    if (gatewayProductMode.value === 'create' && !gatewayCreated.productId && gatewayProductForm.id) {
+        const exists = await queryProductId(gatewayProductForm.id)
+        if (!isOk(exists)) throw new Error('检查网关产品 ID 是否存在失败')
+        if (exists.result) throw new Error('网关产品 ID ' + gatewayProductForm.id + ' 已被占用，请在高级配置中修改或选择已有产品')
+    }
+    if (gatewayDeviceMode.value === 'create' && !gatewayCreated.deviceId && !gatewayCreated.deviceNew) {
+        const exists = await isExists(gatewayId)
+        if (!isOk(exists)) throw new Error('检查网关设备 ID 是否存在失败')
+        if (exists.result) throw new Error('网关设备 ID ' + gatewayId + ' 已被占用，请在高级配置中修改或选择已有设备')
+    }
     const targetAccessId = quickMode.value ? quickCreated.accessId : selectedAccessId.value
     const gatewayProductId = gatewayCreated.productId || (gatewayProductMode.value === 'select' ? selectedGatewayProductId.value : undefined)
     if (gatewayProductId) assertProductAccess(await loadProductDetail(gatewayProductId), targetAccessId)
@@ -1875,7 +1965,7 @@ async function handleSaveAndTest() {
         }
         if (!gatewayCreated.deviceId && gatewayDeviceMode.value === 'create') {
             const alreadyCreated = await readExistingDevice(gatewayId)
-            if (alreadyCreated && (alreadyCreated.productId !== gatewayProduct.id || alreadyCreated.parentId)) throw new Error(`采集器 ID ${gatewayId} 已被其他设备占用`)
+            if (alreadyCreated && (!gatewayCreated.deviceNew || alreadyCreated.productId !== gatewayProduct.id || alreadyCreated.parentId)) throw new Error(`采集器 ID ${gatewayId} 已被其他设备占用`)
             if (!alreadyCreated) {
                 gatewayCreated.deviceNew = true
                 await ensureGatewayDevice(gatewayProduct.id)
@@ -1883,13 +1973,10 @@ async function handleSaveAndTest() {
         }
         gatewayCreated.deviceId = gatewayId
         selectedGatewayDeviceId.value = gatewayId
-        if (gatewayCreated.deviceNew && productActive(gatewayProduct)) {
-            const deploy = await deployDevice(gatewayId)
-            if (!isOk(deploy)) throw new Error('启用新增采集器失败')
-            gatewayCreated.deviceNew = false
-        }
         const gatewayDetail = await getDeviceDetail(gatewayId, true)
-        if (!isOk(gatewayDetail)) throw new Error('读取采集器状态失败')
+        if (!isOk(gatewayDetail) || !gatewayDetail.result?.id) throw new Error('读取采集器状态失败')
+        gatewayDetail.result = await ensureWizardDeviceActive(gatewayDetail.result, productActive(gatewayProduct))
+        gatewayCreated.deviceNew = false
         for (const group of productGroups.value) {
             currentGroup = group
             group.status = '保存中'
@@ -1925,7 +2012,7 @@ async function handleSaveAndTest() {
         currentGroup = undefined
         const desired = productGroups.value.flatMap(group => group.slaveRows.map(row => row.deviceId!))
         savingStage.value = '统一绑定从机'
-        if (!isOk(await bindDevice(gatewayId, desired))) throw new Error('绑定从机失败')
+        if (!isOk(await bindDevice(gatewayId, desired, true))) throw new Error('绑定从机失败')
         savingStage.value = '同步接入网关完整从机列表'
         await syncAccessChildren(gatewayId, desired, removed)
         if (removed.length) {
@@ -2143,6 +2230,14 @@ onMounted(() => {
 
 .step-panel {
     min-height: 500px;
+}
+
+.compact-panel {
+    min-height: 0;
+}
+
+.resource-summary {
+    margin-bottom: 16px;
 }
 
 .section-title {
